@@ -16,6 +16,7 @@ use Amp\Pipeline\Queue;
 use Amp\Sync\ChannelException;
 use Amp\TimeoutCancellation;
 use CT\AmpServer\Messages\MessageLog;
+use CT\AmpServer\Messages\MessagePingPong;
 use CT\AmpServer\Messages\MessageReady;
 use CT\AmpServer\Messages\MessageSocketListen;
 use CT\AmpServer\Messages\MessageSocketTransfer;
@@ -85,7 +86,8 @@ class WorkerProcess                 implements \Psr\Log\LoggerInterface, \Psr\Lo
     
     public function send(mixed $data): void
     {
-        $this->context->send(new WorkerMessage(WorkerMessageType::DATA, $data));
+        // TODO: Implement send() method.
+        //$this->context->send(new WorkerMessage(WorkerMessageType::DATA, $data));
     }
     
     public function runWorkerLoop(): void
@@ -134,7 +136,7 @@ class WorkerProcess                 implements \Psr\Log\LoggerInterface, \Psr\Lo
             }
             
             try {
-                $this->context->send(new WorkerMessage(WorkerMessageType::PING, 0));
+                $this->context->send(new MessagePingPong);
             } catch (\Throwable) {
                 $this->close();
             }

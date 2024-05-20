@@ -156,7 +156,8 @@ class WorkerRunner
     
     public function send(mixed $data): void
     {
-        $this->ipcChannel->send(new WorkerMessage(WorkerMessageType::DATA, $data));
+        // TODO: Implement send() method.
+        //$this->ipcChannel->send(new WorkerMessage(WorkerMessageType::DATA, $data));
     }
     
     public function close(): void
