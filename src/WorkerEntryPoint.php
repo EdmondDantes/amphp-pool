@@ -9,8 +9,6 @@ use Amp\Http\Server\Driver\SocketClientFactory;
 use Amp\Http\Server\RequestHandler\ClosureRequestHandler;
 use Amp\Http\Server\Response;
 use Amp\Http\Server\SocketHttpServer;
-use Amp\Socket\BindContext;
-use Amp\Socket\ResourceServerSocketFactory;
 
 final class WorkerEntryPoint implements WorkerEntryPointI
 {

@@ -5,6 +5,6 @@
         "ext-sockets": "*"
     },
     "autoload": {
-        "psr-4": {"CT\\AmpServer\\": ["./"]}
+        "psr-4": {"CT\\AmpServer\\": ["./src"]}
     }
 }
