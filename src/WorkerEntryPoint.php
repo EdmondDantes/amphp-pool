@@ -12,9 +12,9 @@ use Amp\Http\Server\SocketHttpServer;
 
 final class WorkerEntryPoint implements WorkerEntryPointI
 {
-    private WorkerRunner $workerStrategy;
+    private Worker $workerStrategy;
     
-    public function initialize(WorkerRunner $workerStrategy): void
+    public function initialize(Worker $workerStrategy): void
     {
         $this->workerStrategy = $workerStrategy;
     }

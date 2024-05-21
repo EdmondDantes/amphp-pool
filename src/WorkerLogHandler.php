@@ -12,7 +12,11 @@ use Monolog\Level;
 use Monolog\LogRecord;
 use Psr\Log\LogLevel;
 
-class WorkerLogHandler              extends AbstractProcessingHandler
+/**
+ * Worker Log Handler.
+ * The log handler sends log messages to the worker channel.
+ */
+final class WorkerLogHandler        extends AbstractProcessingHandler
 {
     use ForbidCloning;
     use ForbidSerialization;

@@ -27,10 +27,14 @@ use function Amp\async;
 use function Amp\weakClosure;
 
 /**
+ * Worker Process Context.
+ * The process context is a structure located within the process that creates or is associated with worker processes.
+ * The process context cannot be used within the worker process itself.
+ *
  * @template-covariant TReceive
  * @template TSend
  */
-class WorkerProcess                 implements \Psr\Log\LoggerInterface, \Psr\Log\LoggerAwareInterface
+class WorkerProcessContext          implements \Psr\Log\LoggerInterface, \Psr\Log\LoggerAwareInterface
 {
     use \Psr\Log\LoggerAwareTrait;
     use \Psr\Log\LoggerTrait;
@@ -50,7 +54,7 @@ class WorkerProcess                 implements \Psr\Log\LoggerInterface, \Psr\Lo
     
     /**
      * @param positive-int $id
-     * @param Context<mixed, WorkerMessage|null, WorkerMessage|null> $context
+     * @param Context<mixed> $context
      * @param Queue<ClusterWorkerMessage<TReceive, TSend>> $queue
      */
     public function __construct(

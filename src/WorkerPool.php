@@ -30,6 +30,11 @@ use Revolt\EventLoop;
 use function Amp\async;
 
 /**
+ * Worker Pool Manager Class.
+ *
+ * A worker pool allows you to create groups of processes belonging to different types of workers,
+ * and then use them to perform tasks.
+ *
  * @template-covariant TReceive
  * @template TSend
  */
@@ -176,7 +181,7 @@ class WorkerPool
         
         $deferredCancellation       = new DeferredCancellation();
         
-        $worker                     = new WorkerProcess(
+        $worker                     = new WorkerProcessContext(
             $workerDescriptor->id,
             $context,
             $socketTransport ?? $this->listenerProvider,

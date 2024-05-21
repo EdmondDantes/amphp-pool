@@ -42,7 +42,7 @@ return static function (Channel $channel): void
             throw new \RuntimeException('Entry point class must implement WorkerEntryPointI');
         }
         
-        $strategy                   = new \CT\AmpServer\WorkerRunner((int)$id, $channel, $key, $uri, $type);
+        $strategy                   = new \CT\AmpServer\Worker((int)$id, $channel, $key, $uri, $type);
         $entryPoint->initialize($strategy);
         $strategy->initWorker();
         

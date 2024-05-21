@@ -5,6 +5,6 @@ namespace CT\AmpServer;
 
 interface WorkerEntryPointI
 {
-    public function initialize(WorkerRunner $workerStrategy): void;
+    public function initialize(Worker $workerStrategy): void;
     public function run(): void;
 }
