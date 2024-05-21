@@ -187,6 +187,6 @@ class WorkerProcessContext          implements \Psr\Log\LoggerInterface, \Psr\Lo
             $context['pid']         = $this->context->getPid();
         }
         
-        $this->logger->log($level, $message, $context);
+        $this->logger?->log($level, $message, $context);
     }
 }
