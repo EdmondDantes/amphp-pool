@@ -12,10 +12,11 @@ use Amp\Socket\SocketException;
 use Amp\Sync\Channel;
 use Amp\Sync\ChannelException;
 use CT\AmpServer\Messages\MessageSocketListen;
+use CT\AmpServer\Worker;
 
 final class SocketPipeFactoryWindows implements ServerSocketFactory
 {
-    public function __construct(private readonly Channel $channel) {}
+    public function __construct(private readonly Channel $channel, private readonly Worker $worker) {}
     
     
     public function listen(SocketAddress|string $address, ?BindContext $bindContext = null): ServerSocket
@@ -36,6 +37,13 @@ final class SocketPipeFactoryWindows implements ServerSocketFactory
             );
         }
         
-        return new ServerSocketFactoryWindows($this->channel, $address, $bindContext);
+        $factory                    = new ServerSocketFactoryWindows($this->channel, $address, $bindContext);
+        
+        /**
+         * Subscribe to the worker events for catching the MessageSocketTransfer message.
+         */
+        $this->worker->addEventHandler($factory->workerEventHandler(...));
+        
+        return $factory;
     }
 }

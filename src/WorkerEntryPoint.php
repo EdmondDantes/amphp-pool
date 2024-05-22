@@ -21,8 +21,6 @@ final class WorkerEntryPoint implements WorkerEntryPointI
     
     public function run(): void
     {
-        file_put_contents(__DIR__.'/worker.log', "Worker {$this->workerStrategy} runner" . PHP_EOL, FILE_APPEND);
-
         // Cluster::getServerSocketFactory() will return a factory which creates the socket
         // locally or requests the server socket from the cluster watcher.
         $socketFactory              = $this->workerStrategy->getSocketPipeFactory();

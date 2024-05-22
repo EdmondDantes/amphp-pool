@@ -42,6 +42,7 @@ class Worker
     protected ?ServerSocketFactory $socketPipeFactory = null;
     
     private LoggerInterface $logger;
+    private array           $messageHandlers = [];
     
     public function __construct(
         private readonly int     $id,
@@ -108,7 +109,7 @@ class Worker
     public function getSocketPipeFactory(): ServerSocketFactory
     {
         if (PHP_OS_FAMILY === 'Windows') {
-            return new SocketPipeFactoryWindows($this->ipcChannel);
+            return new SocketPipeFactoryWindows($this->ipcChannel, $this);
         }
         
         if($this->socketPipeFactory !== null) {
@@ -131,14 +132,32 @@ class Worker
                     $this->ipcChannel->send(new MessagePingPong);
                     continue;
                 }
+                
+                try {
+                    foreach ($this->messageHandlers as $eventHandler) {
+                        if($eventHandler($message)) {
+                            break;
+                        }
+                    }
+                } catch (\Throwable $exception) {
+                    $this->logger->error('Error processing message', ['exception' => $exception]);
+                }
             }
         } catch (\Throwable) {
             // IPC Channel manually closed
         } finally {
+            $this->messageHandlers = [];
             $this->loopCancellation->cancel();
             $this->queue->complete();
             $this->ipcForTransferSocket?->close();
         }
+    }
+    
+    public function addEventHandler(callable $handler): self
+    {
+        $this->messageHandlers[] = $handler;
+        
+        return $this;
     }
     
     public function awaitTermination(?Cancellation $cancellation = null): void
