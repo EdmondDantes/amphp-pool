@@ -3,10 +3,13 @@ declare(strict_types=1);
 
 namespace CT\AmpServer\SocketPipe;
 
+use Amp\Parallel\Context\ProcessContext;
 use Amp\Socket\BindContext;
 use Amp\Socket\ResourceServerSocket;
 use Amp\Socket\ServerSocket;
 use Amp\Socket\SocketAddress;
+use CT\AmpServer\Messages\MessageSocketTransfer;
+use CT\AmpServer\WorkerPool;
 use Revolt\EventLoop;
 
 /**
@@ -16,12 +19,8 @@ use Revolt\EventLoop;
 final class SocketListener
 {
     private array $workers          = [];
-    private mixed $receiveCallback  = null;
     
-    public function __construct(private readonly SocketAddress $address, callable $receiveCallback)
-    {
-        $this->receiveCallback      = \WeakReference::create($receiveCallback);
-    }
+    public function __construct(private readonly SocketAddress $address, private readonly WorkerPool $workerPool) {}
     
     public function getSocketAddress(): SocketAddress
     {
@@ -49,14 +48,34 @@ final class SocketListener
         
         EventLoop::queue(function () use ($server) {
             while ($socket = $server->accept()) {
+                // Select free worker
+                $foundedWorker              = $this->workerPool->pickupWorker($this->getWorkers())?->getWorker();
                 
-                $receiveCallback     = $this->receiveCallback->get();
-                
-                if($receiveCallback === null) {
-                    break;
+                if ($foundedWorker === null) {
+                    $socket->close();
+                    return;
                 }
                 
-                $receiveCallback($socket, $this);
+                $pid                        = 0;
+                
+                if($foundedWorker->getContext() instanceof ProcessContext) {
+                    $pid                    = $foundedWorker->getContext()->getPid();
+                }
+                
+                $socketId                   = \socket_wsaprotocol_info_export(\socket_import_stream($socket->getResource()), $pid);
+                
+                if(false === $socketId) {
+                    $socket->close();
+                    throw new \Exception('Failed to export socket information');
+                }
+                
+                try {
+                    $foundedWorker->getContext()->send(new MessageSocketTransfer($socketId));
+                    $foundedWorker->addTransferredSocket($socketId, $socket);
+                } catch (\Throwable $exception) {
+                    $socket->close();
+                    throw $exception;
+                }
             }
         });
     }

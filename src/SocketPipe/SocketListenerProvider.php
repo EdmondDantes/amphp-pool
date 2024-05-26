@@ -4,18 +4,14 @@ declare(strict_types=1);
 namespace CT\AmpServer\SocketPipe;
 
 use Amp\Socket\SocketAddress;
+use CT\AmpServer\WorkerPool;
 
 final class SocketListenerProvider
 {
     /** @var array<string, SocketListener> */
-    private array $sockets          = [];
+    private array $socketListeners  = [];
     
-    private mixed $receiveCallback  = null;
-    
-    public function __construct(callable $receiveCallback)
-    {
-        $this->receiveCallback      = \WeakReference::create($receiveCallback);
-    }
+    public function __construct(private readonly WorkerPool $workerPool) {}
     
     public function listen(int $workerId, SocketAddress|string $address): void
     {
@@ -24,26 +20,20 @@ final class SocketListenerProvider
             $address                = SocketAddress\fromString($address);
         }
         
-        $receiveCallback            = $this->receiveCallback->get();
-        
-        if(null === $receiveCallback) {
-            return;
-        }
-        
         $stringAddress              = (string) $address;
 
-        if(array_key_exists($stringAddress, $this->sockets)) {
-            $this->sockets[$stringAddress]->addWorker($workerId);
+        if(array_key_exists($stringAddress, $this->socketListeners)) {
+            $this->socketListeners[$stringAddress]->addWorker($workerId);
             return;
         }
         
-        $this->sockets[$stringAddress] = new SocketListener($address, $this->receiveCallback->get());
-        $this->sockets[$stringAddress]->addWorker($workerId);
-        $this->sockets[$stringAddress]->receiveLoop();
+        $this->socketListeners[$stringAddress] = new SocketListener($address, $this->workerPool);
+        $this->socketListeners[$stringAddress]->addWorker($workerId);
+        $this->socketListeners[$stringAddress]->receiveLoop();
     }
     
     public function close(): void
     {
-        $this->sockets              = [];
+        $this->socketListeners = [];
     }
 }

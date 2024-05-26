@@ -10,7 +10,6 @@ use Amp\ForbidSerialization;
 use Amp\Pipeline\ConcurrentIterator;
 use Amp\Pipeline\Queue;
 use Amp\Socket\BindContext;
-use Amp\Socket\ResourceSocket;
 use Amp\Socket\ServerSocket;
 use Amp\Socket\Socket;
 use Amp\Socket\SocketAddress;
@@ -94,7 +93,7 @@ final class ServerSocketFactoryWindows implements ServerSocket
         
         \socket_wsaprotocol_info_release($message->socketId);
         
-        return ResourceSocket::fromServerSocket(\socket_export_stream($socket));
+        return ResourceSocket::fromServerSocket(\socket_export_stream($socket), $this->writeOnlyChannel, $message->socketId);
     }
     
     public function getAddress(): SocketAddress
