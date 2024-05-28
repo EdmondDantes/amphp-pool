@@ -13,10 +13,13 @@ use Amp\Future;
 use Amp\Parallel\Context\Context;
 use Amp\Parallel\Context\ProcessContext;
 use Amp\Pipeline\Queue;
+use Amp\Serialization\SerializationException;
 use Amp\Socket\ResourceSocket;
 use Amp\Socket\Socket;
 use Amp\Sync\ChannelException;
 use Amp\TimeoutCancellation;
+use CT\AmpServer\Messages\MessageJob;
+use CT\AmpServer\Messages\MessageJobResult;
 use CT\AmpServer\Messages\MessageLog;
 use CT\AmpServer\Messages\MessagePingPong;
 use CT\AmpServer\Messages\MessageReady;
@@ -140,10 +143,14 @@ class WorkerProcessContext          implements \Psr\Log\LoggerInterface, \Psr\Lo
         return $this;
     }
     
-    public function send(mixed $data): void
+    /**
+     * @throws SerializationException
+     * @throws ChannelException
+     */
+    public function sendJob(mixed $data): void
     {
-        // TODO: Implement send() method.
-        //$this->context->send(new WorkerMessage(WorkerMessageType::DATA, $data));
+        $this->context->send(new MessageJob($data));
+        $this->jobsCount++;
     }
     
     public function runWorkerLoop(): void
@@ -172,6 +179,13 @@ class WorkerProcessContext          implements \Psr\Log\LoggerInterface, \Psr\Lo
                     $this->freeTransferredSocket($message->socketId);
                 } elseif($message instanceof MessageLog) {
                     $this->logger?->log($message->level, $message->message, $message->context);
+                } elseif($message instanceof MessageJobResult) {
+                    $this->isReady  = true;
+                    $this->jobsCount--;
+                    
+                    if($this->jobsCount < 0) {
+                        $this->jobsCount = 0;
+                    }
                 }
             }
             
