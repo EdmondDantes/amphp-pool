@@ -7,8 +7,8 @@ use Amp\Future;
 
 class WorkerDescriptor
 {
-    protected ?WorkerProcess $worker = null;
-    protected ?Future        $future = null;
+    protected ?WorkerProcessContext $worker = null;
+    protected ?Future               $future = null;
     
     public function __construct(
         public readonly int $id,
@@ -16,12 +16,12 @@ class WorkerDescriptor
         public readonly string $entryPointClassName
     ) {}
     
-    public function getWorker(): ?WorkerProcess
+    public function getWorker(): ?WorkerProcessContext
     {
         return $this->worker;
     }
     
-    public function setWorker(WorkerProcess $worker): void
+    public function setWorker(WorkerProcessContext $worker): void
     {
         $this->worker = $worker;
     }

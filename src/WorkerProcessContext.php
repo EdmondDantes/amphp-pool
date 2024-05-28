@@ -13,10 +13,14 @@ use Amp\Future;
 use Amp\Parallel\Context\Context;
 use Amp\Parallel\Context\ProcessContext;
 use Amp\Pipeline\Queue;
+use Amp\Socket\ResourceSocket;
+use Amp\Socket\Socket;
 use Amp\Sync\ChannelException;
 use Amp\TimeoutCancellation;
 use CT\AmpServer\Messages\MessageLog;
+use CT\AmpServer\Messages\MessagePingPong;
 use CT\AmpServer\Messages\MessageReady;
+use CT\AmpServer\Messages\MessageSocketFree;
 use CT\AmpServer\Messages\MessageSocketListen;
 use CT\AmpServer\Messages\MessageSocketTransfer;
 use CT\AmpServer\SocketPipe\SocketListenerProvider;
@@ -26,10 +30,14 @@ use function Amp\async;
 use function Amp\weakClosure;
 
 /**
+ * Worker Process Context.
+ * The process context is a structure located within the process that creates or is associated with worker processes.
+ * The process context cannot be used within the worker process itself.
+ *
  * @template-covariant TReceive
  * @template TSend
  */
-class WorkerProcess                 implements \Psr\Log\LoggerInterface, \Psr\Log\LoggerAwareInterface
+class WorkerProcessContext          implements \Psr\Log\LoggerInterface, \Psr\Log\LoggerAwareInterface
 {
     use \Psr\Log\LoggerAwareTrait;
     use \Psr\Log\LoggerTrait;
@@ -45,11 +53,12 @@ class WorkerProcess                 implements \Psr\Log\LoggerInterface, \Psr\Lo
     private readonly Future $joinFuture;
     private string $watcher     = '';
     private bool $isReady       = false;
-    private bool $isUsed        = false;
+    private bool  $isUsed        = false;
+    private array $transferredSockets = [];
     
     /**
      * @param positive-int $id
-     * @param Context<mixed, WorkerMessage|null, WorkerMessage|null> $context
+     * @param Context<mixed> $context
      * @param Queue<ClusterWorkerMessage<TReceive, TSend>> $queue
      */
     public function __construct(
@@ -83,9 +92,31 @@ class WorkerProcess                 implements \Psr\Log\LoggerInterface, \Psr\Lo
         return $this->isUsed;
     }
     
+    public function addTransferredSocket(string $socketId, ResourceSocket|Socket $socket): self
+    {
+        $this->transferredSockets[$socketId] = $socket;
+        
+        return $this;
+    }
+    
+    public function freeTransferredSocket(string $socketId = null): self
+    {
+        if($socketId === null) {
+            return $this;
+        }
+        
+        if(array_key_exists($socketId, $this->transferredSockets)) {
+            $this->transferredSockets[$socketId]->close();
+            unset($this->transferredSockets[$socketId]);
+        }
+        
+        return $this;
+    }
+    
     public function send(mixed $data): void
     {
-        $this->context->send(new WorkerMessage(WorkerMessageType::DATA, $data));
+        // TODO: Implement send() method.
+        //$this->context->send(new WorkerMessage(WorkerMessageType::DATA, $data));
     }
     
     public function runWorkerLoop(): void
@@ -109,6 +140,9 @@ class WorkerProcess                 implements \Psr\Log\LoggerInterface, \Psr\Lo
                     
                 } elseif($message instanceof MessageSocketTransfer) {
                     $this->isReady  = true;
+                } elseif($message instanceof MessageSocketFree) {
+                    $this->isReady  = true;
+                    $this->freeTransferredSocket($message->socketId);
                 } elseif($message instanceof MessageLog) {
                     $this->logger?->log($message->level, $message->message, $message->context);
                 }
@@ -134,7 +168,7 @@ class WorkerProcess                 implements \Psr\Log\LoggerInterface, \Psr\Lo
             }
             
             try {
-                $this->context->send(new WorkerMessage(WorkerMessageType::PING, 0));
+                $this->context->send(new MessagePingPong);
             } catch (\Throwable) {
                 $this->close();
             }
@@ -181,6 +215,6 @@ class WorkerProcess                 implements \Psr\Log\LoggerInterface, \Psr\Lo
             $context['pid']         = $this->context->getPid();
         }
         
-        $this->logger->log($level, $message, $context);
+        $this->logger?->log($level, $message, $context);
     }
 }

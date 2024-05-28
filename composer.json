@@ -1,0 +1,19 @@
+{
+    "name": "ct/clustered-amp-server",
+    "type": "library",
+    "description": "Library for creating clustered async servers using amphp/http-server and amphp/cluster",
+    "keywords": [
+        "api",
+        "asycn",
+        "server"
+    ],
+    "license": "MIT",
+    "require": {
+        "amphp/cluster": "v2.0.0-beta.1",
+        "amphp/http-server": "^3.3",
+        "ext-sockets": "*"
+    },
+    "autoload": {
+        "psr-4": {"CT\\AmpServer\\": ["./src"]}
+    }
+}

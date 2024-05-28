@@ -9,22 +9,18 @@ use Amp\Http\Server\Driver\SocketClientFactory;
 use Amp\Http\Server\RequestHandler\ClosureRequestHandler;
 use Amp\Http\Server\Response;
 use Amp\Http\Server\SocketHttpServer;
-use Amp\Socket\BindContext;
-use Amp\Socket\ResourceServerSocketFactory;
 
 final class WorkerEntryPoint implements WorkerEntryPointI
 {
-    private WorkerRunner $workerStrategy;
+    private Worker $workerStrategy;
     
-    public function initialize(WorkerRunner $workerStrategy): void
+    public function initialize(Worker $workerStrategy): void
     {
         $this->workerStrategy = $workerStrategy;
     }
     
     public function run(): void
     {
-        file_put_contents(__DIR__.'/worker.log', "Worker {$this->workerStrategy} runner" . PHP_EOL, FILE_APPEND);
-
         // Cluster::getServerSocketFactory() will return a factory which creates the socket
         // locally or requests the server socket from the cluster watcher.
         $socketFactory              = $this->workerStrategy->getSocketPipeFactory();

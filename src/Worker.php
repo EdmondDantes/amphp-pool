@@ -10,22 +10,23 @@ use Amp\DeferredFuture;
 use Amp\Parallel\Ipc;
 use Amp\Pipeline\ConcurrentIterator;
 use Amp\Pipeline\Queue;
+use Amp\Socket\ResourceSocket;
 use Amp\Socket\ServerSocketFactory;
 use Amp\Sync\Channel;
 use Amp\TimeoutCancellation;
 use CT\AmpServer\Messages\MessagePingPong;
-use CT\AmpServer\SocketPipe\ServerSocketFactoryWindows;
 use CT\AmpServer\SocketPipe\SocketPipeFactoryWindows;
 use Psr\Log\LoggerInterface;
-use function Amp\async;
-use function Amp\trapSignal;
 
 /**
+ * Abstraction of Worker Representation within the worker process.
+ * This class should not be used within the process that creates workers!
+ *
  * @template-covariant TReceive
  * @template TSend
  * @implements Channel<TReceive, TSend>
  */
-class WorkerRunner
+class Worker
 {
     protected int $timeout = 5;
     
@@ -37,10 +38,11 @@ class WorkerRunner
     /** @var ConcurrentIterator<TReceive> */
     protected readonly ConcurrentIterator $iterator;
     
-    protected ?\Amp\Socket\Socket $ipcForTransferSocket = null;
+    protected ?ResourceSocket $ipcForTransferSocket = null;
     protected ?ServerSocketFactory $socketPipeFactory = null;
     
     private LoggerInterface $logger;
+    private array           $messageHandlers = [];
     
     public function __construct(
         private readonly int     $id,
@@ -82,14 +84,21 @@ class WorkerRunner
         return $this->workerType;
     }
     
-    public function getIpcForTransferSocket(): \Amp\Socket\Socket
+    public function getIpcForTransferSocket(): ResourceSocket
     {
         if($this->ipcForTransferSocket !== null) {
             return $this->ipcForTransferSocket;
         }
         
         try {
-            $this->ipcForTransferSocket = Ipc\connect($this->uri, $this->key, new TimeoutCancellation($this->timeout));
+            $socket                 = Ipc\connect($this->uri, $this->key, new TimeoutCancellation($this->timeout));
+            
+            if($socket instanceof ResourceSocket) {
+                $this->ipcForTransferSocket = $socket;
+            } else {
+                throw new \RuntimeException('Type of socket is not ResourceSocket');
+            }
+            
         } catch (\Throwable $exception) {
             throw new \RuntimeException('Could not connect to IPC socket', 0, $exception);
         }
@@ -100,7 +109,7 @@ class WorkerRunner
     public function getSocketPipeFactory(): ServerSocketFactory
     {
         if (PHP_OS_FAMILY === 'Windows') {
-            return new SocketPipeFactoryWindows($this->ipcChannel);
+            return new SocketPipeFactoryWindows($this->ipcChannel, $this);
         }
         
         if($this->socketPipeFactory !== null) {
@@ -123,14 +132,32 @@ class WorkerRunner
                     $this->ipcChannel->send(new MessagePingPong);
                     continue;
                 }
+                
+                try {
+                    foreach ($this->messageHandlers as $eventHandler) {
+                        if($eventHandler($message)) {
+                            break;
+                        }
+                    }
+                } catch (\Throwable $exception) {
+                    $this->logger->error('Error processing message', ['exception' => $exception]);
+                }
             }
         } catch (\Throwable) {
             // IPC Channel manually closed
         } finally {
+            $this->messageHandlers = [];
             $this->loopCancellation->cancel();
             $this->queue->complete();
             $this->ipcForTransferSocket?->close();
         }
+    }
+    
+    public function addEventHandler(callable $handler): self
+    {
+        $this->messageHandlers[] = $handler;
+        
+        return $this;
     }
     
     public function awaitTermination(?Cancellation $cancellation = null): void
@@ -156,7 +183,8 @@ class WorkerRunner
     
     public function send(mixed $data): void
     {
-        $this->ipcChannel->send(new WorkerMessage(WorkerMessageType::DATA, $data));
+        // TODO: Implement send() method.
+        //$this->ipcChannel->send(new WorkerMessage(WorkerMessageType::DATA, $data));
     }
     
     public function close(): void
@@ -176,6 +204,6 @@ class WorkerRunner
     
     public function __toString(): string
     {
-        return \sprintf('WorkerStrategy(%d)', $this->id);
+        return 'worker-'.$this->id;
     }
 }

@@ -30,10 +30,15 @@ use Revolt\EventLoop;
 use function Amp\async;
 
 /**
+ * Worker Pool Manager Class.
+ *
+ * A worker pool allows you to create groups of processes belonging to different types of workers,
+ * and then use them to perform tasks.
+ *
  * @template-covariant TReceive
  * @template TSend
  */
-class WorkerPool
+class WorkerPool                    implements WorkerPoolI
 {
     protected int $workerStartTimeout = 5;
     
@@ -53,7 +58,6 @@ class WorkerPool
     private SocketPipeProvider $provider;
     
     private ?SocketListenerProvider $listenerProvider = null;
-    private mixed $receiveCallback;
     
     public function __construct(
         public readonly int $reactorCount,
@@ -75,8 +79,7 @@ class WorkerPool
         
         // For Windows, we should use the SocketListenerProvider instead of the SocketPipeProvider
         if(PHP_OS_FAMILY === 'Windows') {
-            $this->receiveCallback  = $this->receiveCallback(...);
-            $this->listenerProvider = new SocketListenerProvider($this->receiveCallback);
+            $this->listenerProvider = new SocketListenerProvider($this);
         }
     }
     
@@ -114,43 +117,6 @@ class WorkerPool
         }
     }
     
-    private function receiveCallback(ResourceSocket $socket, SocketListener $socketListener): void
-    {
-        // Select free worker
-        $foundedWorker              = null;
-        $possibleWorkers            = $socketListener->getWorkers();
-        
-        foreach ($this->workers as $workerDescriptor) {
-            
-            $worker                 = $workerDescriptor->getWorker();
-            
-            if (in_array($worker->getWorkerId(), $possibleWorkers) && $worker->isReady()) {
-                $foundedWorker             = $worker;
-                break;
-            }
-        }
-        
-        if ($foundedWorker === null) {
-            $socket->close();
-            return;
-        }
-        
-        $pid                        = 0;
-        
-        if($foundedWorker->getContext() instanceof ProcessContext) {
-            $pid                    = $foundedWorker->getContext()->getPid();
-        }
-        
-        $socketId                   = \socket_wsaprotocol_info_export(\socket_import_stream($socket->getResource()), $pid);
-        
-        if(false === $socketId) {
-            $socket->close();
-            throw new \Exception('Failed to export socket information');
-        }
-        
-        $foundedWorker->getContext()->send(new MessageSocketTransfer($socketId));
-    }
-    
     private function startWorker(WorkerDescriptor $workerDescriptor): void
     {
         $context                    = $this->contextFactory->start($this->script);
@@ -176,7 +142,7 @@ class WorkerPool
         
         $deferredCancellation       = new DeferredCancellation();
         
-        $worker                     = new WorkerProcess(
+        $worker                     = new WorkerProcessContext(
             $workerDescriptor->id,
             $context,
             $socketTransport ?? $this->listenerProvider,
@@ -271,6 +237,22 @@ class WorkerPool
         return $this->workers;
     }
     
+    public function pickupWorker(WorkerTypeEnum $workerType = null, array $possibleWorkers = null): ?WorkerDescriptor
+    {
+        foreach ($this->workers as $workerDescriptor) {
+            
+            if ($possibleWorkers !== null && !\in_array($workerDescriptor->id, $possibleWorkers, true)) {
+                continue;
+            }
+            
+            if ($workerDescriptor->getWorker()?->isReady()) {
+                return $workerDescriptor;
+            }
+        }
+        
+        return null;
+    }
+    
     /**
      * Stops all cluster workers. Workers are killed if the cancellation token is cancelled.
      *
@@ -284,7 +266,7 @@ class WorkerPool
         }
         
         $this->running              = false;
-        $this->receiveCallback      = null;
+        $this->listenerProvider?->close();
         
         $futures                    = [];
         
