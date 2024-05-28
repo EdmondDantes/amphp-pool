@@ -99,8 +99,12 @@ class WorkerProcessContext          implements \Psr\Log\LoggerInterface, \Psr\Lo
         return $this;
     }
     
-    public function freeTransferredSocket(string $socketId): self
+    public function freeTransferredSocket(string $socketId = null): self
     {
+        if($socketId === null) {
+            return $this;
+        }
+        
         if(array_key_exists($socketId, $this->transferredSockets)) {
             $this->transferredSockets[$socketId]->close();
             unset($this->transferredSockets[$socketId]);

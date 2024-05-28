@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace CT\AmpServer\Messages;
 
-class MessageSocketFree
+final readonly class MessageSocketFree
 {
-    public function __construct(string $socketId) {}
+    public function __construct(public string|null $socketId = null) {}
 }
