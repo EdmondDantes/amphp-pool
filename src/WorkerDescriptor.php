@@ -13,12 +13,8 @@ class WorkerDescriptor
     public function __construct(
         public readonly int $id,
         public readonly WorkerTypeEnum $type,
-        public readonly string $entryPointClassName,
-        protected PickupWorkerStrategyI $strategy = null
-    )
-    {
-        $this->strategy = $strategy ?? new RandomPickupWorkerStrategy();
-    }
+        public readonly string $entryPointClassName
+    ) {}
     
     public function getWorker(): ?WorkerProcessContext
     {
