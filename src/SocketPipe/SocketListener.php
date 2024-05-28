@@ -9,8 +9,8 @@ use Amp\Socket\ResourceServerSocket;
 use Amp\Socket\ServerSocket;
 use Amp\Socket\SocketAddress;
 use CT\AmpServer\Messages\MessageSocketTransfer;
-use CT\AmpServer\PickupWorkerRoundRobin;
-use CT\AmpServer\PickupWorkerStrategyI;
+use CT\AmpServer\PickupWorkerStrategy\PickupWorkerRoundRobin;
+use CT\AmpServer\PickupWorkerStrategy\PickupWorkerStrategyI;
 use CT\AmpServer\WorkerPool;
 use Revolt\EventLoop;
 

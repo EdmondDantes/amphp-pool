@@ -1,7 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpServer;
+namespace CT\AmpServer\PickupWorkerStrategy;
+
+use CT\AmpServer\WorkerDescriptor;
+use CT\AmpServer\WorkerPoolI;
+use CT\AmpServer\WorkerTypeEnum;
 
 /**
  * The class implements the strategy of selecting workers in a round-robin manner
@@ -11,7 +15,7 @@ final class PickupWorkerRoundRobin implements PickupWorkerStrategyI
     /**
      * @var array<string, array<WorkerDescriptor>>
      */
-    private array $poolByType       = [];
+    private array $poolByType     = [];
     
     public function __construct(private readonly WorkerPoolI $workerPool) {}
     
@@ -20,7 +24,7 @@ final class PickupWorkerRoundRobin implements PickupWorkerStrategyI
         $type                       = $workerType?->value ?? '';
         
         if(false === array_key_exists($type, $this->poolByType) || empty($this->poolByType[$type])) {
-            $this->poolByType[$type] = $this->fillPoolByType($workerType, $possibleWorkers);
+            $this->initPool($workerType, $possibleWorkers);
         }
 
         if(empty($this->poolByType[$type])) {
@@ -30,8 +34,10 @@ final class PickupWorkerRoundRobin implements PickupWorkerStrategyI
         return array_shift($this->poolByType[$type]);
     }
     
-    private function fillPoolByType(WorkerTypeEnum $type = null, array $possibleWorkers = null): array
+    private function initPool(WorkerTypeEnum $workerType = null, array $possibleWorkers = null): void
     {
+        $type                       = $workerType?->value ?? '';
+        
         $pool                       = [];
         
         foreach ($this->workerPool->getWorkers() as $worker) {
@@ -50,6 +56,6 @@ final class PickupWorkerRoundRobin implements PickupWorkerStrategyI
             $pool[]                 = $worker;
         }
         
-        return $pool;
+        $this->poolByType[$type]    = $pool;
     }
 }
