@@ -9,6 +9,8 @@ use Amp\Socket\ResourceServerSocket;
 use Amp\Socket\ServerSocket;
 use Amp\Socket\SocketAddress;
 use CT\AmpServer\Messages\MessageSocketTransfer;
+use CT\AmpServer\PickupWorkerRoundRobin;
+use CT\AmpServer\PickupWorkerStrategyI;
 use CT\AmpServer\WorkerPool;
 use Revolt\EventLoop;
 
@@ -19,8 +21,16 @@ use Revolt\EventLoop;
 final class SocketListener
 {
     private array $workers          = [];
+    private PickupWorkerStrategyI $pickupWorkerStrategy;
     
-    public function __construct(private readonly SocketAddress $address, private readonly WorkerPool $workerPool) {}
+    public function __construct(
+        private readonly SocketAddress $address,
+        private readonly WorkerPool $workerPool,
+        PickupWorkerStrategyI $pickupWorkerStrategy = null
+    )
+    {
+        $this->pickupWorkerStrategy = $pickupWorkerStrategy ?? new PickupWorkerRoundRobin($this->workerPool);
+    }
     
     public function getSocketAddress(): SocketAddress
     {
@@ -49,7 +59,7 @@ final class SocketListener
         EventLoop::queue(function () use ($server) {
             while ($socket = $server->accept()) {
                 // Select free worker
-                $foundedWorker              = $this->workerPool->pickupWorker($this->getWorkers())?->getWorker();
+                $foundedWorker              = $this->pickupWorkerStrategy->pickupWorker(possibleWorkers: $this->workers)?->getWorker();
                 
                 if ($foundedWorker === null) {
                     $socket->close();

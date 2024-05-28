@@ -38,7 +38,7 @@ use function Amp\async;
  * @template-covariant TReceive
  * @template TSend
  */
-class WorkerPool
+class WorkerPool                    implements WorkerPoolI
 {
     protected int $workerStartTimeout = 5;
     
@@ -237,7 +237,7 @@ class WorkerPool
         return $this->workers;
     }
     
-    public function pickupWorker(array $possibleWorkers = null): ?WorkerDescriptor
+    public function pickupWorker(WorkerTypeEnum $workerType = null, array $possibleWorkers = null): ?WorkerDescriptor
     {
         foreach ($this->workers as $workerDescriptor) {
             
