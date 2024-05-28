@@ -53,7 +53,13 @@ class WorkerProcessContext          implements \Psr\Log\LoggerInterface, \Psr\Lo
     private readonly Future $joinFuture;
     private string $watcher     = '';
     private bool $isReady       = false;
-    private bool  $isUsed        = false;
+    private bool  $isUsed       = false;
+    private int $jobsCount      = 0;
+    /**
+     * Equals true if the client uses the worker exclusively.
+     * @var bool
+     */
+    private bool $isExclusive   = false;
     private array $transferredSockets = [];
     
     /**
@@ -92,9 +98,21 @@ class WorkerProcessContext          implements \Psr\Log\LoggerInterface, \Psr\Lo
         return $this->isUsed;
     }
     
+    public function isExclusive(): bool
+    {
+        return $this->isExclusive;
+    }
+    
+    public function getJobsCount(): int
+    {
+        return $this->jobsCount;
+    }
+    
     public function addTransferredSocket(string $socketId, ResourceSocket|Socket $socket): self
     {
         $this->transferredSockets[$socketId] = $socket;
+        $this->isUsed           = true;
+        $this->jobsCount++;
         
         return $this;
     }
@@ -106,8 +124,17 @@ class WorkerProcessContext          implements \Psr\Log\LoggerInterface, \Psr\Lo
         }
         
         if(array_key_exists($socketId, $this->transferredSockets)) {
+            $this->jobsCount--;
             $this->transferredSockets[$socketId]->close();
             unset($this->transferredSockets[$socketId]);
+        }
+        
+        if($this->jobsCount < 0) {
+            $this->jobsCount        = 0;
+        }
+        
+        if($this->jobsCount === 0) {
+            $this->isUsed           = false;
         }
         
         return $this;
