@@ -44,8 +44,8 @@ class Worker
     protected ?ServerSocketFactory $socketPipeFactory = null;
     
     private LoggerInterface $logger;
-    private array             $messageHandlers = [];
-    private WorkerIpcHub|null $jobIpc          = null;
+    private array                $messageHandlers = [];
+    private WorkerIpcServer|null $jobIpc          = null;
     
     public function __construct(
         private readonly int     $id,
@@ -60,7 +60,7 @@ class Worker
         $this->loopCancellation     = new DeferredCancellation();
         
         if($this->workerType === WorkerTypeEnum::JOB->value) {
-            $this->jobIpc           = new WorkerIpcHub($this->id);
+            $this->jobIpc           = new WorkerIpcServer($this->id);
         }
         
         if($logger !== null) {

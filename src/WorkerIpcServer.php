@@ -19,7 +19,7 @@ use const Amp\Process\IS_WINDOWS;
  * Allows organizing a connection pool for communication between workers.
  * The method getJobQueue() returns the task queue where Job, accepted via an IPC channel, is written.
  */
-final class WorkerIpcHub
+final class WorkerIpcServer
 {
     use ForbidCloning;
     use ForbidSerialization;
@@ -34,18 +34,26 @@ final class WorkerIpcHub
     
     private Queue $jobQueue;
     
+    public static function getSocketAddress(int $workerId): SocketAddress
+    {
+        if (IS_WINDOWS) {
+            return new Socket\InternetAddress('127.0.0.1', 10000 + $workerId);
+        } else {
+            return new Socket\UnixAddress(\sys_get_temp_dir() . '/worker-' . $workerId . '.sock');
+        }
+    }
+    
     /**
      * @param int $workerId
      *
      * @throws Socket\SocketException
      */
     public function __construct(int $workerId) {
-        if (IS_WINDOWS) {
-            $address                = new Socket\InternetAddress('127.0.0.1', 10000 + $workerId);
-        } else {
-            $path                   = \sys_get_temp_dir() . '/worker-' . $workerId . '.sock';
-            $address                = new Socket\UnixAddress($path);
-            $this->toUnlink         = $path;
+        
+        $address                    = self::getSocketAddress($workerId);
+        
+        if (!IS_WINDOWS) {
+            $this->toUnlink         = \sys_get_temp_dir() . '/worker-' . $workerId . '.sock';
         }
         
         $this->address              = $address;
