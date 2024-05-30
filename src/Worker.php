@@ -17,6 +17,8 @@ use Amp\TimeoutCancellation;
 use CT\AmpServer\Messages\MessagePingPong;
 use CT\AmpServer\SocketPipe\SocketPipeFactoryWindows;
 use Psr\Log\LoggerInterface;
+use Amp\Parallel\Ipc\IpcHub;
+use Revolt\EventLoop;
 
 /**
  * Abstraction of Worker Representation within the worker process.
@@ -42,7 +44,8 @@ class Worker
     protected ?ServerSocketFactory $socketPipeFactory = null;
     
     private LoggerInterface $logger;
-    private array           $messageHandlers = [];
+    private array             $messageHandlers = [];
+    private WorkerIpcHub|null $jobIpc          = null;
     
     public function __construct(
         private readonly int     $id,
@@ -55,6 +58,10 @@ class Worker
         $this->queue                = new Queue();
         $this->iterator             = $this->queue->iterate();
         $this->loopCancellation     = new DeferredCancellation();
+        
+        if($this->workerType === WorkerTypeEnum::JOB->value) {
+            $this->jobIpc           = new WorkerIpcHub($this->id);
+        }
         
         if($logger !== null) {
             $this->logger           = $logger;
@@ -125,6 +132,10 @@ class Worker
     {
         $abortCancellation          = $this->loopCancellation->getCancellation();
         
+        if($this->workerType === WorkerTypeEnum::JOB->value) {
+            EventLoop::queue($this->jobLoop(...), $abortCancellation);
+        }
+        
         try {
             while ($message = $this->ipcChannel->receive($abortCancellation)) {
                 
@@ -151,6 +162,11 @@ class Worker
             $this->queue->complete();
             $this->ipcForTransferSocket?->close();
         }
+    }
+    
+    protected function jobLoop(Cancellation $cancellation = null): void
+    {
+        while ()
     }
     
     public function addEventHandler(callable $handler): self
