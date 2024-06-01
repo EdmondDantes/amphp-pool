@@ -51,6 +51,7 @@ class Worker
     
     public function __construct(
         private readonly int     $id,
+        private readonly int     $groupId,
         private readonly Channel $ipcChannel,
         private readonly string  $key,
         private readonly string  $uri,
@@ -86,6 +87,11 @@ class Worker
     public function getWorkerId(): int
     {
         return $this->id;
+    }
+    
+    public function getWorkerGroupId(): int
+    {
+        return $this->groupId;
     }
     
     public function getWorkerType(): string
@@ -184,7 +190,7 @@ class Worker
             return;
         }
         
-        $this->workerState          = new WorkerStateStorage($this->id, true);
+        $this->workerState          = new WorkerStateStorage($this->id, $this->groupId, true);
         $this->workerState->workerReady();
         
         $jobQueueIterator           = $this->jobIpc->getJobQueue()->iterate();

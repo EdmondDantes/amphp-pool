@@ -19,7 +19,7 @@ final class WorkersStateInfo
             $storage                = $this->getWorkerStateStorage($workerId);
             $storage->update();
             
-            return new WorkerState($storage->isWorkerReady(), $storage->getJobCount());
+            return new WorkerState($storage->isWorkerReady(), $storage->getJobCount(), $storage->getWorkerGroupId());
         } catch (\Throwable) {
             return null;
         }

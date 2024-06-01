@@ -17,10 +17,10 @@ final class WorkerIpcClient
     
     private array $workerSockets = [];
     
-    public function __construct(private int $workerId, private Cancellation|null $cancellation = null)
+    public function __construct(private int $workerId, private int $workerGroupId = 0, private Cancellation|null $cancellation = null)
     {
         if($this->cancellation === null) {
-            $this->cancellation = new TimeoutCancellation(5);
+            $this->cancellation     = new TimeoutCancellation(5);
         }
     }
     

@@ -19,14 +19,19 @@ final class WorkerStateStorage
     private bool $isReady           = true;
     private int $jobCount           = 0;
     
-    public function __construct(private readonly int $workerId, private readonly bool $isWrite = false)
+    public function __construct(private readonly int $workerId, private int $groupId = 0, private readonly bool $isWrite = false)
     {
-        $this->key                  = ftok(__FILE__, 'w'.$workerId);
+        $this->key                  = ftok(__FILE__.'/'.$this->workerId, 'w');
     }
     
     public function getWorkerId(): int
     {
         return $this->workerId;
+    }
+    
+    public function getWorkerGroupId(): int
+    {
+        return $this->groupId;
     }
     
     public function workerReady(): void
@@ -71,14 +76,14 @@ final class WorkerStateStorage
             return;
         }
         
-        [$isReady, $this->jobCount] = \unpack('Q*', $data);
+        [$isReady, $this->jobCount, $this->groupId] = \unpack('Q*', $data);
         
         $this->isReady              = (bool)$isReady;
     }
     
     private function commit(): void
     {
-        $this->write(\pack('Q*', (int)$this->isReady, $this->jobCount));
+        $this->write(\pack('Q*', (int)$this->isReady, $this->jobCount, $this->groupId));
     }
     
     private function open(): void
