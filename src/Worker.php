@@ -16,8 +16,8 @@ use Amp\Sync\Channel;
 use Amp\TimeoutCancellation;
 use CT\AmpServer\Messages\MessagePingPong;
 use CT\AmpServer\SocketPipe\SocketPipeFactoryWindows;
+use CT\AmpServer\WorkerState\WorkerStateStorage;
 use Psr\Log\LoggerInterface;
-use Amp\Parallel\Ipc\IpcHub;
 use Revolt\EventLoop;
 
 /**
@@ -46,6 +46,8 @@ class Worker
     private LoggerInterface $logger;
     private array                $messageHandlers = [];
     private WorkerIpcServer|null $jobIpc          = null;
+    private mixed                $jobHandler      = null;
+    private WorkerStateStorage|null $workerState  = null;
     
     public function __construct(
         private readonly int     $id,
@@ -128,6 +130,18 @@ class Worker
         return $this->socketPipeFactory;
     }
     
+    public function getJobHandler(): mixed
+    {
+        return $this->jobHandler;
+    }
+    
+    public function setJobHandler(callable $jobHandler): self
+    {
+        $this->jobHandler           = $jobHandler;
+        
+        return $this;
+    }
+    
     public function mainLoop(): void
     {
         $abortCancellation          = $this->loopCancellation->getCancellation();
@@ -166,7 +180,37 @@ class Worker
     
     protected function jobLoop(Cancellation $cancellation = null): void
     {
-        while ()
+        if(false === is_callable($this->jobHandler)) {
+            return;
+        }
+        
+        $this->workerState          = new WorkerStateStorage($this->id, true);
+        $this->workerState->workerReady();
+        
+        $jobQueueIterator           = $this->jobIpc->getJobQueue()->iterate();
+        
+        while ($jobQueueIterator->continue($cancellation)) {
+            $data                   = $jobQueueIterator->getValue();
+            
+            if($data === null) {
+                continue;
+            }
+            
+            EventLoop::queue(function () use ($data, $cancellation) {
+                
+                $jobHandler         = $this->jobHandler;
+                
+                $this->workerState->incrementJobCount();
+                
+                try {
+                    $jobHandler($data, $this, $cancellation);
+                } catch (\Throwable $exception) {
+                    $this->logger->error('Error processing job', ['exception' => $exception]);
+                } finally {
+                    $this->workerState->decrementJobCount();
+                }
+            });
+        }
     }
     
     public function addEventHandler(callable $handler): self
