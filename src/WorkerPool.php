@@ -22,6 +22,7 @@ use Amp\Socket\ResourceSocket;
 use Amp\Socket\ServerSocket;
 use Amp\Sync\ChannelException;
 use CT\AmpServer\Messages\MessageSocketTransfer;
+use CT\AmpServer\PoolState\PoolStateStorage;
 use CT\AmpServer\SocketPipe\SocketListener;
 use CT\AmpServer\SocketPipe\SocketListenerProvider;
 use CT\AmpServer\SocketPipe\SocketPipeProvider;
@@ -59,6 +60,8 @@ class WorkerPool                    implements WorkerPoolI
     
     private ?SocketListenerProvider $listenerProvider = null;
     
+    private PoolStateStorage $poolState;
+    
     public function __construct(
         public readonly int $reactorCount,
         public readonly int $jobCount,
@@ -94,8 +97,14 @@ class WorkerPool                    implements WorkerPoolI
         }
         
         $this->running              = true;
-        
+
         try {
+            
+            $groups                 = $this->calculateGroups();
+            
+            $this->poolState        = new PoolStateStorage(count($groups));
+            $this->poolState->setGroups($groups);
+            
             foreach ($this->workers as $worker) {
                 $this->startWorker($worker);
             }
@@ -124,6 +133,7 @@ class WorkerPool                    implements WorkerPoolI
         
         $context->send([
             'id'                    => $workerDescriptor->id,
+            'groupId'               => $workerDescriptor->groupId,
             'uri'                   => $this->hub->getUri(),
             'key'                   => $key,
             'type'                  => $workerDescriptor->type->value,
@@ -208,21 +218,22 @@ class WorkerPool                    implements WorkerPoolI
         })->ignore());
     }
     
-    public function fillWorkersWith(string $workerClass): void
+    public function fillWorkersWith(string $workerClass, int $groupId = 0): void
     {
         $index                      = 1;
         
         if($this->reactorCount > 0) {
             foreach (range($index, $this->reactorCount) as $id) {
-                $this->addWorker(new WorkerDescriptor($id, WorkerTypeEnum::REACTOR, $workerClass));
+                $this->addWorker(new WorkerDescriptor($id, WorkerTypeEnum::REACTOR, $groupId, $workerClass));
             }
         }
         
         $index                      = $this->reactorCount + 1;
+        $groupId++;
         
         if($this->jobCount > 0) {
             foreach (range($index, $this->jobCount + 1) as $id) {
-                $this->addWorker(new WorkerDescriptor($id, WorkerTypeEnum::JOB, $workerClass));
+                $this->addWorker(new WorkerDescriptor($id, WorkerTypeEnum::JOB, $groupId, $workerClass));
             }
         }
     }
@@ -311,6 +322,24 @@ class WorkerPool                    implements WorkerPoolI
         } finally {
             $this->workers          = [];
         }
+    }
+    
+    private function calculateGroups(): array
+    {
+        $groups                     = [];
+        
+        foreach ($this->workers as $worker) {
+            
+            if(false === array_key_exists($worker->groupId, $groups)) {
+                $groups[$worker->groupId] = [$worker->id, 0];
+            }
+            
+            if($groups[$worker->groupId][1] < $worker->id) {
+                $groups[$worker->groupId][1] = $worker->id;
+            }
+        }
+        
+        return $groups;
     }
     
     public function __destruct()

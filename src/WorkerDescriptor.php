@@ -13,6 +13,7 @@ class WorkerDescriptor
     public function __construct(
         public readonly int $id,
         public readonly WorkerTypeEnum $type,
+        public readonly int $groupId,
         public readonly string $entryPointClassName
     ) {}
     

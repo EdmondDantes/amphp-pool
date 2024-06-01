@@ -14,7 +14,7 @@ return static function (Channel $channel): void
     
     try {
         // Read random IPC hub URI and associated key from a process channel.
-        ['id' => $id, 'uri' => $uri, 'key' => $key, 'type' => $type, 'entryPoint' => $entryPointClassName]
+        ['id' => $id, 'group_id' => $groupId, 'uri' => $uri, 'key' => $key, 'type' => $type, 'entryPoint' => $entryPointClassName]
             = $channel->receive();
         
     } catch (\Throwable $exception) {
@@ -42,7 +42,7 @@ return static function (Channel $channel): void
             throw new \RuntimeException('Entry point class must implement WorkerEntryPointI');
         }
         
-        $strategy                   = new \CT\AmpServer\Worker((int)$id, $channel, $key, $uri, $type);
+        $strategy                   = new \CT\AmpServer\Worker((int)$id, (int)$groupId, $channel, $key, $uri, $type);
         $entryPoint->initialize($strategy);
         $strategy->initWorker();
         

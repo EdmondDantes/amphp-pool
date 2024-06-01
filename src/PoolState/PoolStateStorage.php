@@ -49,6 +49,17 @@ final class PoolStateStorage
         return self::GROUP_INFO_SIZE * $this->groupsCount;
     }
     
+    public function setGroups(array $groups): void
+    {
+        foreach ($groups as $groupId => [$lowestWorkerId, $highestWorkerId]) {
+            if(\array_key_exists($groupId, $this->groups)) {
+                $this->groups[$groupId] = [$lowestWorkerId, $highestWorkerId];
+            }
+        }
+        
+        $this->commit();
+    }
+    
     public function setWorkerGroupInfo(int $groupId, int $lowestWorkerId, int $highestWorkerId): void
     {
         if(false === array_key_exists($groupId, $this->groups)) {
