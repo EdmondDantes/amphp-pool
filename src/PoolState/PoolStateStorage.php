@@ -28,6 +28,8 @@ final class PoolStateStorage
      * @var array<int, array<int, int>>
      */
     private array $groups           = [];
+    private int $updatedAt          = 0;
+    private int $updateInterval     = 5 * 60;
     private bool $isWrite           = false;
     
     public function __construct(private readonly int $groupsCount = 0)
@@ -62,12 +64,25 @@ final class PoolStateStorage
     
     public function setWorkerGroupInfo(int $groupId, int $lowestWorkerId, int $highestWorkerId): void
     {
-        if(false === array_key_exists($groupId, $this->groups)) {
+        if(false === \array_key_exists($groupId, $this->groups)) {
             throw new \RuntimeException('Group ID is out of range');
         }
         
         $this->groups[$groupId]     = [$groupId, $lowestWorkerId, $highestWorkerId, 0];
         $this->commit();
+    }
+    
+    public function findGroupInfo(int $groupId): array
+    {
+        if($this->updatedAt + $this->updateInterval < \time()) {
+            $this->update();
+        }
+        
+        if(\array_key_exists($groupId, $this->groups)) {
+            return $this->groups[$groupId];
+        }
+        
+        return [0, 0];
     }
     
     public function update(): void

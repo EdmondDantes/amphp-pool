@@ -15,7 +15,9 @@ use Amp\Socket\ServerSocketFactory;
 use Amp\Sync\Channel;
 use Amp\TimeoutCancellation;
 use CT\AmpServer\Messages\MessagePingPong;
+use CT\AmpServer\PoolState\PoolStateStorage;
 use CT\AmpServer\SocketPipe\SocketPipeFactoryWindows;
+use CT\AmpServer\WorkerState\WorkersStateInfo;
 use CT\AmpServer\WorkerState\WorkerStateStorage;
 use Psr\Log\LoggerInterface;
 use Revolt\EventLoop;
@@ -245,12 +247,6 @@ class Worker
     public function __destruct()
     {
         $this->close();
-    }
-    
-    public function send(mixed $data): void
-    {
-        // TODO: Implement send() method.
-        //$this->ipcChannel->send(new WorkerMessage(WorkerMessageType::DATA, $data));
     }
     
     public function close(): void
