@@ -29,7 +29,7 @@ final class WorkerIpcClient
     private array $resultsFutures = [];
     private int $maxTryCount        = 3;
     
-    public function __construct(private int $workerId, private int $workerGroupId = 0, private Cancellation|null $cancellation = null)
+    public function __construct(private readonly int $workerId, private readonly int $workerGroupId = 0, private Cancellation|null $cancellation = null)
     {
         if($this->cancellation === null) {
             $this->cancellation     = new TimeoutCancellation(5);
