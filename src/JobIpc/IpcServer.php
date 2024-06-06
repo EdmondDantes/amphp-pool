@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpServer;
+namespace CT\AmpServer\JobIpc;
 
 use Amp\ByteStream\ReadableResourceStream;
 use Amp\ByteStream\StreamChannel;
@@ -19,7 +19,7 @@ use const Amp\Process\IS_WINDOWS;
  * Allows organizing a connection pool for communication between workers.
  * The method getJobQueue() returns the task queue where Job, accepted via an IPC channel, is written.
  */
-final class WorkerIpcServer
+final class IpcServer
 {
     use ForbidCloning;
     use ForbidSerialization;

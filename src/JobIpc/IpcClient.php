@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpServer;
+namespace CT\AmpServer\JobIpc;
 
 use Amp\ByteStream\StreamException;
 use Amp\Cancellation;
@@ -18,18 +18,24 @@ use CT\AmpServer\WorkerState\WorkersStateInfo;
 use Revolt\EventLoop;
 use function Amp\Socket\socketConnector;
 
-final class WorkerIpcClient
+final class IpcClient
 {
     use ForbidCloning;
     use ForbidSerialization;
     
-    private array $workerSockets = [];
+    private array $workerSockets    = [];
+    private JobTransportI|null $jobTransport      = null;
     private WorkersStateInfo|null $workersInfo    = null;
     private PoolStateStorage|null $poolState      = null;
     private array $resultsFutures = [];
     private int $maxTryCount        = 3;
     
-    public function __construct(private readonly int $workerId, private readonly int $workerGroupId = 0, private Cancellation|null $cancellation = null)
+    public function __construct(
+        private readonly int $workerId,
+        private readonly int $workerGroupId = 0,
+        JobTransportI $jobTransport = null,
+        private Cancellation|null $cancellation = null
+    )
     {
         if($this->cancellation === null) {
             $this->cancellation     = new TimeoutCancellation(5);
@@ -37,6 +43,7 @@ final class WorkerIpcClient
         
         $this->workersInfo          = new WorkersStateInfo();
         $this->poolState            = new PoolStateStorage();
+        $this->jobTransport         = $jobTransport ?? new JobTransport();
     }
     
     public function sendJob(string $data, int $workerGroupId, bool $awaitResult = false, int $workerId = null): Future|null
@@ -70,7 +77,7 @@ final class WorkerIpcClient
                 }
                 
             } catch (NoAvailableWorkers $exception) {
-                $deferred?->complete();
+                $deferred?->complete($exception);
                 throw $exception;
             } catch (StreamException) {
                 $tryCount++;
@@ -91,25 +98,14 @@ final class WorkerIpcClient
         }
         
         $socket                     = $this->getWorkerSocket($foundedWorkerId);
-
-        if($deferred !== null) {
-            $deferred               = new DeferredFuture();
-            $data                   = pack('Q*', spl_object_id($deferred), strlen($data)).$data;
-        } else {
-            $data                   = pack('Q*', 0, strlen($data)).$data;
-        }
+        $jobId                      = $deferred !== null ? spl_object_id($deferred) : 0;
         
         try {
-            $socket->write($data);
+            $socket->write($this->jobTransport->createRequest($jobId, $this->workerId, $workerGroupId, $data));
         } catch (\Throwable $exception) {
-            $deferred->complete(null);
+            $deferred->complete($exception);
             throw $exception;
         }
-    }
-    
-    public function receiveResult(): mixed
-    {
-    
     }
     
     public function __destruct()
@@ -171,10 +167,10 @@ final class WorkerIpcClient
         $connector                  = socketConnector();
         
         $client                     = $connector->connect(
-            WorkerIpcServer::getSocketAddress($workerId), cancellation: $this->cancellation
+            IpcServer::getSocketAddress($workerId), cancellation: $this->cancellation
         );
         
-        $client->write(WorkerIpcServer::HAND_SHAKE);
+        $client->write(IpcServer::HAND_SHAKE);
         
         return $client;
     }

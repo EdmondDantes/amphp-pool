@@ -14,10 +14,10 @@ use Amp\Socket\ResourceSocket;
 use Amp\Socket\ServerSocketFactory;
 use Amp\Sync\Channel;
 use Amp\TimeoutCancellation;
+use CT\AmpServer\JobIpc\JobHandlerI;
+use CT\AmpServer\JobIpc\IpcServer;
 use CT\AmpServer\Messages\MessagePingPong;
-use CT\AmpServer\PoolState\PoolStateStorage;
 use CT\AmpServer\SocketPipe\SocketPipeFactoryWindows;
-use CT\AmpServer\WorkerState\WorkersStateInfo;
 use CT\AmpServer\WorkerState\WorkerStateStorage;
 use Psr\Log\LoggerInterface;
 use Revolt\EventLoop;
@@ -30,7 +30,7 @@ use Revolt\EventLoop;
  * @template TSend
  * @implements Channel<TReceive, TSend>
  */
-class Worker
+class Worker                        implements WorkerI
 {
     protected int $timeout = 5;
     
@@ -46,10 +46,10 @@ class Worker
     protected ?ServerSocketFactory $socketPipeFactory = null;
     
     private LoggerInterface $logger;
-    private array                $messageHandlers = [];
-    private WorkerIpcServer|null $jobIpc          = null;
-    private mixed                $jobHandler      = null;
-    private WorkerStateStorage|null $workerState  = null;
+    private array            $messageHandlers = [];
+    private IpcServer|null   $jobIpc          = null;
+    private JobHandlerI|null $jobHandler      = null;
+    private WorkerStateStorage|null $workerState = null;
     
     public function __construct(
         private readonly int     $id,
@@ -65,7 +65,7 @@ class Worker
         $this->loopCancellation     = new DeferredCancellation();
         
         if($this->workerType === WorkerTypeEnum::JOB->value) {
-            $this->jobIpc           = new WorkerIpcServer($this->id);
+            $this->jobIpc           = new IpcServer($this->id);
         }
         
         if($logger !== null) {
@@ -138,12 +138,12 @@ class Worker
         return $this->socketPipeFactory;
     }
     
-    public function getJobHandler(): mixed
+    public function getJobHandler(): JobHandlerI|null
     {
         return $this->jobHandler;
     }
     
-    public function setJobHandler(callable $jobHandler): self
+    public function setJobHandler(JobHandlerI $jobHandler): self
     {
         $this->jobHandler           = $jobHandler;
         
@@ -188,7 +188,7 @@ class Worker
     
     protected function jobLoop(Cancellation $cancellation = null): void
     {
-        if(false === is_callable($this->jobHandler)) {
+        if(null === $this->jobHandler) {
             return;
         }
         
@@ -198,24 +198,45 @@ class Worker
         $jobQueueIterator           = $this->jobIpc->getJobQueue()->iterate();
         
         while ($jobQueueIterator->continue($cancellation)) {
-            $data                   = $jobQueueIterator->getValue();
+            
+            if(null === $this->jobHandler) {
+                return;
+            }
+            
+            [$channel, $data]       = $jobQueueIterator->getValue();
             
             if($data === null) {
                 continue;
             }
             
-            EventLoop::queue(function () use ($data, $cancellation) {
+            EventLoop::queue(function () use ($channel, $data, $cancellation) {
                 
-                $jobHandler         = $this->jobHandler;
+                if($this->jobHandler === null) {
+                    return;
+                }
                 
                 $this->workerState->incrementJobCount();
                 
+                $result             = null;
+                
                 try {
-                    $jobHandler($data, $this, $cancellation);
+                    $result         = $this->jobHandler->invokeJob($data, $this, $cancellation);
                 } catch (\Throwable $exception) {
                     $this->logger->error('Error processing job', ['exception' => $exception]);
                 } finally {
                     $this->workerState->decrementJobCount();
+                }
+                
+                if($result !== null) {
+                    // Try to send the result twice
+                    for($i = 1; $i <= 2; $i++) {
+                        try {
+                            $channel->send($result);
+                            break;
+                        } catch (\Throwable $exception) {
+                            $this->logger->error('Error sending job result (try number '.$i.')', ['exception' => $exception]);
+                        }
+                    }
                 }
             });
         }
@@ -223,7 +244,7 @@ class Worker
     
     public function addEventHandler(callable $handler): self
     {
-        $this->messageHandlers[] = $handler;
+        $this->messageHandlers[]    = $handler;
         
         return $this;
     }
