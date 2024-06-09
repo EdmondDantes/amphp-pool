@@ -36,13 +36,9 @@ final class PoolStateStorage
     {
         $this->key                  = ftok(__FILE__, 'p');
         
-        if($this->groupsCount < 1) {
-            throw new \RuntimeException('Invalid groups count');
-        }
-        
         if($this->groupsCount > 0) {
             $this->isWrite          = true;
-            $this->groups           = \array_fill(0, $this->groupsCount, [0, 0]);
+            $this->groups           = \array_fill(1, $this->groupsCount, [0, 0, 0, 0]);
         }
     }
     
@@ -54,6 +50,11 @@ final class PoolStateStorage
     public function setGroups(array $groups): void
     {
         foreach ($groups as $groupId => [$lowestWorkerId, $highestWorkerId]) {
+            
+            if($groupId <= 0) {
+                continue;
+            }
+            
             if(\array_key_exists($groupId, $this->groups)) {
                 $this->groups[$groupId] = [$lowestWorkerId, $highestWorkerId];
             }
@@ -64,6 +65,10 @@ final class PoolStateStorage
     
     public function setWorkerGroupInfo(int $groupId, int $lowestWorkerId, int $highestWorkerId): void
     {
+        if($groupId === 0) {
+            throw new \RuntimeException('Group ID is out of range: not allowed to use 0');
+        }
+        
         if(false === \array_key_exists($groupId, $this->groups)) {
             throw new \RuntimeException('Group ID is out of range');
         }
@@ -79,7 +84,8 @@ final class PoolStateStorage
         }
         
         if(\array_key_exists($groupId, $this->groups)) {
-            return $this->groups[$groupId];
+            [, $lowestWorkerId, $highestWorkerId] = $this->groups[$groupId];
+            return [$lowestWorkerId, $highestWorkerId];
         }
         
         return [0, 0];
@@ -96,7 +102,11 @@ final class PoolStateStorage
             $lowestWorkerId         = $groupInfo[1] ?? 0;
             $highestWorkerId        = $groupInfo[2] ?? 0;
             
-            $this->groups[$groupId] = [$lowestWorkerId, $highestWorkerId];
+            if($groupId === 0) {
+                continue;
+            }
+            
+            $this->groups[$groupId] = [$groupId, $lowestWorkerId, $highestWorkerId, 0];
         }
     }
     
@@ -107,19 +117,29 @@ final class PoolStateStorage
     
     private function open(): void
     {
-        if($this->isWrite) {
-            $this->shmop            = \shmop_open($this->key, 'c', 0644, $this->getStructureSize());
-        } else {
-            $this->shmop            = \shmop_open($this->key, 'a', 0, 0);
+        \set_error_handler(static function($number, $error, $file = null, $line = null) {
+            throw new \ErrorException($error, 0, $number, $file, $line);
+        });
+        
+        try {
+            if($this->isWrite) {
+                $shmop              = \shmop_open($this->key, 'c', 0644, $this->getStructureSize());
+            } else {
+                $shmop              = \shmop_open($this->key, 'a', 0, 0);
+            }
+        } finally {
+            \restore_error_handler();
         }
+        
+        if($shmop === false) {
+            throw new \RuntimeException('Failed to open shared memory');
+        }
+        
+        $this->shmop                = $shmop;
     }
     
     private function read(): string
     {
-        if($this->isWrite) {
-            throw new \RuntimeException('This instance PoolStorage is write-only');
-        }
-        
         if($this->shmop === null) {
             $this->open();
         }
@@ -135,7 +155,7 @@ final class PoolStateStorage
     
     private function write(string $data): void
     {
-        if($this->isWrite) {
+        if(false === $this->isWrite) {
             throw new \RuntimeException('This instance PoolStorage is read-only');
         }
         
@@ -143,8 +163,18 @@ final class PoolStateStorage
             $this->open();
         }
         
-        if(\shmop_write($this->shmop, $data, 0) !== strlen($data)) {
-            throw new \RuntimeException('Failed to write data to shared memory');
+        set_error_handler(static function($number, $error, $file = null, $line = null) {
+            throw new \ErrorException($error, 0, $number, $file, $line);
+        });
+        
+        try {
+            $count                  = \shmop_write($this->shmop, $data, 0);
+        } finally {
+            \restore_error_handler();
+        }
+        
+        if($count !== strlen($data)) {
+            throw new \RuntimeException('Failed to write data to shared memory: wrote '.$count.' bytes from '.strlen($data));
         }
     }
     

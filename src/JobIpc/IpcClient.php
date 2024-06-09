@@ -31,8 +31,8 @@ final class IpcClient
     /**
      * @var StreamChannel[]
      */
-    private array $workerChannels               = [];
-    private JobTransportI|null $jobTransport   = null;
+    private array                 $workerChannels = [];
+    private JobSerializerI|null   $jobTransport   = null;
     private WorkersStateInfo|null $workersInfo    = null;
     private PoolStateStorage|null $poolState      = null;
     /**
@@ -45,15 +45,15 @@ final class IpcClient
     private string $futureTimeoutCallbackId;
     
     public function __construct(
-        private readonly int $workerId,
-        private readonly int $workerGroupId = 0,
-        JobTransportI $jobTransport = null,
+        private readonly int               $workerId,
+        private readonly int               $workerGroupId = 0,
+        JobSerializerI                     $jobTransport = null,
         private readonly Cancellation|null $cancellation = null
     )
     {
         $this->workersInfo          = new WorkersStateInfo();
         $this->poolState            = new PoolStateStorage();
-        $this->jobTransport         = $jobTransport ?? new JobTransport();
+        $this->jobTransport         = $jobTransport ?? new JobSerializer();
     }
     
     public function mainLoop(): void

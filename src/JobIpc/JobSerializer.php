@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace CT\AmpServer\JobIpc;
 
-final class JobTransport            implements JobTransportI
+final class JobSerializer            implements JobSerializerI
 {
     final const int HEADER_LENGTH   = 16;
     

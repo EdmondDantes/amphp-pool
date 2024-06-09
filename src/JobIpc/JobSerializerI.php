@@ -6,9 +6,9 @@ namespace CT\AmpServer\JobIpc;
 /**
  * Interface JobTransportI
  *
- * This interface defines the methods that a job transport must implement.
+ * The interface is responsible for serializing and deserializing JOBs.
  */
-interface JobTransportI
+interface JobSerializerI
 {
     public function createRequest(int $jobId, int $fromWorkerId, int $workerGroupId, string $data): string;
     public function parseRequest(string $request): JobRequest;
