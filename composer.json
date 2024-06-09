@@ -16,5 +16,13 @@
     },
     "autoload": {
         "psr-4": {"CT\\AmpServer\\": ["./src"]}
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "CT\\AmpServer\\": "./tests"
+        }
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.2"
     }
 }

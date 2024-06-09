@@ -19,6 +19,9 @@ use CT\AmpServer\WorkerState\WorkersStateInfo;
 use Revolt\EventLoop;
 use function Amp\Socket\socketConnector;
 
+/**
+ * The class is responsible for sending JOBs to other workers.
+ */
 final class IpcClient
 {
     use ForbidCloning;

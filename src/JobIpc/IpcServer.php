@@ -9,6 +9,7 @@ use Amp\Cancellation;
 use Amp\ForbidCloning;
 use Amp\ForbidSerialization;
 use Amp\Pipeline\Queue;
+use Amp\Serialization\PassthroughSerializer;
 use Amp\Socket;
 use Amp\Socket\SocketAddress;
 use Amp\TimeoutCancellation;
@@ -73,7 +74,10 @@ final class IpcServer
     
     public function close(): void
     {
-        $this->jobQueue->complete();
+        if(false === $this->jobQueue->isComplete()) {
+            $this->jobQueue->complete();
+        }
+        
         $this->server->close();
         $this->unlink();
     }
@@ -85,7 +89,7 @@ final class IpcServer
     
     public function receiveLoop(Cancellation $cancellation = null): void
     {
-        while (!($client = $this->server->accept($cancellation))) {
+        while (($client = $this->server->accept($cancellation)) !== null) {
             EventLoop::queue($this->createWorkerSocket(...), $client, $cancellation);
         }
     }
@@ -107,7 +111,7 @@ final class IpcServer
             $stream->close();
         }
         
-        $channel                    = new StreamChannel($stream, $stream);
+        $channel                    = new StreamChannel($stream, $stream, new PassthroughSerializer());
         
         EventLoop::queue(function () use ($channel, $cancellation) {
             while (($data = $channel->receive($cancellation)) !== null) {
