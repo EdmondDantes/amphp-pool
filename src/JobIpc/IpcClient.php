@@ -127,10 +127,10 @@ final class IpcClient
     
     public function __destruct()
     {
-        $this->stop();
+        $this->close();
     }
     
-    public function stop(): void
+    public function close(): void
     {
         EventLoop::cancel($this->futureTimeoutCallbackId);
         
@@ -139,6 +139,8 @@ final class IpcClient
         
         foreach($channels as $channel) {
             try {
+                // Close connection gracefully
+                $channel->send(IpcServer::CLOSE_HAND_SHAKE);
                 $channel->close();
             } catch (\Throwable) {
             }
@@ -230,8 +232,14 @@ final class IpcClient
                 }
             }
         } catch (\Throwable $exception) {
+            
             unset($this->workerChannels[$workerId]);
-            $channel->close();
+            
+            try {
+                $channel->send(IpcServer::CLOSE_HAND_SHAKE);
+                $channel->close();
+            } catch (\Throwable) {
+            }
         }
     }
     

@@ -26,6 +26,7 @@ final class IpcServer
     use ForbidSerialization;
     
     public const string HAND_SHAKE = 'AM PHP WORKER IPC';
+    public const string CLOSE_HAND_SHAKE = 'AM PHP WORKER IPC CLOSE';
     
     private int $workerId;
     
@@ -115,6 +116,12 @@ final class IpcServer
         
         EventLoop::queue(function () use ($channel, $cancellation) {
             while (($data = $channel->receive($cancellation)) !== null) {
+                
+                if($data === self::CLOSE_HAND_SHAKE) {
+                    $channel->close();
+                    break;
+                }
+                
                 $this->jobQueue->pushAsync([$channel, $data]);
             }
         });
