@@ -3,13 +3,14 @@ declare(strict_types=1);
 
 namespace CT\AmpServer\JobIpc;
 
+use Amp\ByteStream\StreamChannel;
 use Amp\ByteStream\StreamException;
 use Amp\Cancellation;
 use Amp\DeferredFuture;
 use Amp\ForbidCloning;
 use Amp\ForbidSerialization;
 use Amp\Future;
-use Amp\Socket\Socket;
+use Amp\Serialization\PassthroughSerializer;
 use Amp\TimeoutCancellation;
 use Amp\TimeoutException;
 use CT\AmpServer\Exceptions\NoAvailableWorkers;
@@ -27,8 +28,11 @@ final class IpcClient
     use ForbidCloning;
     use ForbidSerialization;
     
-    private array $workerSockets    = [];
-    private JobTransportI|null $jobTransport      = null;
+    /**
+     * @var StreamChannel[]
+     */
+    private array $workerChannels               = [];
+    private JobTransportI|null $jobTransport   = null;
     private WorkersStateInfo|null $workersInfo    = null;
     private PoolStateStorage|null $poolState      = null;
     /**
@@ -108,17 +112,17 @@ final class IpcClient
             throw new NoAvailableWorkers($workerGroupId);
         }
         
-        $socket                     = $this->getWorkerSocket($foundedWorkerId);
+        $channel                    = $this->getWorkerChannel($foundedWorkerId);
         $jobId                      = $deferred !== null ? spl_object_id($deferred) : 0;
         
         try {
-            $socket->write($this->jobTransport->createRequest($jobId, $this->workerId, $workerGroupId, $data));
+            $channel->send($this->jobTransport->createRequest($jobId, $this->workerId, $workerGroupId, $data));
         } catch (\Throwable $exception) {
             $deferred->complete($exception);
             throw $exception;
         }
         
-        return spl_object_id($socket);
+        return spl_object_id($channel);
     }
     
     public function __destruct()
@@ -130,12 +134,12 @@ final class IpcClient
     {
         EventLoop::cancel($this->futureTimeoutCallbackId);
         
-        $sockets                    = $this->workerSockets;
-        $this->workerSockets         = [];
+        $channels                   = $this->workerChannels;
+        $this->workerChannels       = [];
         
-        foreach($sockets as $socket) {
+        foreach($channels as $channel) {
             try {
-                $socket->close();
+                $channel->close();
             } catch (\Throwable) {
             }
         }
@@ -180,20 +184,20 @@ final class IpcClient
         return $lastWorkerId;
     }
     
-    private function getWorkerSocket(int $workerId): Socket
+    private function getWorkerChannel(int $workerId): StreamChannel
     {
-        if(array_key_exists($workerId, $this->workerSockets)) {
-            return $this->workerSockets[$workerId];
+        if(array_key_exists($workerId, $this->workerChannels)) {
+            return $this->workerChannels[$workerId];
         }
         
-        $this->workerSockets[$workerId] = $this->createConnectToWorker($workerId);
+        $this->workerChannels[$workerId] = $this->createWorkerChannel($workerId);
         
         EventLoop::queue($this->readLoop(...), $workerId);
         
-        return $this->workerSockets[$workerId];
+        return $this->workerChannels[$workerId];
     }
     
-    private function createConnectToWorker(int $workerId): Socket
+    private function createWorkerChannel(int $workerId): StreamChannel
     {
         $connector                  = socketConnector();
         
@@ -203,19 +207,19 @@ final class IpcClient
         
         $client->write(IpcServer::HAND_SHAKE);
         
-        return $client;
+        return new StreamChannel($client, $client, new PassthroughSerializer);
     }
     
     private function readLoop(int $workerId): void
     {
-        $socket                     = $this->workerSockets[$workerId] ?? null;
+        $channel                    = $this->workerChannels[$workerId] ?? null;
         
-        if($socket === null) {
+        if($channel === null) {
             return;
         }
         
         try {
-            while (($data = $socket->read($this->cancellation)) !== null) {
+            while (($data = $channel->receive($this->cancellation)) !== null) {
                 
                 $response           = $this->jobTransport->parseResponse($data);
                 
@@ -226,8 +230,8 @@ final class IpcClient
                 }
             }
         } catch (\Throwable $exception) {
-            unset($this->workerSockets[$workerId]);
-            $socket->close();
+            unset($this->workerChannels[$workerId]);
+            $channel->close();
         }
     }
     
