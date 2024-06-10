@@ -15,18 +15,18 @@ final class JobSerializer            implements JobSerializerI
     public function parseRequest(string $request): JobRequest
     {
         // Check minimum length
-        if (strlen($request) < self::HEADER_LENGTH) {
+        if (\strlen($request) < self::HEADER_LENGTH) {
             throw new \InvalidArgumentException('Request is too short (less '.self::HEADER_LENGTH.' bytes)');
         }
         
-        $buffer                     = unpack('V*', substr($request, 0, self::HEADER_LENGTH));
+        $buffer                     = \unpack('V*', substr($request, 0, self::HEADER_LENGTH));
         
-        if(false === $buffer || count($buffer) !== 4) {
-            throw new \RuntimeException('Failed to unpack data');
+        if(false === $buffer || \count($buffer) !== 4) {
+            throw new \RuntimeException('Failed to unpack data for request');
         }
         
         [, $jobId, $fromWorkerId, $workerGroupId, $dataLength] = $buffer;
-        $data                       = substr($request, self::HEADER_LENGTH);
+        $data                       = \substr($request, self::HEADER_LENGTH);
         
         return new JobRequest($jobId, $fromWorkerId, $workerGroupId, $dataLength, $data);
     }
@@ -43,8 +43,15 @@ final class JobSerializer            implements JobSerializerI
             throw new \InvalidArgumentException('Response is too short (less '.self::HEADER_LENGTH.' bytes)');
         }
         
-        [$jobId, $fromWorkerId, $workerGroupId, $dataLength] = unpack('V*', substr($response, 0, self::HEADER_LENGTH));
-        $data                       = substr($response, self::HEADER_LENGTH);
+        $buffer                     = \unpack('V*', \substr($response, 0, self::HEADER_LENGTH));
+        
+        if(false === $buffer || count($buffer) !== 4) {
+            throw new \RuntimeException('Failed to unpack data for response');
+        }
+        
+        [, $jobId, $fromWorkerId, $workerGroupId, $dataLength] = $buffer;
+        
+        $data                       = \substr($response, self::HEADER_LENGTH);
         
         return new JobResponse($jobId, $fromWorkerId, $workerGroupId, $dataLength, $data);
     }
