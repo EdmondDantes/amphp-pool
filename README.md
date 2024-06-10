@@ -1,4 +1,4 @@
-# Am PHP Cluster
+# Am PHP Cluster [![PHP Composer](https://github.com/EdmondDantes/ampCluster/actions/workflows/php-debug.yml/badge.svg)](https://github.com/EdmondDantes/ampCluster/actions/workflows/php-debug.yml)
 
 Implementation of a process pool for handling `TCP/IP` connections similar to `Swoole`, 
 with the ability to create workers of different types and interaction between them.
