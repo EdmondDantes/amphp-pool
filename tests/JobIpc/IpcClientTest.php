@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace CT\AmpServer\JobIpc;
 
+use Amp\CancelledException;
 use Amp\DeferredCancellation;
 use Amp\TimeoutCancellation;
 use CT\AmpServer\PoolState\PoolStateStorage;
@@ -29,10 +30,11 @@ class IpcClientTest                 extends TestCase
         $this->workerState->workerReady();
         
         $this->jobSerializer        = new JobSerializer;
-        $this->ipcServer            = new IpcServer(1);
-        $this->ipcClient            = new IpcClient(2);
         
         $this->jobsLoopCancellation = new DeferredCancellation();
+        
+        $this->ipcServer            = new IpcServer(1);
+        $this->ipcClient            = new IpcClient(2, cancellation: $this->jobsLoopCancellation->getCancellation());
         
         EventLoop::queue($this->ipcServer->receiveLoop(...), $this->jobsLoopCancellation->getCancellation());
         EventLoop::queue($this->jobsLoop(...));
@@ -44,8 +46,9 @@ class IpcClientTest                 extends TestCase
     {
         $this->jobsLoopCancellation->cancel();
         $this->ipcClient->close();
-        $this->jobHandler = null;
+        $this->ipcServer->close();
         $this->poolState->close();
+        $this->jobHandler = null;
     }
 
     public function testDefault(): void
@@ -69,18 +72,22 @@ class IpcClientTest                 extends TestCase
         $iterator                   = $this->ipcServer->getJobQueue()->iterate();
         $abortCancellation          = $this->jobsLoopCancellation->getCancellation();
         
-        while ($iterator->continue($abortCancellation)) {
-            [$channel, $data]       = $iterator->getValue();
-            
-            if(is_callable($this->jobHandler)) {
+        try {
+            while ($iterator->continue($abortCancellation)) {
+                [$channel, $data]   = $iterator->getValue();
                 
-                $request            = $this->jobSerializer->parseRequest($data);
-                $response           = call_user_func($this->jobHandler, $request);
-                
-                if($request->jobId !== 0) {
-                    $channel->send($this->jobSerializer->createResponse($request->jobId, $request->fromWorkerId, $request->workerGroupId, $response ?? ''));
+                if(is_callable($this->jobHandler)) {
+                    
+                    $request        = $this->jobSerializer->parseRequest($data);
+                    $response       = call_user_func($this->jobHandler, $request);
+                    
+                    if($request->jobId !== 0) {
+                        $channel->send($this->jobSerializer->createResponse($request->jobId, $request->fromWorkerId, $request->workerGroupId, $response ?? ''));
+                    }
                 }
             }
+        } catch (CancelledException) {
+            // Ignore
         }
     }
 }

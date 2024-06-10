@@ -6,6 +6,7 @@ namespace CT\AmpServer\JobIpc;
 use Amp\ByteStream\ReadableResourceStream;
 use Amp\ByteStream\StreamChannel;
 use Amp\Cancellation;
+use Amp\CancelledException;
 use Amp\ForbidCloning;
 use Amp\ForbidSerialization;
 use Amp\Pipeline\Queue;
@@ -75,9 +76,11 @@ final class IpcServer
     
     public function close(): void
     {
+        /*
         if(false === $this->jobQueue->isComplete()) {
             $this->jobQueue->complete();
         }
+        */
         
         $this->server->close();
         $this->unlink();
@@ -90,8 +93,11 @@ final class IpcServer
     
     public function receiveLoop(Cancellation $cancellation = null): void
     {
-        while (($client = $this->server->accept($cancellation)) !== null) {
-            EventLoop::queue($this->createWorkerSocket(...), $client, $cancellation);
+        try {
+            while (($client = $this->server->accept($cancellation)) !== null) {
+                EventLoop::queue($this->createWorkerSocket(...), $client, $cancellation);
+            }
+        } catch (CancelledException) {
         }
     }
     
@@ -115,14 +121,21 @@ final class IpcServer
         $channel                    = new StreamChannel($stream, $stream, new PassthroughSerializer());
         
         EventLoop::queue(function () use ($channel, $cancellation) {
-            while (($data = $channel->receive($cancellation)) !== null) {
-                
-                if($data === self::CLOSE_HAND_SHAKE) {
-                    $channel->close();
-                    break;
+            
+            try {
+                while (($data = $channel->receive($cancellation)) !== null) {
+                    
+                    if($data === self::CLOSE_HAND_SHAKE) {
+                        $channel->close();
+                        break;
+                    }
+                    
+                    $this->jobQueue->pushAsync([$channel, $data]);
                 }
-                
-                $this->jobQueue->pushAsync([$channel, $data]);
+            } catch (CancelledException) {
+                // Ignore
+            } finally {
+                $channel->close();
             }
         });
     }
