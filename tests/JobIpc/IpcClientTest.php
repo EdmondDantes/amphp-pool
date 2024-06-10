@@ -6,6 +6,7 @@ namespace CT\AmpServer\JobIpc;
 use Amp\DeferredCancellation;
 use Amp\TimeoutCancellation;
 use CT\AmpServer\PoolState\PoolStateStorage;
+use CT\AmpServer\WorkerState\WorkerStateStorage;
 use PHPUnit\Framework\TestCase;
 use Revolt\EventLoop;
 
@@ -14,6 +15,7 @@ class IpcClientTest                 extends TestCase
     private IpcClient $ipcClient;
     private IpcServer $ipcServer;
     private PoolStateStorage $poolState;
+    private WorkerStateStorage $workerState;
     private DeferredCancellation $jobsLoopCancellation;
     private JobSerializerI       $jobSerializer;
     private mixed                $jobHandler = null;
@@ -22,6 +24,9 @@ class IpcClientTest                 extends TestCase
     {
         $this->poolState            = new PoolStateStorage(1);
         $this->poolState->setWorkerGroupInfo(1, 1, 1);
+        
+        $this->workerState          = new WorkerStateStorage(1, 1, true);
+        $this->workerState->workerReady();
         
         $this->jobSerializer        = new JobSerializer;
         $this->ipcServer            = new IpcServer(1);

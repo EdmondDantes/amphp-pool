@@ -19,7 +19,13 @@ final class JobSerializer            implements JobSerializerI
             throw new \InvalidArgumentException('Request is too short (less '.self::HEADER_LENGTH.' bytes)');
         }
         
-        [$jobId, $fromWorkerId, $workerGroupId, $dataLength] = unpack('V*', substr($request, 0, self::HEADER_LENGTH));
+        $buffer                     = unpack('V*', substr($request, 0, self::HEADER_LENGTH));
+        
+        if(false === $buffer || count($buffer) !== 4) {
+            throw new \RuntimeException('Failed to unpack data');
+        }
+        
+        [, $jobId, $fromWorkerId, $workerGroupId, $dataLength] = $buffer;
         $data                       = substr($request, self::HEADER_LENGTH);
         
         return new JobRequest($jobId, $fromWorkerId, $workerGroupId, $dataLength, $data);

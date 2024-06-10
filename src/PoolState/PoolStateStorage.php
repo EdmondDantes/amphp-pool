@@ -36,6 +36,10 @@ final class PoolStateStorage
     {
         $this->key                  = ftok(__FILE__, 'p');
         
+        if($this->key === -1) {
+            throw new \RuntimeException('Failed to generate key ftok');
+        }
+        
         if($this->groupsCount > 0) {
             $this->isWrite          = true;
             $this->groups           = \array_fill(1, $this->groupsCount, [0, 0, 0, 0]);
@@ -96,7 +100,11 @@ final class PoolStateStorage
         $data                       = $this->read();
         $data                       = \unpack('L*', $data);
         
-        foreach (\array_chunk($data, 4) as $groupInfo) {
+        if(false === $data || \count($data) % 3 !== 0) {
+            throw new \RuntimeException('Failed to unpack data');
+        }
+        
+        foreach (\array_chunk($data, 3) as $groupInfo) {
             
             $groupId                = $groupInfo[0] ?? 0;
             $lowestWorkerId         = $groupInfo[1] ?? 0;

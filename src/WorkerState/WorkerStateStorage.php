@@ -21,7 +21,11 @@ final class WorkerStateStorage
     
     public function __construct(private readonly int $workerId, private int $groupId = 0, private readonly bool $isWrite = false)
     {
-        $this->key                  = ftok(__FILE__.'/'.$this->workerId, 'w');
+        $this->key                  = \ftok(__FILE__, pack('c', $workerId));
+        
+        if($this->key === -1) {
+            throw new \RuntimeException('Failed to generate key ftok');
+        }
     }
     
     public function getWorkerId(): int
@@ -76,23 +80,43 @@ final class WorkerStateStorage
             return;
         }
         
-        [$isReady, $this->jobCount, $this->groupId] = \unpack('Q*', $data);
+        $result                     = \unpack('L*', $data);
+        
+        if(false === $result || count($result) !== 4) {
+            throw new \RuntimeException('Failed to unpack data');
+        }
+        
+        [, $isReady, $this->jobCount, $this->groupId] = $result;
         
         $this->isReady              = (bool)$isReady;
     }
     
     private function commit(): void
     {
-        $this->write(\pack('Q*', (int)$this->isReady, $this->jobCount, $this->groupId));
+        $this->write(\pack('L*', (int)$this->isReady, $this->jobCount, $this->groupId));
     }
     
     private function open(): void
     {
-        if($this->isWrite) {
-            $this->shmop            = \shmop_open($this->key, 'c', 0644, WorkerState::SIZE);
-        } else {
-            $this->shmop            = \shmop_open($this->key, 'a', 0, 0);
+        \set_error_handler(static function($number, $error, $file = null, $line = null) {
+            throw new \ErrorException($error, 0, $number, $file, $line);
+        });
+        
+        try {
+            if($this->isWrite) {
+                $shmop              = \shmop_open($this->key, 'c', 0644, WorkerState::SIZE);
+            } else {
+                $shmop              = \shmop_open($this->key, 'a', 0, 0);
+            }
+        } finally {
+            \restore_error_handler();
         }
+        
+        if($shmop === false) {
+            throw new \RuntimeException('Failed to open shared memory');
+        }
+        
+        $this->shmop                = $shmop;
     }
     
     private function read(): string
@@ -116,7 +140,7 @@ final class WorkerStateStorage
     
     private function write(string $data): void
     {
-        if($this->isWrite) {
+        if(false === $this->isWrite) {
             throw new \RuntimeException('This instance WorkersStateStorage is read-only');
         }
         
