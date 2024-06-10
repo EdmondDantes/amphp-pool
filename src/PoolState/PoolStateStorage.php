@@ -60,7 +60,7 @@ final class PoolStateStorage
             }
             
             if(\array_key_exists($groupId, $this->groups)) {
-                $this->groups[$groupId] = [$lowestWorkerId, $highestWorkerId];
+                $this->groups[$groupId] = [$groupId, $lowestWorkerId, $highestWorkerId, 0];
             }
         }
         
@@ -100,11 +100,11 @@ final class PoolStateStorage
         $data                       = $this->read();
         $data                       = \unpack('L*', $data);
         
-        if(false === $data || \count($data) % 3 !== 0) {
+        if(false === $data) {
             throw new \RuntimeException('Failed to unpack data');
         }
         
-        foreach (\array_chunk($data, 3) as $groupInfo) {
+        foreach (\array_chunk($data, 4) as $groupInfo) {
             
             $groupId                = $groupInfo[0] ?? 0;
             $lowestWorkerId         = $groupInfo[1] ?? 0;
