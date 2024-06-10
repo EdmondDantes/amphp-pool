@@ -51,6 +51,21 @@ final class PoolStateStorage
         return self::GROUP_INFO_SIZE * $this->groupsCount;
     }
     
+    public function getGroups(): array
+    {
+        $groups                     = [];
+        
+        foreach ($this->groups as $groupId => [, $lowestWorkerId, $highestWorkerId]) {
+            if($groupId <= 0) {
+                continue;
+            }
+            
+            $groups[$groupId]       = [$lowestWorkerId, $highestWorkerId];
+        }
+        
+        return $groups;
+    }
+    
     public function setGroups(array $groups): void
     {
         foreach ($groups as $groupId => [$lowestWorkerId, $highestWorkerId]) {
