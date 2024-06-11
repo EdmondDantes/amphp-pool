@@ -202,7 +202,7 @@ class WorkerPool                    implements WorkerPoolI
                        && $remoteException->getOriginalClassName() === FatalWorkerException::class) {
                         
                         // The Worker died due to a fatal error, so we should stop the server.
-                        $this->logger->error('Server shutdown due to fatal worker error');
+                        $this->logger?->error('Server shutdown due to fatal worker error');
                         throw $remoteException;
                     }
                 } catch (\Throwable $exception) {
