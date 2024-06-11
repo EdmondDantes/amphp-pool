@@ -19,7 +19,8 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "CT\\AmpServer\\": "./tests"
+            "CT\\AmpServer\\": "./tests",
+            "Examples\\": "./examples"
         }
     },
     "require-dev": {

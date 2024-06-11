@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpServer\Worker;
+namespace Examples\HttpServer;
 
 use Amp\Http\HttpStatus;
 use Amp\Http\Server\DefaultErrorHandler;
@@ -9,14 +9,16 @@ use Amp\Http\Server\Driver\SocketClientFactory;
 use Amp\Http\Server\RequestHandler\ClosureRequestHandler;
 use Amp\Http\Server\Response;
 use Amp\Http\Server\SocketHttpServer;
+use CT\AmpServer\Worker\WorkerEntryPointI;
+use CT\AmpServer\Worker\WorkerI;
 
-final class WorkerEntryPoint implements WorkerEntryPointI
+final class WorkerEntryPoint        implements WorkerEntryPointI
 {
-    private Worker $workerStrategy;
+    private WorkerI $workerStrategy;
     
-    public function initialize(Worker $workerStrategy): void
+    public function initialize(WorkerI $workerStrategy): void
     {
-        $this->workerStrategy = $workerStrategy;
+        $this->workerStrategy       = $workerStrategy;
     }
     
     public function run(): void

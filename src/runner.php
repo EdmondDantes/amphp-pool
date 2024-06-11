@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 use Amp\Future;
 use Amp\Sync\Channel;
+use CT\AmpServer\Worker\WorkerEntryPointI;
+use CT\AmpServer\Worker\Worker;
 use function Amp\async;
 
 return static function (Channel $channel): void
@@ -38,11 +40,11 @@ return static function (Channel $channel): void
             throw new \RuntimeException('Entry point class not found: ' . $entryPointClassName);
         }
         
-        if (false === $entryPoint instanceof \CT\AmpServer\Worker\WorkerEntryPointI) {
+        if (false === $entryPoint instanceof WorkerEntryPointI) {
             throw new \RuntimeException('Entry point class must implement WorkerEntryPointI');
         }
         
-        $strategy                   = new \CT\AmpServer\Worker\Worker((int)$id, (int)$groupId, $channel, $key, $uri, $type);
+        $strategy                   = new Worker((int)$id, (int)$groupId, $channel, $key, $uri, $type);
         $entryPoint->initialize($strategy);
         $strategy->initWorker();
         

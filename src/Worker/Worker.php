@@ -22,7 +22,6 @@ use CT\AmpServer\WorkerState\WorkerStateStorage;
 use CT\AmpServer\WorkerTypeEnum;
 use Psr\Log\LoggerInterface;
 use Revolt\EventLoop;
-use function Amp\Parallel\Ipc;
 
 /**
  * Abstraction of Worker Representation within the worker process.
