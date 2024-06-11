@@ -3,10 +3,10 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/vendor/autoload.php';
 
+use CT\AmpServer\Worker\WorkerEntryPoint;
 use CT\AmpServer\WorkerPool;
-use CT\AmpServer\WorkerEntryPoint;
-use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
+use Monolog\Logger;
 
 $logger = new Logger('cluster');
 $logger->pushHandler(new StreamHandler('php://stdout'));

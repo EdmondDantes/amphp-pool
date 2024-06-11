@@ -38,11 +38,11 @@ return static function (Channel $channel): void
             throw new \RuntimeException('Entry point class not found: ' . $entryPointClassName);
         }
         
-        if (false === $entryPoint instanceof \CT\AmpServer\WorkerEntryPointI) {
+        if (false === $entryPoint instanceof \CT\AmpServer\Worker\WorkerEntryPointI) {
             throw new \RuntimeException('Entry point class must implement WorkerEntryPointI');
         }
         
-        $strategy                   = new \CT\AmpServer\Worker((int)$id, (int)$groupId, $channel, $key, $uri, $type);
+        $strategy                   = new \CT\AmpServer\Worker\Worker((int)$id, (int)$groupId, $channel, $key, $uri, $type);
         $entryPoint->initialize($strategy);
         $strategy->initWorker();
         

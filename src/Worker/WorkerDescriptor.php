@@ -1,9 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpServer;
+namespace CT\AmpServer\Worker;
 
 use Amp\Future;
+use CT\AmpServer\WorkerProcessContext;
+use CT\AmpServer\WorkerTypeEnum;
 
 class WorkerDescriptor
 {
@@ -24,7 +26,7 @@ class WorkerDescriptor
     
     public function setWorker(WorkerProcessContext $worker): void
     {
-        $this->worker = $worker;
+        $this->worker               = $worker;
     }
     
     public function getFuture(): ?Future
@@ -34,7 +36,7 @@ class WorkerDescriptor
     
     public function setFuture(Future $future): void
     {
-        $this->future = $future;
+        $this->future               = $future;
     }
     
     public function reset(): void

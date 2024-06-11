@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpServer;
+namespace CT\AmpServer\Worker;
 
 use Psr\Log\LoggerInterface;
 

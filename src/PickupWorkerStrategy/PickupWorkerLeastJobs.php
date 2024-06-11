@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace CT\AmpServer\PickupWorkerStrategy;
 
-use CT\AmpServer\WorkerDescriptor;
+use CT\AmpServer\Worker\WorkerDescriptor;
 use CT\AmpServer\WorkerPoolI;
 use CT\AmpServer\WorkerTypeEnum;
 

@@ -12,7 +12,7 @@ use Amp\Socket\SocketException;
 use Amp\Sync\Channel;
 use Amp\Sync\ChannelException;
 use CT\AmpServer\Messages\MessageSocketListen;
-use CT\AmpServer\Worker;
+use CT\AmpServer\Worker\Worker;
 
 final class SocketPipeFactoryWindows implements ServerSocketFactory
 {

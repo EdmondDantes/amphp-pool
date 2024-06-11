@@ -205,6 +205,7 @@ final class PoolStateStorage
     {
         if($this->shmop !== null && $this->isWrite) {
             \shmop_delete($this->shmop);
+            $this->shmop            = null;
         }
     }
     

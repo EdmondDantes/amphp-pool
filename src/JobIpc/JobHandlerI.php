@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace CT\AmpServer\JobIpc;
 
 use Amp\Cancellation;
-use CT\AmpServer\WorkerI;
+use CT\AmpServer\Worker\WorkerI;
 
 interface JobHandlerI
 {

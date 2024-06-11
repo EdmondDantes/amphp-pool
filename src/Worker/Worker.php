@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpServer;
+namespace CT\AmpServer\Worker;
 
 use Amp\Cancellation;
 use Amp\Cluster\ServerSocketPipeFactory;
@@ -14,13 +14,15 @@ use Amp\Socket\ResourceSocket;
 use Amp\Socket\ServerSocketFactory;
 use Amp\Sync\Channel;
 use Amp\TimeoutCancellation;
-use CT\AmpServer\JobIpc\JobHandlerI;
 use CT\AmpServer\JobIpc\IpcServer;
+use CT\AmpServer\JobIpc\JobHandlerI;
 use CT\AmpServer\Messages\MessagePingPong;
 use CT\AmpServer\SocketPipe\SocketPipeFactoryWindows;
 use CT\AmpServer\WorkerState\WorkerStateStorage;
+use CT\AmpServer\WorkerTypeEnum;
 use Psr\Log\LoggerInterface;
 use Revolt\EventLoop;
+use function Amp\Parallel\Ipc;
 
 /**
  * Abstraction of Worker Representation within the worker process.

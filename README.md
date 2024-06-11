@@ -15,16 +15,14 @@ Similarly, different groups of jobWorkers can be created to handle various types
 The project implements a method for distributing socket connections among processes for the Windows platform.
 
 ## Example
+
 ```php
 <?php
 declare(strict_types=1);
 
 require_once __DIR__ . '/vendor/autoload.php';
 
-use CT\AmpServer\WorkerPool;
-use CT\AmpServer\WorkerEntryPoint;
-use Monolog\Logger;
-use Monolog\Handler\StreamHandler;
+use CT\AmpServer\Worker\WorkerEntryPoint;use CT\AmpServer\WorkerPool;use Monolog\Handler\StreamHandler;use Monolog\Logger;
 
 $logger = new Logger('cluster');
 $logger->pushHandler(new StreamHandler('php://stdout'));

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpServer;
+namespace CT\AmpServer\Worker;
 
 use Amp\Http\HttpStatus;
 use Amp\Http\Server\DefaultErrorHandler;
