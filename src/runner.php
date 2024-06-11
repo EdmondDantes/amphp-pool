@@ -5,6 +5,7 @@ use Amp\Future;
 use Amp\Sync\Channel;
 use CT\AmpServer\Worker\WorkerEntryPointI;
 use CT\AmpServer\Worker\Worker;
+use CT\AmpServer\Exceptions\FatalWorkerException;
 use function Amp\async;
 
 return static function (Channel $channel): void
@@ -16,11 +17,11 @@ return static function (Channel $channel): void
     
     try {
         // Read random IPC hub URI and associated key from a process channel.
-        ['id' => $id, 'group_id' => $groupId, 'uri' => $uri, 'key' => $key, 'type' => $type, 'entryPoint' => $entryPointClassName]
+        ['id' => $id, 'groupId' => $groupId, 'uri' => $uri, 'key' => $key, 'type' => $type, 'entryPoint' => $entryPointClassName]
             = $channel->receive();
         
     } catch (\Throwable $exception) {
-        throw new \RuntimeException('Could not connect to IPC socket', 0, $exception);
+        throw new FatalWorkerException('Could not connect to IPC socket', 0, $exception);
     }
     
     if (\function_exists('cli_set_process_title')) {
@@ -37,11 +38,11 @@ return static function (Channel $channel): void
         if (class_exists($entryPointClassName)) {
             $entryPoint             = new $entryPointClassName();
         } else {
-            throw new \RuntimeException('Entry point class not found: ' . $entryPointClassName);
+            throw new FatalWorkerException('Entry point class not found: ' . $entryPointClassName);
         }
         
         if (false === $entryPoint instanceof WorkerEntryPointI) {
-            throw new \RuntimeException('Entry point class must implement WorkerEntryPointI');
+            throw new FatalWorkerException('Entry point class must implement WorkerEntryPointI');
         }
         
         $strategy                   = new Worker((int)$id, (int)$groupId, $channel, $key, $uri, $type);
@@ -61,9 +62,7 @@ return static function (Channel $channel): void
              }),
         ]);
     } catch (\Throwable $exception) {
-        file_put_contents(__DIR__.'/test.log',
-                          $exception->getMessage().'::'.$exception->getFile().':'.$exception->getLine().PHP_EOL, FILE_APPEND
-        );
+        throw new FatalWorkerException('Worker process fatal error', 0, $exception);
     } finally {
         $channel->send(null);
     }

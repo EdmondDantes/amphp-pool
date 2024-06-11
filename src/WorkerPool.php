@@ -12,12 +12,15 @@ use Amp\DeferredCancellation;
 use Amp\Future;
 use Amp\Parallel\Context\ContextException;
 use Amp\Parallel\Context\ContextFactory;
+use Amp\Parallel\Context\ContextPanicError;
 use Amp\Parallel\Context\DefaultContextFactory;
 use Amp\Parallel\Ipc\IpcHub;
 use Amp\Parallel\Ipc\LocalIpcHub;
+use Amp\Parallel\Worker\TaskFailureThrowable;
 use Amp\Pipeline\ConcurrentIterator;
 use Amp\Pipeline\Queue;
 use Amp\Sync\ChannelException;
+use CT\AmpServer\Exceptions\FatalWorkerException;
 use CT\AmpServer\PoolState\PoolStateStorage;
 use CT\AmpServer\SocketPipe\SocketListenerProvider;
 use CT\AmpServer\SocketPipe\SocketPipeProvider;
@@ -192,6 +195,16 @@ class WorkerPool                    implements WorkerPoolI
                 } catch (ChannelException $exception) {
                     $worker->error("Worker {$id} died unexpectedly: {$exception->getMessage()}" .
                                    ($this->running ? ", restarting..." : ""));
+                    
+                    $remoteException = $exception->getPrevious();
+                    
+                    if(($remoteException instanceof TaskFailureThrowable || $remoteException instanceof ContextPanicError)
+                       && $remoteException->getOriginalClassName() === FatalWorkerException::class) {
+                        
+                        // The Worker died due to a fatal error, so we should stop the server.
+                        $this->logger->error('Server shutdown due to fatal worker error');
+                        throw $remoteException;
+                    }
                 } catch (\Throwable $exception) {
                     $worker->error(
                         "Worker {$id} failed: " . (string) $exception,
