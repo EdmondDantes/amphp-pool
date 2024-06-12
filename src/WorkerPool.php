@@ -189,8 +189,7 @@ class WorkerPool                    implements WorkerPoolI
                 try {
                     $worker->runWorkerLoop();
                     
-                    $worker->info("Worker {$id} terminated cleanly" .
-                                  ($this->running ? ", restarting..." : ""));
+                    $worker->info("Worker {$id} terminated cleanly" . ($this->running ? ", restarting..." : ""));
                 } catch (CancelledException) {
                     $worker->info("Worker {$id} forcefully terminated as part of watcher shutdown");
                 } catch (ChannelException $exception) {
@@ -268,11 +267,7 @@ class WorkerPool                    implements WorkerPoolI
         
         $workerId                   = $this->getLastWorkerId();
         
-        if($workerId === 0) {
-            $workerId               = 1;
-        }
-        
-        foreach (range($workerId, $count) as $id) {
+        foreach (range($workerId + 1, $workerId + $count) as $id) {
             $this->addWorker(new WorkerDescriptor($id, $type, $groupId, $workerClass));
         }
         

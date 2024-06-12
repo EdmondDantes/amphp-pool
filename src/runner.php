@@ -27,7 +27,7 @@ return static function (Channel $channel): void
     if (\function_exists('cli_set_process_title')) {
         \set_error_handler(static fn () => true);
         try {
-            \cli_set_process_title($type.' worker #'.$id);
+            \cli_set_process_title($type.' worker #'.$id. ' group #'.$groupId);
         } finally {
             \restore_error_handler();
         }
@@ -61,9 +61,11 @@ return static function (Channel $channel): void
                  $referenceEntryPoint->get()?->run();
              }),
         ]);
+        
+        // End of a worker process
+        $channel->send(null);
+        
     } catch (\Throwable $exception) {
         throw new FatalWorkerException('Worker process fatal error', 0, $exception);
-    } finally {
-        $channel->send(null);
     }
 };

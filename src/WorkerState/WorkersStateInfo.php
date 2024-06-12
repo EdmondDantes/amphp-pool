@@ -3,6 +3,9 @@ declare(strict_types=1);
 
 namespace CT\AmpServer\WorkerState;
 
+use CT\AmpServer\WorkerState\Exceptions\WorkerStateNotAvailable;
+use CT\AmpServer\WorkerState\Exceptions\WorkerStateReadFailed;
+
 /**
  * The class provides information about the state of the workers.
  */
@@ -20,7 +23,7 @@ final class WorkersStateInfo
             $storage->update();
             
             return new WorkerState($storage->isWorkerReady(), $storage->getJobCount(), $storage->getWorkerGroupId());
-        } catch (\Throwable) {
+        } catch (WorkerStateNotAvailable|WorkerStateReadFailed) {
             return null;
         }
     }

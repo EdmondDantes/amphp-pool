@@ -13,11 +13,12 @@ use Amp\Future;
 use Amp\Serialization\PassthroughSerializer;
 use Amp\TimeoutCancellation;
 use Amp\TimeoutException;
-use CT\AmpServer\Exceptions\NoAvailableWorkers;
+use CT\AmpServer\Exceptions\NoWorkersAvailable;
 use CT\AmpServer\Exceptions\SendJobException;
 use CT\AmpServer\PoolState\PoolStateStorage;
 use CT\AmpServer\WorkerState\WorkersStateInfo;
 use Revolt\EventLoop;
+use function Amp\delay;
 use function Amp\Socket\socketConnector;
 
 /**
@@ -44,16 +45,26 @@ final class IpcClient
     private int $futureTimeout      = 60 * 10;
     private string $futureTimeoutCallbackId;
     
+    /**
+     * IpcClient constructor.
+     *
+     * @param int                 $workerId         Current worker ID
+     * @param int                 $workerGroupId    Current worker group ID
+     * @param JobSerializerI|null $jobSerializer    Job serializer
+     * @param Cancellation|null   $cancellation     Cancellation
+     * @param int                 $retryInterval    Retry interval for sending a job
+     */
     public function __construct(
         private readonly int               $workerId,
         private readonly int               $workerGroupId = 0,
-        JobSerializerI                     $jobTransport = null,
-        private readonly Cancellation|null $cancellation = null
+        JobSerializerI                     $jobSerializer = null,
+        private readonly Cancellation|null $cancellation = null,
+        private readonly int               $retryInterval = 1
     )
     {
         $this->workersInfo          = new WorkersStateInfo();
         $this->poolState            = new PoolStateStorage();
-        $this->jobTransport         = $jobTransport ?? new JobSerializer();
+        $this->jobTransport         = $jobSerializer ?? new JobSerializer();
     }
     
     public function mainLoop(): void
@@ -61,6 +72,25 @@ final class IpcClient
         $this->futureTimeoutCallbackId = EventLoop::repeat($this->futureTimeout / 2, $this->updateFuturesByTimeout(...));
     }
     
+    /**
+     * Send a job to the worker asynchronously in the separate fiber.
+     * If $awaitResult equals True than method returns a Future that will be completed when the job is done.
+     *
+     * However, the duration of a Job should not exceed the JobTimeout. Therefore, if you want to perform very long tasks,
+     * you should consider how to properly organize work between workers or increase the JobTimeout.
+     *
+     * Please note that if the Job-Worker process terminates unexpectedly, all Futures will be completed with an error.
+     *
+     * Every time the job should be sent maxTryCount times with a retryInterval between attempts.
+     * If retryInterval equals 0, the method will throw an exception if it cannot send the job.
+     *
+     * @param string   $data
+     * @param int      $workerGroupId
+     * @param bool     $awaitResult
+     * @param int|null $workerId
+     *
+     * @return Future|null
+     */
     public function sendJob(string $data, int $workerGroupId, bool $awaitResult = false, int $workerId = null): Future|null
     {
         $deferred                   = null;
@@ -74,13 +104,25 @@ final class IpcClient
         return $deferred?->getFuture();
     }
     
+    /**
+     * Try to send a job to the worker immediately in the current fiber.
+     *
+     * @param string              $data
+     * @param int                 $workerGroupId
+     * @param bool|DeferredFuture $awaitResult
+     * @param int|null            $workerId
+     *
+     * @return Future|null
+     * @throws \Throwable
+     */
     public function sendJobImmediately(string $data, int $workerGroupId, bool|DeferredFuture $awaitResult = false, int $workerId = null): Future|null
     {
         $tryCount                   = 0;
         $ignoreWorkers              = [];
-        $deferred                   = null;
         
-        if(false === $awaitResult instanceof DeferredFuture) {
+        if($awaitResult instanceof DeferredFuture) {
+            $deferred               = $awaitResult;
+        } else {
             $deferred               = $awaitResult ? new DeferredFuture() : null;
         }
         
@@ -95,16 +137,28 @@ final class IpcClient
                     return null;
                 }
                 
-            } catch (NoAvailableWorkers $exception) {
-                $deferred?->complete($exception);
-                throw $exception;
+            } catch (NoWorkersAvailable $exception) {
+                
+                if($this->retryInterval <= 0) {
+                    $deferred?->complete($exception);
+                    throw $exception;
+                } else {
+                    $tryCount++;
+                    // suspend the current task for a while
+                    delay((float)$this->retryInterval, true, $this->cancellation);
+                }
+                
             } catch (StreamException) {
                 $tryCount++;
-                $ignoreWorkers[] = $workerId;
+                $ignoreWorkers[]    = $workerId;
             }
         }
         
-        $deferred?->complete();
+        if($deferred !== null) {
+            $deferred->complete(new SendJobException($workerGroupId, $this->maxTryCount));
+            return $deferred->getFuture();
+        }
+        
         throw new SendJobException($workerGroupId, $this->maxTryCount);
     }
     
@@ -113,7 +167,7 @@ final class IpcClient
         $foundedWorkerId            = $this->pickupWorker($workerGroupId, $workerId, $ignoreWorkers);
         
         if($foundedWorkerId === null) {
-            throw new NoAvailableWorkers($workerGroupId);
+            throw new NoWorkersAvailable($workerGroupId);
         }
         
         $channel                    = $this->getWorkerChannel($foundedWorkerId);

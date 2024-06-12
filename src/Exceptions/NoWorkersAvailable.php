@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace CT\AmpServer\Exceptions;
 
-final class NoAvailableWorkers extends \RuntimeException
+final class NoWorkersAvailable extends \RuntimeException
 {
     public function __construct(int $workerGroupId)
     {

@@ -3,6 +3,9 @@ declare(strict_types=1);
 
 namespace CT\AmpServer\WorkerState;
 
+use CT\AmpServer\WorkerState\Exceptions\WorkerStateNotAvailable;
+use CT\AmpServer\WorkerState\Exceptions\WorkerStateReadFailed;
+
 /**
  * The class creates an entry in the shared memory area where it writes the state of the Worker, which can be read by another process.
  *
@@ -99,7 +102,7 @@ final class WorkerStateStorage
     private function open(): void
     {
         \set_error_handler(static function($number, $error, $file = null, $line = null) {
-            throw new \ErrorException($error, 0, $number, $file, $line);
+            throw new WorkerStateNotAvailable($error, 0, new \ErrorException($error, 0, $number, $file, $line));
         });
         
         try {
@@ -113,7 +116,7 @@ final class WorkerStateStorage
         }
         
         if($shmop === false) {
-            throw new \RuntimeException('Failed to open shared memory');
+            throw new WorkerStateNotAvailable('Failed to open shared memory');
         }
         
         $this->shmop                = $shmop;
@@ -132,7 +135,7 @@ final class WorkerStateStorage
         $data                       = \shmop_read($this->shmop, 0, WorkerState::SIZE);
         
         if($data === false) {
-            throw new \RuntimeException('Failed to read data from shared memory');
+            throw new WorkerStateReadFailed('Failed to read data from shared memory');
         }
         
         return $data;

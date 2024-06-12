@@ -43,11 +43,21 @@ final class WorkerTestEntryPoint    implements WorkerEntryPointI
                 $deferredCancellation->cancel(new FatalWorkerException('Timeout for Reactor Worker'));
             });
             
-            $resultFuture           = $jobIpcClient->sendJob(
-                self::JOB_TEST, $this->workerStrategy->getWorkerGroupId() + 1, true
-            );
+            try {
+                $resultFuture           = $jobIpcClient->sendJob(
+                    self::JOB_TEST, $this->workerStrategy->getWorkerGroupId() + 1, true
+                );
+                
+                $result                 = $resultFuture->await($deferredCancellation->getCancellation());
+            } catch (\Throwable $exception) {
+                $deferredCancellation->cancel($exception);
+                throw new FatalWorkerException('Reactor Worker failed', 0, $exception);
+            }
             
-            $result                 = $resultFuture->await($deferredCancellation->getCancellation());
+            if($result instanceof \Throwable) {
+                $deferredCancellation->cancel($result);
+                throw new FatalWorkerException('Reactor Worker failed', 0, $result);
+            }
             
             $tmpFile                = sys_get_temp_dir() . self::RESULT_FILE;
             file_put_contents($tmpFile, $result);
