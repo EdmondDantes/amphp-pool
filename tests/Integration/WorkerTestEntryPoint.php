@@ -12,7 +12,7 @@ use CT\AmpServer\Worker\WorkerI;
 use CT\AmpServer\WorkerTypeEnum;
 use Revolt\EventLoop;
 
-class WorkerTestEntryPoint          implements WorkerEntryPointI
+final class WorkerTestEntryPoint    implements WorkerEntryPointI
 {
     private const string JOB_TEST    = 'JOB_TEST';
     public const string RESULT_FILE  = '/amp_worker_test_result.txt';

@@ -41,6 +41,7 @@ use function Amp\async;
 class WorkerPool                    implements WorkerPoolI
 {
     protected int $workerStartTimeout = 5;
+    private int $lastGroupId        = 0;
     
     /**
      * @var WorkerDescriptor[]
@@ -245,6 +246,50 @@ class WorkerPool                    implements WorkerPoolI
                 $this->addWorker(new WorkerDescriptor($id, WorkerTypeEnum::JOB, $groupId, $workerClass));
             }
         }
+    }
+    
+    /**
+     * @param string         $workerClass
+     * @param WorkerTypeEnum $type
+     * @param int            $count
+     * @param int            $groupId
+     *
+     * @return $this
+     */
+    public function fillWorkersGroup(string $workerClass, WorkerTypeEnum $type, int $count, int $groupId = 0): self
+    {
+        if($count <= 0) {
+            return $this;
+        }
+        
+        if($groupId === 0) {
+            $groupId                = ++$this->lastGroupId;
+        }
+        
+        $workerId                   = $this->getLastWorkerId();
+        
+        if($workerId === 0) {
+            $workerId               = 1;
+        }
+        
+        foreach (range($workerId, $count) as $id) {
+            $this->addWorker(new WorkerDescriptor($id, $type, $groupId, $workerClass));
+        }
+        
+        return $this;
+    }
+    
+    public function getLastWorkerId(): int
+    {
+        $maxId                      = 0;
+        
+        foreach ($this->workers as $worker) {
+            if($worker->id > $maxId) {
+                $maxId              = $worker->id;
+            }
+        }
+        
+        return $maxId;
     }
     
     public function addWorker(WorkerDescriptor $worker): void
