@@ -62,8 +62,8 @@ class WorkerPool                    implements WorkerPoolI
     private PoolStateStorage $poolState;
     
     public function __construct(
-        public readonly int $reactorCount,
-        public readonly int $jobCount,
+        public readonly int $reactorCount   = 0,
+        public readonly int $jobCount       = 0,
         protected readonly IpcHub $hub      = new LocalIpcHub(),
         protected ?ContextFactory $contextFactory = null,
         protected string|array $script      = '',
