@@ -11,8 +11,6 @@ class WorkerToWorkerTest            extends TestCase
 {
     public function testWorkerToWorkerMessage(): void
     {
-        return;
-        
         $workerPool                 = new WorkerPool();
         $workerPool->fillWorkersGroup(WorkerTestEntryPoint::class, WorkerTypeEnum::REACTOR, 1);
         $workerPool->fillWorkersGroup(WorkerTestEntryPoint::class, WorkerTypeEnum::JOB, 1);

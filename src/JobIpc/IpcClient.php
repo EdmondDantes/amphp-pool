@@ -74,11 +74,15 @@ final class IpcClient
         return $deferred?->getFuture();
     }
     
-    public function sendJobImmediately(string $data, int $workerGroupId, bool $awaitResult = false, int $workerId = null): Future|null
+    public function sendJobImmediately(string $data, int $workerGroupId, bool|DeferredFuture $awaitResult = false, int $workerId = null): Future|null
     {
         $tryCount                   = 0;
         $ignoreWorkers              = [];
-        $deferred                   = $awaitResult ? new DeferredFuture() : null;
+        $deferred                   = null;
+        
+        if(false === $awaitResult instanceof DeferredFuture) {
+            $deferred               = $awaitResult ? new DeferredFuture() : null;
+        }
         
         while($tryCount < $this->maxTryCount) {
             try {
