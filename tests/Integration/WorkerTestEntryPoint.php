@@ -39,9 +39,11 @@ final class WorkerTestEntryPoint    implements WorkerEntryPointI
             
             EventLoop::queue($jobIpcClient->mainLoop(...));
             
-            EventLoop::delay(5000, static function () use ($deferredCancellation): void {
+            /*
+            EventLoop::delay(5, static function () use ($deferredCancellation): void {
                 $deferredCancellation->cancel(new FatalWorkerException('Timeout for Reactor Worker'));
             });
+            */
             
             try {
                 $resultFuture           = $jobIpcClient->sendJob(

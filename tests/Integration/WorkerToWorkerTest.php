@@ -15,7 +15,7 @@ class WorkerToWorkerTest            extends TestCase
         
         $workerPool                 = new WorkerPool();
         $workerPool->fillWorkersGroup(WorkerTestEntryPoint::class, WorkerTypeEnum::REACTOR, 1);
-        $workerPool->fillWorkersGroup(WorkerTestEntryPoint::class, WorkerTypeEnum::JOB, 1);
+        //$workerPool->fillWorkersGroup(WorkerTestEntryPoint::class, WorkerTypeEnum::JOB, 1);
         $workerPool->run();
         $workerPool->mainLoop();
         

@@ -33,6 +33,8 @@ return static function (Channel $channel): void
         }
     }
     
+    $strategy                       = null;
+    
     try {
         
         if (class_exists($entryPointClassName)) {
@@ -62,10 +64,13 @@ return static function (Channel $channel): void
              }),
         ]);
         
-        // End of a worker process
+        // Normally, the worker process will exit when the IPC channel is closed.
         $channel->send(null);
         
     } catch (\Throwable $exception) {
-        throw new FatalWorkerException('Worker process fatal error', 0, $exception);
+        $channel->send(new FatalWorkerException($exception->getMessage()));
+        throw $exception;
+    } finally {
+        $strategy?->close();
     }
 };

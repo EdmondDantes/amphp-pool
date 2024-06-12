@@ -19,6 +19,7 @@ use Amp\Socket\Socket;
 use Amp\Sync\ChannelException;
 use Amp\TimeoutCancellation;
 use Amp\TimeoutException;
+use CT\AmpServer\Exceptions\FatalWorkerException;
 use CT\AmpServer\Messages\MessageJob;
 use CT\AmpServer\Messages\MessageJobResult;
 use CT\AmpServer\Messages\MessageLog;
@@ -79,7 +80,7 @@ class WorkerProcessContext          implements \Psr\Log\LoggerInterface, \Psr\Lo
         private readonly DeferredCancellation $deferredCancellation
     ) {
         $this->lastActivity         = \time();
-        $this->joinFuture           = async($this->context->join(...), $this->deferredCancellation->getCancellation());
+        $this->joinFuture           = async($this->context->join(...));
     }
     
     public function getContext(): Context
@@ -162,6 +163,10 @@ class WorkerProcessContext          implements \Psr\Log\LoggerInterface, \Psr\Lo
             while (($message = $this->context->receive($cancellation)) !== null) {
                 
                 $this->lastActivity = \time();
+                
+                if($message instanceof FatalWorkerException) {
+                    throw $message;
+                }
                 
                 if($message instanceof MessageReady) {
                     $this->isReady = true;
