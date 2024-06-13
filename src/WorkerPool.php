@@ -149,6 +149,10 @@ class WorkerPool                    implements WorkerPoolInterface
             throw new \Exception('The worker groups scheme is empty');
         }
         
+        if (count($this->workers) <= 0) {
+            throw new \Exception('The number of workers must be greater than zero');
+        }
+        
         $lastGroupId                = 0;
         
         foreach ($this->groupsScheme as $group) {
@@ -180,14 +184,13 @@ class WorkerPool                    implements WorkerPoolInterface
         }
     }
     
+    /**
+     * @throws \Throwable
+     */
     public function run(): void
     {
         if ($this->running || $this->queue->isComplete()) {
             throw new \Exception('The cluster watcher is already running or has already run');
-        }
-        
-        if (count($this->workers) <= 0) {
-            throw new \Exception('The number of workers must be greater than zero');
         }
         
         $this->validateGroupsScheme();
@@ -232,6 +235,7 @@ class WorkerPool                    implements WorkerPoolInterface
             'key'                   => $key,
             'type'                  => $workerDescriptor->type->value,
             'entryPoint'            => $workerDescriptor->entryPointClassName,
+            'groupsScheme'          => $this->groupsScheme,
         ]);
         
         try {
@@ -396,7 +400,7 @@ class WorkerPool                    implements WorkerPoolInterface
      */
     public function stop(?Cancellation $cancellation = null): void
     {
-        if ($this->queue->isComplete()) {
+        if ($this->queue->isComplete() || false === $this->running) {
             return;
         }
         
@@ -446,24 +450,6 @@ class WorkerPool                    implements WorkerPoolInterface
         } finally {
             $this->workers          = [];
         }
-    }
-    
-    private function calculateGroups(): array
-    {
-        $groups                     = [];
-        
-        foreach ($this->workers as $worker) {
-            
-            if(false === array_key_exists($worker->groupId, $groups)) {
-                $groups[$worker->groupId] = [$worker->id, 0];
-            }
-            
-            if($groups[$worker->groupId][1] < $worker->id) {
-                $groups[$worker->groupId][1] = $worker->id;
-            }
-        }
-        
-        return $groups;
     }
     
     public function __destruct()

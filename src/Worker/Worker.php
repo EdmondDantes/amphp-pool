@@ -18,6 +18,7 @@ use CT\AmpServer\JobIpc\IpcServer;
 use CT\AmpServer\JobIpc\JobHandlerInterface;
 use CT\AmpServer\Messages\MessagePingPong;
 use CT\AmpServer\SocketPipe\SocketPipeFactoryWindows;
+use CT\AmpServer\WorkerGroup;
 use CT\AmpServer\WorkerState\WorkerStateStorage;
 use CT\AmpServer\WorkerTypeEnum;
 use Psr\Log\LoggerInterface;
@@ -59,6 +60,10 @@ class Worker                        implements WorkerInterface
         private readonly string  $key,
         private readonly string  $uri,
         private readonly string  $workerType,
+        /**
+         * @var array<int, WorkerGroup>
+         */
+        private array $groupsScheme,
         LoggerInterface          $logger = null
     ) {
         $this->queue                = new Queue();
@@ -80,6 +85,14 @@ class Worker                        implements WorkerInterface
     public function initWorker(): void
     {
         $this->getSocketPipeFactory();
+    }
+
+    /**
+     * @return array<int, WorkerGroup>
+     */
+    public function getGroupsScheme(): array
+    {
+        return $this->groupsScheme;
     }
     
     public function getLogger(): LoggerInterface
