@@ -90,17 +90,12 @@ class WorkerPool                    implements WorkerPoolInterface
         }
     }
     
-    /**
-     * @param WorkerTypeEnum $type
-     * @param int            $minCount
-     * @param int|null       $maxCount
-     * @param string|null    $groupName
-     * @param array          $jobGroups
-     *
-     * @return $this
-     */
-    public function describeGroup(WorkerTypeEnum $type, int $minCount = 1, int $maxCount = null, string $groupName = null, array $jobGroups = []): self
+    public function describeGroup(string $workerClass, WorkerTypeEnum $type, int $minCount = 1, int $maxCount = null, string $groupName = null, array $jobGroups = []): self
     {
+        if(class_exists($workerClass) === false) {
+            throw new \Error("The worker class '{$workerClass}' does not exist");
+        }
+        
         $groupId                    = ++$this->lastGroupId;
         $maxCount                   ??= $minCount;
         $groupName                  ??= 'group-' . ++$groupId;
@@ -113,26 +108,26 @@ class WorkerPool                    implements WorkerPoolInterface
             throw new \Error('The maximum number of workers must be greater than or equal to the minimum number of workers');
         }
         
-        $this->groupsScheme[$groupId] = new WorkerGroup($type, $groupId, $minCount, $maxCount, $groupName, $jobGroups);
+        $this->groupsScheme[$groupId] = new WorkerGroup($workerClass, $type, $groupId, $minCount, $maxCount, $groupName, $jobGroups);
         
         return $this;
     }
     
-    public function describeReactorGroup(int $minCount = 1, int $maxCount = null, string $groupName = null, int $jobGroup = null): self
+    public function describeReactorGroup(string $workerClass, int $minCount = 1, int $maxCount = null, string $groupName = null, int $jobGroup = null): self
     {
         $jobGroup                   = $jobGroup ?? $this->lastGroupId + 2;
         
-        return $this->describeGroup(WorkerTypeEnum::REACTOR, $minCount, $maxCount, $groupName, [$jobGroup]);
+        return $this->describeGroup($workerClass, WorkerTypeEnum::REACTOR, $minCount, $maxCount, $groupName, [$jobGroup]);
     }
     
-    public function describeJobGroup(int $minCount = 1, int $maxCount = null, string $groupName = null): self
+    public function describeJobGroup(string $workerClass, int $minCount = 1, int $maxCount = null, string $groupName = null): self
     {
-        return $this->describeGroup(WorkerTypeEnum::JOB, $minCount, $maxCount, $groupName);
+        return $this->describeGroup($workerClass,WorkerTypeEnum::JOB, $minCount, $maxCount, $groupName);
     }
     
-    public function describeServiceGroup(string $groupName, int $minCount = 1, int $maxCount = null, array $jobGroups = []): self
+    public function describeServiceGroup(string $workerClass, string $groupName, int $minCount = 1, int $maxCount = null, array $jobGroups = []): self
     {
-        return $this->describeGroup(WorkerTypeEnum::SERVICE, $minCount, $maxCount, $groupName);
+        return $this->describeGroup($workerClass,WorkerTypeEnum::SERVICE, $minCount, $maxCount, $groupName);
     }
     
     public function getGroupsScheme(): array
@@ -156,6 +151,10 @@ class WorkerPool                    implements WorkerPoolInterface
         $lastGroupId                = 0;
         
         foreach ($this->groupsScheme as $group) {
+            
+            if(class_exists($group->workerClass) === false) {
+                throw new \Exception("The worker class '{$group->workerClass}' does not exist");
+            }
             
             if($group->workerGroupId <= $lastGroupId) {
                 throw new \Exception('The group ID must be greater than the previous group id');

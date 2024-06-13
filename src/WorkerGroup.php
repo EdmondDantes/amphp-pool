@@ -6,6 +6,7 @@ namespace CT\AmpServer;
 final readonly class WorkerGroup
 {
     public function __construct(
+        public string $workerClass,
         public WorkerTypeEnum $workerType,
         public int $workerGroupId,
         public int $minWorkers,
