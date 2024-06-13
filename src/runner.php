@@ -68,7 +68,13 @@ return static function (Channel $channel): void
         $channel->send(null);
         
     } catch (\Throwable $exception) {
-        $channel->send(new FatalWorkerException($exception->getMessage()));
+        
+        if(false === $exception instanceof FatalWorkerException) {
+            // Make sure that the exception is a FatalWorkerException
+            $exception = new FatalWorkerException('Worker encountered a fatal error', 0, $exception);
+        }
+        
+        $channel->send($exception);
         throw $exception;
     } finally {
         $strategy?->close();
