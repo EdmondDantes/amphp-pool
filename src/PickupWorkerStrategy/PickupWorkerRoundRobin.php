@@ -4,20 +4,20 @@ declare(strict_types=1);
 namespace CT\AmpServer\PickupWorkerStrategy;
 
 use CT\AmpServer\Worker\WorkerDescriptor;
-use CT\AmpServer\WorkerPoolI;
+use CT\AmpServer\WorkerPoolInterface;
 use CT\AmpServer\WorkerTypeEnum;
 
 /**
  * The class implements the strategy of selecting workers in a round-robin manner
  */
-final class PickupWorkerRoundRobin implements PickupWorkerStrategyI
+final class PickupWorkerRoundRobin implements PickupWorkerStrategyInterface
 {
     /**
      * @var array<string, array<WorkerDescriptor>>
      */
     private array $poolByType     = [];
     
-    public function __construct(private readonly WorkerPoolI $workerPool) {}
+    public function __construct(private readonly WorkerPoolInterface $workerPool) {}
     
     public function pickupWorker(WorkerTypeEnum $workerType = null, array $possibleWorkers = null): ?WorkerDescriptor
     {

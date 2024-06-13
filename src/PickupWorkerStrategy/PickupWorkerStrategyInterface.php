@@ -9,7 +9,7 @@ use CT\AmpServer\WorkerTypeEnum;
 /**
  * The interface describes the strategy for selecting workers from the pool
  */
-interface PickupWorkerStrategyI
+interface PickupWorkerStrategyInterface
 {
     /**
      * Pickup a worker from the pool

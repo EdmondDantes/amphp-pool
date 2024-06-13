@@ -38,7 +38,7 @@ use function Amp\async;
  * @template-covariant TReceive
  * @template TSend
  */
-class WorkerPool                    implements WorkerPoolI
+class WorkerPool                    implements WorkerPoolInterface
 {
     protected int $workerStartTimeout = 5;
     private int $lastGroupId        = 0;

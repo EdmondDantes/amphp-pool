@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 use Amp\Future;
 use Amp\Sync\Channel;
-use CT\AmpServer\Worker\WorkerEntryPointI;
+use CT\AmpServer\Worker\WorkerEntryPointInterface;
 use CT\AmpServer\Worker\Worker;
 use CT\AmpServer\Exceptions\FatalWorkerException;
 use function Amp\async;
@@ -43,7 +43,7 @@ return static function (Channel $channel): void
             throw new FatalWorkerException('Entry point class not found: ' . $entryPointClassName);
         }
         
-        if (false === $entryPoint instanceof WorkerEntryPointI) {
+        if (false === $entryPoint instanceof WorkerEntryPointInterface) {
             throw new FatalWorkerException('Entry point class must implement WorkerEntryPointI');
         }
         

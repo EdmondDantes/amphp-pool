@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace CT\AmpServer\PickupWorkerStrategy;
 
 use CT\AmpServer\Worker\WorkerDescriptor;
-use CT\AmpServer\WorkerPoolI;
+use CT\AmpServer\WorkerPoolInterface;
 use CT\AmpServer\WorkerTypeEnum;
 
 /**
@@ -14,9 +14,9 @@ use CT\AmpServer\WorkerTypeEnum;
  * and use the one that is currently handling the minimum number of tasks.
  *
  */
-final class PickupWorkerLeastJobs   implements PickupWorkerStrategyI
+final class PickupWorkerLeastJobs   implements PickupWorkerStrategyInterface
 {
-    public function __construct(private readonly WorkerPoolI $workerPool) {}
+    public function __construct(private readonly WorkerPoolInterface $workerPool) {}
     
     public function pickupWorker(WorkerTypeEnum $workerType = null, array $possibleWorkers = null): ?WorkerDescriptor
     {

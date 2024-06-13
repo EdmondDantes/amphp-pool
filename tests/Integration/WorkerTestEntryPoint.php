@@ -7,19 +7,19 @@ use Amp\DeferredCancellation;
 use CT\AmpServer\Exceptions\FatalWorkerException;
 use CT\AmpServer\JobIpc\IpcClient;
 use CT\AmpServer\JobIpc\IpcServer;
-use CT\AmpServer\Worker\WorkerEntryPointI;
-use CT\AmpServer\Worker\WorkerI;
+use CT\AmpServer\Worker\WorkerEntryPointInterface;
+use CT\AmpServer\Worker\WorkerInterface;
 use CT\AmpServer\WorkerTypeEnum;
 use Revolt\EventLoop;
 
-final class WorkerTestEntryPoint    implements WorkerEntryPointI
+final class WorkerTestEntryPoint    implements WorkerEntryPointInterface
 {
     private const string JOB_TEST    = 'JOB_TEST';
     public const string RESULT_FILE  = '/amp_worker_test_result.txt';
     
-    private WorkerI $workerStrategy;
+    private WorkerInterface $workerStrategy;
     
-    #[\Override] public function initialize(WorkerI $workerStrategy): void
+    #[\Override] public function initialize(WorkerInterface $workerStrategy): void
     {
         $this->workerStrategy       = $workerStrategy;
     }

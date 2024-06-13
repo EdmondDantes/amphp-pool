@@ -15,7 +15,7 @@ use Amp\Socket\ServerSocketFactory;
 use Amp\Sync\Channel;
 use Amp\TimeoutCancellation;
 use CT\AmpServer\JobIpc\IpcServer;
-use CT\AmpServer\JobIpc\JobHandlerI;
+use CT\AmpServer\JobIpc\JobHandlerInterface;
 use CT\AmpServer\Messages\MessagePingPong;
 use CT\AmpServer\SocketPipe\SocketPipeFactoryWindows;
 use CT\AmpServer\WorkerState\WorkerStateStorage;
@@ -31,7 +31,7 @@ use Revolt\EventLoop;
  * @template TSend
  * @implements Channel<TReceive, TSend>
  */
-class Worker                        implements WorkerI
+class Worker                        implements WorkerInterface
 {
     protected int $timeout = 5;
     
@@ -48,9 +48,9 @@ class Worker                        implements WorkerI
     
     private LoggerInterface $logger;
     private array            $messageHandlers = [];
-    private IpcServer|null   $jobIpc          = null;
-    private JobHandlerI|null $jobHandler      = null;
-    private WorkerStateStorage|null $workerState = null;
+    private IpcServer|null           $jobIpc      = null;
+    private JobHandlerInterface|null $jobHandler  = null;
+    private WorkerStateStorage|null  $workerState = null;
     
     public function __construct(
         private readonly int     $id,
@@ -139,12 +139,12 @@ class Worker                        implements WorkerI
         return $this->socketPipeFactory;
     }
     
-    public function getJobHandler(): JobHandlerI|null
+    public function getJobHandler(): JobHandlerInterface|null
     {
         return $this->jobHandler;
     }
     
-    public function setJobHandler(JobHandlerI $jobHandler): self
+    public function setJobHandler(JobHandlerInterface $jobHandler): self
     {
         $this->jobHandler           = $jobHandler;
         

@@ -9,14 +9,14 @@ use Amp\Http\Server\Driver\SocketClientFactory;
 use Amp\Http\Server\RequestHandler\ClosureRequestHandler;
 use Amp\Http\Server\Response;
 use Amp\Http\Server\SocketHttpServer;
-use CT\AmpServer\Worker\WorkerEntryPointI;
-use CT\AmpServer\Worker\WorkerI;
+use CT\AmpServer\Worker\WorkerEntryPointInterface;
+use CT\AmpServer\Worker\WorkerInterface;
 
-final class WorkerEntryPoint        implements WorkerEntryPointI
+final class WorkerEntryPoint        implements WorkerEntryPointInterface
 {
-    private WorkerI $workerStrategy;
+    private WorkerInterface $workerStrategy;
     
-    public function initialize(WorkerI $workerStrategy): void
+    public function initialize(WorkerInterface $workerStrategy): void
     {
         $this->workerStrategy       = $workerStrategy;
     }

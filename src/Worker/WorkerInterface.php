@@ -5,7 +5,7 @@ namespace CT\AmpServer\Worker;
 
 use Psr\Log\LoggerInterface;
 
-interface WorkerI
+interface WorkerInterface
 {
     public function getWorkerId(): int;
     public function getWorkerGroupId(): int;
