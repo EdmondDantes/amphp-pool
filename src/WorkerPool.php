@@ -62,14 +62,18 @@ class WorkerPool                    implements WorkerPoolInterface
     
     private PoolStateStorage $poolState;
     
+    /**
+     * @var WorkerGroup[]
+     */
+    private array $groupsScheme             = [];
+    
     public function __construct(
-        public readonly int $reactorCount   = 0,
-        public readonly int $jobCount       = 0,
         protected readonly IpcHub $hub      = new LocalIpcHub(),
         protected ?ContextFactory $contextFactory = null,
         protected string|array $script      = '',
         protected ?PsrLogger $logger        = null
     ) {
+        
         $this->script               = \array_merge(
             [__DIR__ . '/runner.php'],
             \is_array($script) ? \array_values(\array_map(\strval(...), $script)) : [$script],
@@ -86,24 +90,114 @@ class WorkerPool                    implements WorkerPoolInterface
         }
     }
     
+    /**
+     * @param WorkerTypeEnum $type
+     * @param int            $minCount
+     * @param int|null       $maxCount
+     * @param string|null    $groupName
+     * @param array          $jobGroups
+     *
+     * @return $this
+     */
+    public function describeGroup(WorkerTypeEnum $type, int $minCount = 1, int $maxCount = null, string $groupName = null, array $jobGroups = []): self
+    {
+        $groupId                    = ++$this->lastGroupId;
+        $maxCount                   ??= $minCount;
+        $groupName                  ??= 'group-' . ++$groupId;
+        
+        if($minCount <= 0) {
+            throw new \Error('The minimum number of workers must be greater than zero');
+        }
+        
+        if($maxCount < $minCount) {
+            throw new \Error('The maximum number of workers must be greater than or equal to the minimum number of workers');
+        }
+        
+        $this->groupsScheme[$groupId] = new WorkerGroup($type, $groupId, $minCount, $maxCount, $groupName, $jobGroups);
+        
+        return $this;
+    }
+    
+    public function describeReactorGroup(int $minCount = 1, int $maxCount = null, string $groupName = null, int $jobGroup = null): self
+    {
+        $jobGroup                   = $jobGroup ?? $this->lastGroupId + 2;
+        
+        return $this->describeGroup(WorkerTypeEnum::REACTOR, $minCount, $maxCount, $groupName, [$jobGroup]);
+    }
+    
+    public function describeJobGroup(int $minCount = 1, int $maxCount = null, string $groupName = null): self
+    {
+        return $this->describeGroup(WorkerTypeEnum::JOB, $minCount, $maxCount, $groupName);
+    }
+    
+    public function describeServiceGroup(string $groupName, int $minCount = 1, int $maxCount = null, array $jobGroups = []): self
+    {
+        return $this->describeGroup(WorkerTypeEnum::SERVICE, $minCount, $maxCount, $groupName);
+    }
+    
+    public function getGroupsScheme(): array
+    {
+        return $this->groupsScheme;
+    }
+    
+    /**
+     * @throws \Exception
+     */
+    public function validateGroupsScheme(): void
+    {
+        if(empty($this->groupsScheme)) {
+            throw new \Exception('The worker groups scheme is empty');
+        }
+        
+        $lastGroupId                = 0;
+        
+        foreach ($this->groupsScheme as $group) {
+            
+            if($group->workerGroupId <= $lastGroupId) {
+                throw new \Exception('The group ID must be greater than the previous group id');
+            }
+            
+            $lastGroupId            = $group->workerGroupId;
+            
+            if($group->minWorkers <= 0) {
+                throw new \Exception('The minimum number of workers must be greater than zero');
+            }
+            
+            if($group->maxWorkers < $group->minWorkers) {
+                throw new \Exception('The maximum number of workers must be greater than or equal to the minimum number of workers');
+            }
+            
+            foreach ($group->jobGroups as $jobGroupId) {
+                if(\array_key_exists($jobGroupId, $this->groupsScheme)) {
+                    throw new \Exception("The job group id '{$jobGroupId}' is not found in the worker groups scheme");
+                }
+                
+                if($jobGroupId === $group->workerGroupId) {
+                    throw new \Exception("The job group id '{$jobGroupId}' must be different from the worker group id");
+                }
+            }
+            
+        }
+    }
+    
     public function run(): void
     {
         if ($this->running || $this->queue->isComplete()) {
-            throw new \Error('The cluster watcher is already running or has already run');
+            throw new \Exception('The cluster watcher is already running or has already run');
         }
         
         if (count($this->workers) <= 0) {
-            throw new \Error('The number of workers must be greater than zero');
+            throw new \Exception('The number of workers must be greater than zero');
         }
+        
+        $this->validateGroupsScheme();
         
         $this->running              = true;
 
         try {
             
-            $groups                 = $this->calculateGroups();
-            
-            $this->poolState        = new PoolStateStorage(count($groups));
-            $this->poolState->setGroups($groups);
+            $this->poolState        = new PoolStateStorage(count($this->groupsScheme));
+            $this->poolState->setGroups($this->groupsScheme);
             
             foreach ($this->workers as $worker) {
                 $this->startWorker($worker);
@@ -227,26 +321,6 @@ class WorkerPool                    implements WorkerPoolInterface
         })->ignore());
     }
     
-    public function fillWorkersWith(string $workerClass, int $groupId = 0): void
-    {
-        $index                      = 1;
-        
-        if($this->reactorCount > 0) {
-            foreach (range($index, $this->reactorCount) as $id) {
-                $this->addWorker(new WorkerDescriptor($id, WorkerTypeEnum::REACTOR, $groupId, $workerClass));
-            }
-        }
-        
-        $index                      = $this->reactorCount + 1;
-        $groupId++;
-        
-        if($this->jobCount > 0) {
-            foreach (range($index, $this->jobCount + 1) as $id) {
-                $this->addWorker(new WorkerDescriptor($id, WorkerTypeEnum::JOB, $groupId, $workerClass));
-            }
-        }
-    }
-    
     /**
      * @param string         $workerClass
      * @param WorkerTypeEnum $type
@@ -287,9 +361,10 @@ class WorkerPool                    implements WorkerPoolInterface
         return $maxId;
     }
     
-    public function addWorker(WorkerDescriptor $worker): void
+    protected function addWorker(WorkerDescriptor $worker): self
     {
         $this->workers[]            = $worker;
+        return $this;
     }
     
     public function getWorkers(): array
