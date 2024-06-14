@@ -16,7 +16,8 @@ class WorkerDescriptor
         public readonly int $id,
         public readonly WorkerTypeEnum $type,
         public readonly int $groupId,
-        public readonly string $entryPointClassName
+        public readonly string $entryPointClassName,
+        public readonly bool $shouldBeStarted = false
     ) {}
     
     public function getWorker(): ?WorkerProcessContext

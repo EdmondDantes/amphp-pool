@@ -154,10 +154,6 @@ class WorkerPool                    implements WorkerPoolInterface
             throw new \Exception('The worker groups scheme is empty');
         }
         
-        if (count($this->workers) <= 0) {
-            throw new \Exception('The number of workers must be greater than zero');
-        }
-        
         $lastGroupId                = 0;
         
         foreach ($this->groupsScheme as $group) {
@@ -203,6 +199,11 @@ class WorkerPool                    implements WorkerPoolInterface
         }
         
         $this->validateGroupsScheme();
+        $this->applyGroupScheme();
+        
+        if (count($this->workers) <= 0) {
+            throw new \Exception('The number of workers must be greater than zero');
+        }
         
         $this->running              = true;
 
@@ -212,7 +213,9 @@ class WorkerPool                    implements WorkerPoolInterface
             $this->poolState->setGroups($this->groupsScheme);
             
             foreach ($this->workers as $worker) {
-                $this->startWorker($worker);
+                if($worker->shouldBeStarted) {
+                    $this->startWorker($worker);
+                }
             }
         } catch (\Throwable $exception) {
             $this->stop();
@@ -229,6 +232,13 @@ class WorkerPool                    implements WorkerPoolInterface
     {
         foreach ($this->getMessageIterator() as $message) {
             continue;
+        }
+    }
+    
+    protected function applyGroupScheme(): void
+    {
+        foreach ($this->groupsScheme as $group) {
+            $this->fillWorkersGroup($group->workerClass, $group->type, $group->minWorkers, $group->workerGroupId);
         }
     }
     
@@ -337,14 +347,15 @@ class WorkerPool                    implements WorkerPoolInterface
     /**
      * @param string         $workerClass
      * @param WorkerTypeEnum $type
-     * @param int            $count
+     * @param int            $minCount
+     * @param int            $maxCount
      * @param int            $groupId
      *
      * @return $this
      */
-    public function fillWorkersGroup(string $workerClass, WorkerTypeEnum $type, int $count, int $groupId = 0): self
+    protected function fillWorkersGroup(string $workerClass, WorkerTypeEnum $type, int $minCount, int $maxCount, int $groupId = 0): self
     {
-        if($count <= 0) {
+        if($minCount <= 0) {
             return $this;
         }
         
@@ -352,10 +363,12 @@ class WorkerPool                    implements WorkerPoolInterface
             $groupId                = ++$this->lastGroupId;
         }
         
-        $workerId                   = $this->getLastWorkerId();
+        $baseWorkerId               = $this->getLastWorkerId() + 1;
         
-        foreach (range($workerId + 1, $workerId + $count) as $id) {
-            $this->addWorker(new WorkerDescriptor($id, $type, $groupId, $workerClass));
+        foreach (range($baseWorkerId, $baseWorkerId + $maxCount - 1) as $id) {
+            $this->addWorker(
+                new WorkerDescriptor($id, $type, $groupId, $workerClass, $id <= ($baseWorkerId + $minCount))
+            );
         }
         
         return $this;
