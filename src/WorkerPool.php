@@ -98,7 +98,17 @@ class WorkerPool                    implements WorkerPoolInterface
         
         $groupId                    = ++$this->lastGroupId;
         $maxCount                   ??= $minCount;
-        $groupName                  ??= 'group-' . ++$groupId;
+        
+        if($groupName === null) {
+            // If group name undefined, use the worker class name without a namespace
+            $groupName              = \strrchr($workerClass, '\\');
+            
+            if($groupName === false) {
+                $groupName          = 'Group'.$groupId;
+            } else {
+                $groupName          = \ucfirst(\substr($groupName, 1));
+            }
+        }
         
         if($minCount <= 0) {
             throw new \Error('The minimum number of workers must be greater than zero');
