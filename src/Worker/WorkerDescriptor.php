@@ -8,7 +8,7 @@ use CT\AmpCluster\WorkerGroup;
 use CT\AmpCluster\WorkerProcessContext;
 use CT\AmpCluster\WorkerTypeEnum;
 
-class WorkerDescriptor
+final class WorkerDescriptor
 {
     protected ?WorkerProcessContext $worker = null;
     protected ?Future               $future = null;

@@ -6,7 +6,8 @@ use Amp\Sync\Channel;
 use CT\AmpCluster\Worker\WorkerEntryPointInterface;
 use CT\AmpCluster\Worker\Worker;
 use CT\AmpCluster\Exceptions\FatalWorkerException;
-use CT\AmpCluster\WorkerGroup;
+use CT\AmpCluster\Exceptions\RemoteException;
+use CT\AmpCluster\WorkerGroupInterface;
 use function Amp\async;
 
 return static function (Channel $channel): void
@@ -21,8 +22,8 @@ return static function (Channel $channel): void
         ['id' => $id, 'uri' => $uri, 'key' => $key, 'group' => $group, 'groupsScheme' => $groupsScheme]
                 = $channel->receive();
         
-        if(false === $group instanceof WorkerGroup) {
-            throw new Error('Invalid group type. Expected WorkerGroup');
+        if(false === $group instanceof WorkerGroupInterface) {
+            throw new Error('Invalid group type. Expected WorkerGroupInterface');
         }
         
         if(!is_array($groupsScheme)) {
@@ -36,7 +37,7 @@ return static function (Channel $channel): void
     if (\function_exists('cli_set_process_title')) {
         \set_error_handler(static fn () => true);
         try {
-            \cli_set_process_title($group->groupName.' worker #'.$id. ' group #'.$group->workerGroupId);
+            \cli_set_process_title($group->getGroupName().' worker #'.$id. ' group #'.$group->getWorkerGroupId());
         } finally {
             \restore_error_handler();
         }
@@ -46,7 +47,7 @@ return static function (Channel $channel): void
     
     try {
         
-        $entryPointClassName        = $group->workerClass;
+        $entryPointClassName        = $group->getEntryPointClass();
         
         if (class_exists($entryPointClassName)) {
             $entryPoint             = new $entryPointClassName();
@@ -81,7 +82,7 @@ return static function (Channel $channel): void
         
     } catch (\Throwable $exception) {
         
-        if(false === $exception instanceof FatalWorkerException) {
+        if(false === $exception instanceof RemoteException) {
             // Make sure that the exception is a FatalWorkerException
             $exception = new FatalWorkerException('Worker encountered a fatal error', 0, $exception);
         }
@@ -89,6 +90,6 @@ return static function (Channel $channel): void
         $channel->send($exception);
         throw $exception;
     } finally {
-        $strategy?->close();
+        $strategy?->stop();
     }
 };

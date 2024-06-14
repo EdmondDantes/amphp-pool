@@ -21,6 +21,7 @@ use Amp\Pipeline\ConcurrentIterator;
 use Amp\Pipeline\Queue;
 use Amp\Sync\ChannelException;
 use CT\AmpCluster\Exceptions\FatalWorkerException;
+use CT\AmpCluster\Exceptions\TerminateWorkerException;
 use CT\AmpCluster\PoolState\PoolStateStorage;
 use CT\AmpCluster\SocketPipe\SocketListenerProvider;
 use CT\AmpCluster\SocketPipe\SocketPipeProvider;
@@ -63,7 +64,7 @@ class WorkerPool                    implements WorkerPoolInterface
     private PoolStateStorage $poolState;
     
     /**
-     * @var WorkerGroup[]
+     * @var WorkerGroupInterface[]
      */
     private array $groupsScheme             = [];
     
@@ -158,30 +159,30 @@ class WorkerPool                    implements WorkerPoolInterface
         
         foreach ($this->groupsScheme as $group) {
             
-            if(class_exists($group->workerClass) === false) {
-                throw new \Exception("The worker class '{$group->workerClass}' does not exist");
+            if(class_exists($group->getEntryPointClass()) === false) {
+                throw new \Exception("The worker class '{$group->getEntryPointClass()}' does not exist");
             }
             
-            if($group->workerGroupId <= $lastGroupId) {
+            if($group->getWorkerGroupId() <= $lastGroupId) {
                 throw new \Exception('The group ID must be greater than the previous group id');
             }
             
-            $lastGroupId            = $group->workerGroupId;
+            $lastGroupId            = $group->getWorkerGroupId();
             
-            if($group->minWorkers <= 0) {
+            if($group->getMinWorkers() <= 0) {
                 throw new \Exception('The minimum number of workers must be greater than zero');
             }
             
-            if($group->maxWorkers < $group->minWorkers) {
+            if($group->getMaxWorkers() < $group->getMinWorkers()) {
                 throw new \Exception('The maximum number of workers must be greater than or equal to the minimum number of workers');
             }
             
-            foreach ($group->jobGroups as $jobGroupId) {
+            foreach ($group->getJobGroups() as $jobGroupId) {
                 if(\array_key_exists($jobGroupId, $this->groupsScheme)) {
                     throw new \Exception("The job group id '{$jobGroupId}' is not found in the worker groups scheme");
                 }
                 
-                if($jobGroupId === $group->workerGroupId) {
+                if($jobGroupId === $group->getWorkerGroupId()) {
                     throw new \Exception("The job group id '{$jobGroupId}' must be different from the worker group id");
                 }
             }
@@ -281,7 +282,7 @@ class WorkerPool                    implements WorkerPoolInterface
         
         $workerDescriptor->setWorker($worker);
         
-        $worker->info(\sprintf('Started %s worker #%d', $workerDescriptor->group->workerType->value, $workerDescriptor->id));
+        $worker->info(\sprintf('Started %s worker #%d', $workerDescriptor->group->getWorkerType()->value, $workerDescriptor->id));
         
         // Server stopped while worker was starting, so immediately throw everything away.
         if (false === $this->running) {
@@ -299,6 +300,7 @@ class WorkerPool                    implements WorkerPoolInterface
             async($this->provider->provideFor(...), $socketTransport, $deferredCancellation->getCancellation())->ignore();
             
             $id                         = $workerDescriptor->id;
+            $allowRestart               = $workerDescriptor->shouldBeRestarted;
             
             try {
                 try {
@@ -308,18 +310,25 @@ class WorkerPool                    implements WorkerPoolInterface
                 } catch (CancelledException) {
                     $worker->info("Worker {$id} forcefully terminated as part of watcher shutdown");
                 } catch (ChannelException $exception) {
-                    $worker->error("Worker {$id} died unexpectedly: {$exception->getMessage()}" .
-                                   ($this->running ? ", restarting..." : ""));
+                    $worker->error(
+                        "Worker {$id} died unexpectedly: {$exception->getMessage()}" .
+                        ($this->running ? ", restarting..." : "")
+                    );
                     
                     $remoteException = $exception->getPrevious();
                     
-                    if(($remoteException instanceof TaskFailureThrowable || $remoteException instanceof ContextPanicError)
-                       && $remoteException->getOriginalClassName() === FatalWorkerException::class) {
+                    if (($remoteException instanceof TaskFailureThrowable
+                         || $remoteException
+                            instanceof
+                            ContextPanicError)
+                        && $remoteException->getOriginalClassName() === FatalWorkerException::class) {
                         
                         // The Worker died due to a fatal error, so we should stop the server.
                         $this->logger?->error('Server shutdown due to fatal worker error');
                         throw $remoteException;
                     }
+                } catch (TerminateWorkerException) {
+                    $worker->info("Worker {$id} terminated cleanly without restart");
                 } catch (\Throwable $exception) {
                     $worker->error(
                         "Worker {$id} failed: " . (string) $exception,
@@ -344,22 +353,22 @@ class WorkerPool                    implements WorkerPoolInterface
     
     protected function fillWorkersGroup(WorkerGroup $group): void
     {
-        if($group->workerGroupId === 0) {
+        if($group->getWorkerGroupId() === 0) {
             throw new \Error('The group id must be greater than zero');
         }
         
-        if($group->minWorkers <= 0) {
+        if($group->getMinWorkers() <= 0) {
             throw new \Error('The minimum number of workers must be greater than zero');
         }
 
-        if($group->maxWorkers < $group->minWorkers) {
+        if($group->getMaxWorkers() < $group->getMinWorkers()) {
             throw new \Error('The maximum number of workers must be greater than or equal to the minimum number of workers');
         }
         
         $baseWorkerId               = $this->getLastWorkerId() + 1;
         
-        foreach (range($baseWorkerId, $baseWorkerId + $group->maxWorkers - 1) as $id) {
-            $this->addWorker(new WorkerDescriptor($id, $group, $id <= ($baseWorkerId + $group->minWorkers - 1)));
+        foreach (range($baseWorkerId, $baseWorkerId + $group->getMinWorkers() - 1) as $id) {
+            $this->addWorker(new WorkerDescriptor($id, $group, $id <= ($baseWorkerId + $group->getMinWorkers() - 1)));
         }
     }
     

@@ -69,7 +69,7 @@ class Worker                        implements WorkerInterface
         $this->iterator             = $this->queue->iterate();
         $this->loopCancellation     = new DeferredCancellation();
         
-        if($this->group->workerType === WorkerTypeEnum::JOB) {
+        if($this->group->getWorkerType() === WorkerTypeEnum::JOB) {
             $this->jobIpc           = new IpcServer($this->id);
         }
         
@@ -111,12 +111,12 @@ class Worker                        implements WorkerInterface
     
     public function getWorkerGroupId(): int
     {
-        return $this->group->workerGroupId;
+        return $this->group->getWorkerGroupId();
     }
     
     public function getWorkerType(): WorkerTypeEnum
     {
-        return $this->group->workerType;
+        return $this->group->getWorkerType();
     }
     
     public function getIpcForTransferSocket(): ResourceSocket
@@ -172,7 +172,7 @@ class Worker                        implements WorkerInterface
     {
         $abortCancellation          = $this->loopCancellation->getCancellation();
         
-        if($this->group->workerType === WorkerTypeEnum::JOB) {
+        if($this->group->getWorkerType() === WorkerTypeEnum::JOB) {
             EventLoop::queue($this->jobLoop(...), $abortCancellation);
         }
         
@@ -210,7 +210,7 @@ class Worker                        implements WorkerInterface
             return;
         }
         
-        $this->workerState          = new WorkerStateStorage($this->id, $this->group->workerGroupId, true);
+        $this->workerState          = new WorkerStateStorage($this->id, $this->group->getWorkerGroupId(), true);
         $this->workerState->workerReady();
         
         $jobQueueIterator           = $this->jobIpc->getJobQueue()->iterate();
@@ -285,15 +285,15 @@ class Worker                        implements WorkerInterface
     
     public function __destruct()
     {
-        $this->close();
+        $this->stop();
     }
     
-    public function close(): void
+    public function stop(): void
     {
         $this->loopCancellation->cancel();
     }
     
-    public function isClosed(): bool
+    public function isStopped(): bool
     {
         return $this->loopCancellation->isCancelled();
     }
@@ -305,6 +305,6 @@ class Worker                        implements WorkerInterface
     
     public function __toString(): string
     {
-        return $this->group->groupName.'-'.$this->id;
+        return $this->group->getGroupName().'-'.$this->id;
     }
 }

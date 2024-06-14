@@ -20,6 +20,7 @@ use Amp\Sync\ChannelException;
 use Amp\TimeoutCancellation;
 use Amp\TimeoutException;
 use CT\AmpCluster\Exceptions\FatalWorkerException;
+use CT\AmpCluster\Exceptions\RemoteException;
 use CT\AmpCluster\Messages\MessageJob;
 use CT\AmpCluster\Messages\MessageJobResult;
 use CT\AmpCluster\Messages\MessageLog;
@@ -164,7 +165,7 @@ class WorkerProcessContext          implements \Psr\Log\LoggerInterface, \Psr\Lo
                 
                 $this->lastActivity = \time();
                 
-                if($message instanceof FatalWorkerException) {
+                if($message instanceof RemoteException) {
                     throw $message;
                 }
                 
