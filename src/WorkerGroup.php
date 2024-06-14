@@ -3,9 +3,6 @@ declare(strict_types=1);
 
 namespace CT\AmpCluster;
 
-use CT\AmpCluster\Worker\RestartPolicy\RestartAlways;
-use CT\AmpCluster\Worker\RestartPolicy\RestartPolicyInterface;
-
 /**
  * Data structure for describing a group of workers.
  */
@@ -22,7 +19,9 @@ final readonly class WorkerGroup implements WorkerGroupInterface
          * @var int[]
          */
         private array          $jobGroups = [],
-        private ?string $restartPolicyClass = null
+        private ?string        $pickupStrategyClass = null,
+        private ?string        $restartStrategyClass = null,
+        private ?string        $scalingStrategyClass = null
     ) {}
     
     public function getEntryPointClass(): string
@@ -60,8 +59,18 @@ final readonly class WorkerGroup implements WorkerGroupInterface
         return $this->jobGroups;
     }
     
-    public function getRestartPolicyClass(): ?string
+    public function getPickupStrategyClass(): ?string
     {
-        return $this->restartPolicyClass;
+        return $this->pickupStrategyClass;
+    }
+    
+    public function getRestartStrategyClass(): ?string
+    {
+        return $this->restartStrategyClass;
+    }
+    
+    public function getScalingStrategyClass(): ?string
+    {
+        return $this->scalingStrategyClass;
     }
 }

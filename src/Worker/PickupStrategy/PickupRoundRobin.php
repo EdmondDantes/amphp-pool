@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpCluster\PickupWorkerStrategy;
+namespace CT\AmpCluster\Worker\PickupStrategy;
 
 use CT\AmpCluster\Worker\WorkerDescriptor;
 use CT\AmpCluster\WorkerPoolInterface;
@@ -10,7 +10,7 @@ use CT\AmpCluster\WorkerTypeEnum;
 /**
  * The class implements the strategy of selecting workers in a round-robin manner
  */
-final class PickupWorkerRoundRobin implements PickupWorkerStrategyInterface
+final class PickupRoundRobin implements PickupStrategyInterface
 {
     /**
      * @var array<string, array<WorkerDescriptor>>

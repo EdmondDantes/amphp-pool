@@ -1,12 +1,12 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpCluster\Worker\RestartPolicy;
+namespace CT\AmpCluster\Worker\RestartStrategy;
 
 /**
  * Worker Restart Strategy, which defines the rules by which a worker can be restarted.
  */
-interface RestartPolicyInterface
+interface RestartStrategyInterface
 {
     /**
      * Returns the seconds to wait before restarting the worker.

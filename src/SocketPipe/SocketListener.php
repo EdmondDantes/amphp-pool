@@ -9,8 +9,8 @@ use Amp\Socket\ResourceServerSocket;
 use Amp\Socket\ServerSocket;
 use Amp\Socket\SocketAddress;
 use CT\AmpCluster\Messages\MessageSocketTransfer;
-use CT\AmpCluster\PickupWorkerStrategy\PickupWorkerRoundRobin;
-use CT\AmpCluster\PickupWorkerStrategy\PickupWorkerStrategyInterface;
+use CT\AmpCluster\Worker\PickupStrategy\PickupRoundRobin;
+use CT\AmpCluster\Worker\PickupStrategy\PickupStrategyInterface;
 use CT\AmpCluster\WorkerPool;
 use Revolt\EventLoop;
 
@@ -20,16 +20,16 @@ use Revolt\EventLoop;
  */
 final class SocketListener
 {
-    private array                         $workers          = [];
-    private PickupWorkerStrategyInterface $pickupWorkerStrategy;
+    private array                   $workers          = [];
+    private PickupStrategyInterface $pickupWorkerStrategy;
     
     public function __construct(
         private readonly SocketAddress $address,
         private readonly WorkerPool $workerPool,
-        PickupWorkerStrategyInterface $pickupWorkerStrategy = null
+        PickupStrategyInterface $pickupWorkerStrategy = null
     )
     {
-        $this->pickupWorkerStrategy = $pickupWorkerStrategy ?? new PickupWorkerRoundRobin($this->workerPool);
+        $this->pickupWorkerStrategy = $pickupWorkerStrategy ?? new PickupRoundRobin($this->workerPool);
     }
     
     public function getSocketAddress(): SocketAddress

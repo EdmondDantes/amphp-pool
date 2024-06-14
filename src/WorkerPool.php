@@ -25,7 +25,11 @@ use CT\AmpCluster\Exceptions\TerminateWorkerException;
 use CT\AmpCluster\PoolState\PoolStateStorage;
 use CT\AmpCluster\SocketPipe\SocketListenerProvider;
 use CT\AmpCluster\SocketPipe\SocketPipeProvider;
+use CT\AmpCluster\Worker\PickupStrategy\PickupLeastJobs;
+use CT\AmpCluster\Worker\RestartStrategy\RestartAlways;
+use CT\AmpCluster\Worker\ScalingStrategy\ScalingSimple;
 use CT\AmpCluster\Worker\WorkerDescriptor;
+use CT\AmpCluster\Worker\WorkerStrategies;
 use Psr\Log\LoggerInterface as PsrLogger;
 use Revolt\EventLoop;
 use function Amp\async;
@@ -367,8 +371,13 @@ class WorkerPool                    implements WorkerPoolInterface
         
         $baseWorkerId               = $this->getLastWorkerId() + 1;
         
+        // All workers in the group will have the same strategies
+        $strategies                 = $this->buildWorkerStrategies($group);
+        
         foreach (range($baseWorkerId, $baseWorkerId + $group->getMinWorkers() - 1) as $id) {
-            $this->addWorker(new WorkerDescriptor($id, $group, $id <= ($baseWorkerId + $group->getMinWorkers() - 1)));
+            $this->addWorker(new WorkerDescriptor(
+                $id, $group, $strategies, $id <= ($baseWorkerId + $group->getMinWorkers() - 1
+            )));
         }
     }
     
@@ -459,5 +468,19 @@ class WorkerPool                    implements WorkerPoolInterface
     public function __destruct()
     {
         EventLoop::queue($this->stop(...));
+    }
+    
+    protected function buildWorkerStrategies(WorkerGroup $group): WorkerStrategies
+    {
+        $class                      = $group->getPickupStrategyClass() ?? PickupLeastJobs::class;
+        $pickupStrategy             = new $class($this);
+        
+        $class                      = $group->getScalingStrategyClass() ?? ScalingSimple::class;
+        $scalingStrategy            = new $class($this);
+        
+        $class                      = $group->getRestartStrategyClass() ?? RestartAlways::class;
+        $restartStrategy            = new $class($this);
+        
+        return new WorkerStrategies($pickupStrategy, $scalingStrategy, $restartStrategy);
     }
 }

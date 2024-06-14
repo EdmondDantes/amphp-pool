@@ -3,6 +3,9 @@ declare(strict_types=1);
 
 namespace CT\AmpCluster;
 
+/**
+ * Worker Group Interface, which defines the configuration of a worker group.
+ */
 interface WorkerGroupInterface
 {
     public function getEntryPointClass(): string;
@@ -17,5 +20,7 @@ interface WorkerGroupInterface
      */
     public function getJobGroups(): array;
     
-    public function getRestartPolicyClass(): ?string;
+    public function getRestartStrategyClass(): ?string;
+    
+    public function getScalingStrategyClass(): ?string;
 }
