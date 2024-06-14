@@ -6,6 +6,7 @@ use Amp\Sync\Channel;
 use CT\AmpCluster\Worker\WorkerEntryPointInterface;
 use CT\AmpCluster\Worker\Worker;
 use CT\AmpCluster\Exceptions\FatalWorkerException;
+use CT\AmpCluster\WorkerGroup;
 use function Amp\async;
 
 return static function (Channel $channel): void
@@ -17,9 +18,16 @@ return static function (Channel $channel): void
     
     try {
         // Read random IPC hub URI and associated key from a process channel.
-        ['id' => $id, 'groupId' => $groupId, 'uri' => $uri, 'key' => $key,
-         'type' => $type, 'entryPoint' => $entryPointClassName, 'groupsScheme' => $groupsScheme]
-            = $channel->receive();
+        ['id' => $id, 'uri' => $uri, 'key' => $key, 'group' => $group, 'groupsScheme' => $groupsScheme]
+                = $channel->receive();
+        
+        if(false === $group instanceof WorkerGroup) {
+            throw new Error('Invalid group type. Expected WorkerGroup');
+        }
+        
+        if(!is_array($groupsScheme)) {
+            throw new Error('Invalid groups scheme. Expected array');
+        }
         
     } catch (\Throwable $exception) {
         throw new FatalWorkerException('Could not connect to IPC socket', 0, $exception);
@@ -28,7 +36,7 @@ return static function (Channel $channel): void
     if (\function_exists('cli_set_process_title')) {
         \set_error_handler(static fn () => true);
         try {
-            \cli_set_process_title($type.' worker #'.$id. ' group #'.$groupId);
+            \cli_set_process_title($group->groupName.' worker #'.$id. ' group #'.$group->workerGroupId);
         } finally {
             \restore_error_handler();
         }
@@ -37,6 +45,8 @@ return static function (Channel $channel): void
     $strategy                       = null;
     
     try {
+        
+        $entryPointClassName        = $group->workerClass;
         
         if (class_exists($entryPointClassName)) {
             $entryPoint             = new $entryPointClassName();
@@ -48,7 +58,8 @@ return static function (Channel $channel): void
             throw new FatalWorkerException('Entry point class must implement WorkerEntryPointI');
         }
         
-        $strategy                   = new Worker((int)$id, (int)$groupId, $channel, $key, $uri, $type, $groupsScheme);
+        $strategy                   = new Worker((int)$id, $channel, $key, $uri, $group, $groupsScheme);
+        
         $entryPoint->initialize($strategy);
         $strategy->initWorker();
         

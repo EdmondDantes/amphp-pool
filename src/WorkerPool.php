@@ -238,7 +238,7 @@ class WorkerPool                    implements WorkerPoolInterface
     protected function applyGroupScheme(): void
     {
         foreach ($this->groupsScheme as $group) {
-            $this->fillWorkersGroup($group->workerClass, $group->type, $group->minWorkers, $group->workerGroupId);
+            $this->fillWorkersGroup($group);
         }
     }
     
@@ -249,11 +249,9 @@ class WorkerPool                    implements WorkerPoolInterface
         
         $context->send([
             'id'                    => $workerDescriptor->id,
-            'groupId'               => $workerDescriptor->groupId,
             'uri'                   => $this->hub->getUri(),
             'key'                   => $key,
-            'type'                  => $workerDescriptor->type->value,
-            'entryPoint'            => $workerDescriptor->entryPointClassName,
+            'group'                 => $workerDescriptor->group,
             'groupsScheme'          => $this->groupsScheme,
         ]);
         
@@ -283,7 +281,7 @@ class WorkerPool                    implements WorkerPoolInterface
         
         $workerDescriptor->setWorker($worker);
         
-        $worker->info(\sprintf('Started %s worker #%d', $workerDescriptor->type->value, $workerDescriptor->id));
+        $worker->info(\sprintf('Started %s worker #%d', $workerDescriptor->group->workerType->value, $workerDescriptor->id));
         
         // Server stopped while worker was starting, so immediately throw everything away.
         if (false === $this->running) {
@@ -344,33 +342,28 @@ class WorkerPool                    implements WorkerPoolInterface
         })->ignore());
     }
     
-    /**
-     * @param string         $workerClass
-     * @param WorkerTypeEnum $type
-     * @param int            $minCount
-     * @param int            $maxCount
-     * @param int            $groupId
-     */
-    protected function fillWorkersGroup(string $workerClass, WorkerTypeEnum $type, int $minCount, int $maxCount, int $groupId = 0): void
+    protected function fillWorkersGroup(WorkerGroup $group): void
     {
-        if($minCount <= 0) {
-            return;
+        if($group->workerGroupId === 0) {
+            throw new \Error('The group id must be greater than zero');
         }
         
-        if($groupId === 0) {
-            $groupId                = ++$this->lastGroupId;
+        if($group->minWorkers <= 0) {
+            throw new \Error('The minimum number of workers must be greater than zero');
+        }
+
+        if($group->maxWorkers < $group->minWorkers) {
+            throw new \Error('The maximum number of workers must be greater than or equal to the minimum number of workers');
         }
         
         $baseWorkerId               = $this->getLastWorkerId() + 1;
         
-        foreach (range($baseWorkerId, $baseWorkerId + $maxCount - 1) as $id) {
-            $this->addWorker(
-                new WorkerDescriptor($id, $type, $groupId, $workerClass, $id <= ($baseWorkerId + $minCount))
-            );
+        foreach (range($baseWorkerId, $baseWorkerId + $group->maxWorkers - 1) as $id) {
+            $this->addWorker(new WorkerDescriptor($id, $group, $id <= ($baseWorkerId + $group->minWorkers - 1)));
         }
     }
     
-    public function getLastWorkerId(): int
+    protected function getLastWorkerId(): int
     {
         $maxId                      = 0;
         
@@ -392,22 +385,6 @@ class WorkerPool                    implements WorkerPoolInterface
     public function getWorkers(): array
     {
         return $this->workers;
-    }
-    
-    public function pickupWorker(WorkerTypeEnum $workerType = null, array $possibleWorkers = null): ?WorkerDescriptor
-    {
-        foreach ($this->workers as $workerDescriptor) {
-            
-            if ($possibleWorkers !== null && !\in_array($workerDescriptor->id, $possibleWorkers, true)) {
-                continue;
-            }
-            
-            if ($workerDescriptor->getWorker()?->isReady()) {
-                return $workerDescriptor;
-            }
-        }
-        
-        return null;
     }
     
     /**

@@ -55,11 +55,10 @@ class Worker                        implements WorkerInterface
     
     public function __construct(
         private readonly int     $id,
-        private readonly int     $groupId,
         private readonly Channel $ipcChannel,
         private readonly string  $key,
         private readonly string  $uri,
-        private readonly string  $workerType,
+        private readonly WorkerGroup $group,
         /**
          * @var array<int, WorkerGroup>
          */
@@ -70,7 +69,7 @@ class Worker                        implements WorkerInterface
         $this->iterator             = $this->queue->iterate();
         $this->loopCancellation     = new DeferredCancellation();
         
-        if($this->workerType === WorkerTypeEnum::JOB->value) {
+        if($this->group->workerType === WorkerTypeEnum::JOB) {
             $this->jobIpc           = new IpcServer($this->id);
         }
         
@@ -105,14 +104,19 @@ class Worker                        implements WorkerInterface
         return $this->id;
     }
     
-    public function getWorkerGroupId(): int
+    public function getWorkerGroup(): WorkerGroup
     {
-        return $this->groupId;
+        return $this->group;
     }
     
-    public function getWorkerType(): string
+    public function getWorkerGroupId(): int
     {
-        return $this->workerType;
+        return $this->group->workerGroupId;
+    }
+    
+    public function getWorkerType(): WorkerTypeEnum
+    {
+        return $this->group->workerType;
     }
     
     public function getIpcForTransferSocket(): ResourceSocket
@@ -168,7 +172,7 @@ class Worker                        implements WorkerInterface
     {
         $abortCancellation          = $this->loopCancellation->getCancellation();
         
-        if($this->workerType === WorkerTypeEnum::JOB->value) {
+        if($this->group->workerType === WorkerTypeEnum::JOB) {
             EventLoop::queue($this->jobLoop(...), $abortCancellation);
         }
         
@@ -206,7 +210,7 @@ class Worker                        implements WorkerInterface
             return;
         }
         
-        $this->workerState          = new WorkerStateStorage($this->id, $this->groupId, true);
+        $this->workerState          = new WorkerStateStorage($this->id, $this->group->workerGroupId, true);
         $this->workerState->workerReady();
         
         $jobQueueIterator           = $this->jobIpc->getJobQueue()->iterate();
@@ -301,6 +305,6 @@ class Worker                        implements WorkerInterface
     
     public function __toString(): string
     {
-        return 'worker-'.$this->id;
+        return $this->group->groupName.'-'.$this->id;
     }
 }

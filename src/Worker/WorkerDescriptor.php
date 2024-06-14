@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace CT\AmpCluster\Worker;
 
 use Amp\Future;
+use CT\AmpCluster\WorkerGroup;
 use CT\AmpCluster\WorkerProcessContext;
 use CT\AmpCluster\WorkerTypeEnum;
 
@@ -14,9 +15,7 @@ class WorkerDescriptor
     
     public function __construct(
         public readonly int $id,
-        public readonly WorkerTypeEnum $type,
-        public readonly int $groupId,
-        public readonly string $entryPointClassName,
+        public readonly WorkerGroup $group,
         public readonly bool $shouldBeStarted = false
     ) {}
     
