@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpServer\JobIpc;
+namespace CT\AmpCluster\JobIpc;
 
 use Amp\Cancellation;
-use CT\AmpServer\Worker\WorkerInterface;
+use CT\AmpCluster\Worker\WorkerInterface;
 
 interface JobHandlerInterface
 {

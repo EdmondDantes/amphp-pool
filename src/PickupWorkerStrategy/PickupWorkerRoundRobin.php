@@ -1,11 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpServer\PickupWorkerStrategy;
+namespace CT\AmpCluster\PickupWorkerStrategy;
 
-use CT\AmpServer\Worker\WorkerDescriptor;
-use CT\AmpServer\WorkerPoolInterface;
-use CT\AmpServer\WorkerTypeEnum;
+use CT\AmpCluster\Worker\WorkerDescriptor;
+use CT\AmpCluster\WorkerPoolInterface;
+use CT\AmpCluster\WorkerTypeEnum;
 
 /**
  * The class implements the strategy of selecting workers in a round-robin manner

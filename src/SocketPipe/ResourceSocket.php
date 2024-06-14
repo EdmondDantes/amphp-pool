@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpServer\SocketPipe;
+namespace CT\AmpCluster\SocketPipe;
 
 use Amp\ByteStream\ClosedException;
 use Amp\ByteStream\ReadableResourceStream;
@@ -20,7 +20,7 @@ use Amp\Socket\TlsInfo;
 use Amp\Socket\TlsState;
 use Amp\Socket\Internal;
 use Amp\Sync\Channel;
-use CT\AmpServer\Messages\MessageSocketFree;
+use CT\AmpCluster\Messages\MessageSocketFree;
 
 /**
  * Copy of the ResourceSocket class from the amphp/socket package.

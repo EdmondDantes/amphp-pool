@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 
-use CT\AmpServer\WorkerPool;
+use CT\AmpCluster\WorkerPool;
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
 use Examples\HttpServer\HttpReactor;

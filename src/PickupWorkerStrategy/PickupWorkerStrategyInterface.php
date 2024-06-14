@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpServer\PickupWorkerStrategy;
+namespace CT\AmpCluster\PickupWorkerStrategy;
 
-use CT\AmpServer\Worker\WorkerDescriptor;
-use CT\AmpServer\WorkerTypeEnum;
+use CT\AmpCluster\Worker\WorkerDescriptor;
+use CT\AmpCluster\WorkerTypeEnum;
 
 /**
  * The interface describes the strategy for selecting workers from the pool

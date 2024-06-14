@@ -1,13 +1,13 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpServer\JobIpc;
+namespace CT\AmpCluster\JobIpc;
 
 use Amp\CancelledException;
 use Amp\DeferredCancellation;
 use Amp\TimeoutCancellation;
-use CT\AmpServer\PoolState\PoolStateStorage;
-use CT\AmpServer\WorkerState\WorkerStateStorage;
+use CT\AmpCluster\PoolState\PoolStateStorage;
+use CT\AmpCluster\WorkerState\WorkerStateStorage;
 use PHPUnit\Framework\TestCase;
 use Revolt\EventLoop;
 

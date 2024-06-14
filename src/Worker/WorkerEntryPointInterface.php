@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpServer\Worker;
+namespace CT\AmpCluster\Worker;
 
 interface WorkerEntryPointInterface
 {

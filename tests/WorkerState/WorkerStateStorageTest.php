@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpServer\WorkerState;
+namespace CT\AmpCluster\WorkerState;
 
 use PHPUnit\Framework\TestCase;
 

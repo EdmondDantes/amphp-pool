@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpServer\WorkerState;
+namespace CT\AmpCluster\WorkerState;
 
-use CT\AmpServer\WorkerState\Exceptions\WorkerStateNotAvailable;
-use CT\AmpServer\WorkerState\Exceptions\WorkerStateReadFailed;
+use CT\AmpCluster\WorkerState\Exceptions\WorkerStateNotAvailable;
+use CT\AmpCluster\WorkerState\Exceptions\WorkerStateReadFailed;
 
 /**
  * The class provides information about the state of the workers.

@@ -1,17 +1,17 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpServer\SocketPipe;
+namespace CT\AmpCluster\SocketPipe;
 
 use Amp\Parallel\Context\ProcessContext;
 use Amp\Socket\BindContext;
 use Amp\Socket\ResourceServerSocket;
 use Amp\Socket\ServerSocket;
 use Amp\Socket\SocketAddress;
-use CT\AmpServer\Messages\MessageSocketTransfer;
-use CT\AmpServer\PickupWorkerStrategy\PickupWorkerRoundRobin;
-use CT\AmpServer\PickupWorkerStrategy\PickupWorkerStrategyInterface;
-use CT\AmpServer\WorkerPool;
+use CT\AmpCluster\Messages\MessageSocketTransfer;
+use CT\AmpCluster\PickupWorkerStrategy\PickupWorkerRoundRobin;
+use CT\AmpCluster\PickupWorkerStrategy\PickupWorkerStrategyInterface;
+use CT\AmpCluster\WorkerPool;
 use Revolt\EventLoop;
 
 /**

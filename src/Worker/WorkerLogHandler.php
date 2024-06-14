@@ -1,12 +1,12 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpServer\Worker;
+namespace CT\AmpCluster\Worker;
 
 use Amp\ForbidCloning;
 use Amp\ForbidSerialization;
 use Amp\Sync\Channel;
-use CT\AmpServer\Messages\MessageLog;
+use CT\AmpCluster\Messages\MessageLog;
 use Monolog\Handler\AbstractProcessingHandler;
 use Monolog\Level;
 use Monolog\LogRecord;

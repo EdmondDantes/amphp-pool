@@ -3,9 +3,9 @@ declare(strict_types=1);
 
 use Amp\Future;
 use Amp\Sync\Channel;
-use CT\AmpServer\Worker\WorkerEntryPointInterface;
-use CT\AmpServer\Worker\Worker;
-use CT\AmpServer\Exceptions\FatalWorkerException;
+use CT\AmpCluster\Worker\WorkerEntryPointInterface;
+use CT\AmpCluster\Worker\Worker;
+use CT\AmpCluster\Exceptions\FatalWorkerException;
 use function Amp\async;
 
 return static function (Channel $channel): void

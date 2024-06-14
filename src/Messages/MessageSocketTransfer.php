@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpServer\Messages;
+namespace CT\AmpCluster\Messages;
 
 final readonly class MessageSocketTransfer
 {

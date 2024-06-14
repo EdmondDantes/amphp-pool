@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpServer\SocketPipe;
+namespace CT\AmpCluster\SocketPipe;
 
 use Amp\Socket\SocketAddress;
-use CT\AmpServer\WorkerPool;
+use CT\AmpCluster\WorkerPool;
 
 final class SocketListenerProvider
 {

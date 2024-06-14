@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpServer\Exceptions;
+namespace CT\AmpCluster\Exceptions;
 
 /**
  * FatalWorkerException is thrown when a worker encounters a fatal error.

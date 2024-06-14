@@ -1,11 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpServer\Worker;
+namespace CT\AmpCluster\Worker;
 
 use Amp\Future;
-use CT\AmpServer\WorkerProcessContext;
-use CT\AmpServer\WorkerTypeEnum;
+use CT\AmpCluster\WorkerProcessContext;
+use CT\AmpCluster\WorkerTypeEnum;
 
 class WorkerDescriptor
 {

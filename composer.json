@@ -1,5 +1,5 @@
 {
-    "name": "ct/clustered-amp-server",
+    "name": "ct/amp-cluster",
     "type": "library",
     "description": "Library for creating clustered async servers using amphp/http-server and amphp/cluster",
     "keywords": [
@@ -19,7 +19,7 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "CT\\AmpServer\\": "./tests",
+            "CT\\AmpCluster\\": "./tests",
             "Examples\\": "./examples"
         }
     },

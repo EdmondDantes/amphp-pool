@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpServer\PoolState;
+namespace CT\AmpCluster\PoolState;
 
 use PHPUnit\Framework\TestCase;
 

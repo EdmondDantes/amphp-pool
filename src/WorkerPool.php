@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpServer;
+namespace CT\AmpCluster;
 
 use Amp\Cancellation;
 use Amp\CancelledException;
@@ -20,11 +20,11 @@ use Amp\Parallel\Worker\TaskFailureThrowable;
 use Amp\Pipeline\ConcurrentIterator;
 use Amp\Pipeline\Queue;
 use Amp\Sync\ChannelException;
-use CT\AmpServer\Exceptions\FatalWorkerException;
-use CT\AmpServer\PoolState\PoolStateStorage;
-use CT\AmpServer\SocketPipe\SocketListenerProvider;
-use CT\AmpServer\SocketPipe\SocketPipeProvider;
-use CT\AmpServer\Worker\WorkerDescriptor;
+use CT\AmpCluster\Exceptions\FatalWorkerException;
+use CT\AmpCluster\PoolState\PoolStateStorage;
+use CT\AmpCluster\SocketPipe\SocketListenerProvider;
+use CT\AmpCluster\SocketPipe\SocketPipeProvider;
+use CT\AmpCluster\Worker\WorkerDescriptor;
 use Psr\Log\LoggerInterface as PsrLogger;
 use Revolt\EventLoop;
 use function Amp\async;

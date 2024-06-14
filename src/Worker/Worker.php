@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpServer\Worker;
+namespace CT\AmpCluster\Worker;
 
 use Amp\Cancellation;
 use Amp\Cluster\ServerSocketPipeFactory;
@@ -14,13 +14,13 @@ use Amp\Socket\ResourceSocket;
 use Amp\Socket\ServerSocketFactory;
 use Amp\Sync\Channel;
 use Amp\TimeoutCancellation;
-use CT\AmpServer\JobIpc\IpcServer;
-use CT\AmpServer\JobIpc\JobHandlerInterface;
-use CT\AmpServer\Messages\MessagePingPong;
-use CT\AmpServer\SocketPipe\SocketPipeFactoryWindows;
-use CT\AmpServer\WorkerGroup;
-use CT\AmpServer\WorkerState\WorkerStateStorage;
-use CT\AmpServer\WorkerTypeEnum;
+use CT\AmpCluster\JobIpc\IpcServer;
+use CT\AmpCluster\JobIpc\JobHandlerInterface;
+use CT\AmpCluster\Messages\MessagePingPong;
+use CT\AmpCluster\SocketPipe\SocketPipeFactoryWindows;
+use CT\AmpCluster\WorkerGroup;
+use CT\AmpCluster\WorkerState\WorkerStateStorage;
+use CT\AmpCluster\WorkerTypeEnum;
 use Psr\Log\LoggerInterface;
 use Revolt\EventLoop;
 

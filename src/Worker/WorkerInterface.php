@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpServer\Worker;
+namespace CT\AmpCluster\Worker;
 
-use CT\AmpServer\WorkerGroup;
+use CT\AmpCluster\WorkerGroup;
 use Psr\Log\LoggerInterface;
 
 interface WorkerInterface

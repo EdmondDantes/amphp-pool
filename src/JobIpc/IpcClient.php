@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpServer\JobIpc;
+namespace CT\AmpCluster\JobIpc;
 
 use Amp\ByteStream\StreamChannel;
 use Amp\ByteStream\StreamException;
@@ -13,10 +13,10 @@ use Amp\Future;
 use Amp\Serialization\PassthroughSerializer;
 use Amp\TimeoutCancellation;
 use Amp\TimeoutException;
-use CT\AmpServer\Exceptions\NoWorkersAvailable;
-use CT\AmpServer\Exceptions\SendJobException;
-use CT\AmpServer\PoolState\PoolStateStorage;
-use CT\AmpServer\WorkerState\WorkersStateInfo;
+use CT\AmpCluster\Exceptions\NoWorkersAvailable;
+use CT\AmpCluster\Exceptions\SendJobException;
+use CT\AmpCluster\PoolState\PoolStateStorage;
+use CT\AmpCluster\WorkerState\WorkersStateInfo;
 use Revolt\EventLoop;
 use function Amp\delay;
 use function Amp\Socket\socketConnector;
