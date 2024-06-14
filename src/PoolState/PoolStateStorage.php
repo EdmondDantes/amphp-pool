@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 namespace CT\AmpCluster\PoolState;
 
-use CT\AmpCluster\WorkerState\WorkerState;
-
 /**
  * The class describes the configuration data structure of Workers groups for a pool.
  * The information is in shared memory and is available for reading by different processes.

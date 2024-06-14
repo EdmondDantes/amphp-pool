@@ -15,7 +15,7 @@
         "ext-shmop": "*"
     },
     "autoload": {
-        "psr-4": {"CT\\AmpServer\\": ["./src"]}
+        "psr-4": {"CT\\AmpCluster\\": ["./src"]}
     },
     "autoload-dev": {
         "psr-4": {
