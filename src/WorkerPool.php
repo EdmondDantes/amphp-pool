@@ -350,13 +350,11 @@ class WorkerPool                    implements WorkerPoolInterface
      * @param int            $minCount
      * @param int            $maxCount
      * @param int            $groupId
-     *
-     * @return $this
      */
-    protected function fillWorkersGroup(string $workerClass, WorkerTypeEnum $type, int $minCount, int $maxCount, int $groupId = 0): self
+    protected function fillWorkersGroup(string $workerClass, WorkerTypeEnum $type, int $minCount, int $maxCount, int $groupId = 0): void
     {
         if($minCount <= 0) {
-            return $this;
+            return;
         }
         
         if($groupId === 0) {
@@ -370,8 +368,6 @@ class WorkerPool                    implements WorkerPoolInterface
                 new WorkerDescriptor($id, $type, $groupId, $workerClass, $id <= ($baseWorkerId + $minCount))
             );
         }
-        
-        return $this;
     }
     
     public function getLastWorkerId(): int
