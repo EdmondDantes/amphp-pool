@@ -7,7 +7,7 @@ use Amp\CancelledException;
 use Amp\DeferredCancellation;
 use Amp\TimeoutCancellation;
 use CT\AmpCluster\PoolState\PoolStateStorage;
-use CT\AmpCluster\WorkerState\WorkerStateStorage;
+use CT\AmpCluster\Worker\WorkerState\WorkerStateStorage;
 use PHPUnit\Framework\TestCase;
 use Revolt\EventLoop;
 

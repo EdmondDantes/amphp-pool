@@ -16,7 +16,7 @@ use Amp\TimeoutException;
 use CT\AmpCluster\Exceptions\NoWorkersAvailable;
 use CT\AmpCluster\Exceptions\SendJobException;
 use CT\AmpCluster\PoolState\PoolStateStorage;
-use CT\AmpCluster\WorkerState\WorkersStateInfo;
+use CT\AmpCluster\Worker\WorkerState\WorkersStateInfo;
 use Revolt\EventLoop;
 use function Amp\delay;
 use function Amp\Socket\socketConnector;

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace CT\AmpCluster\WorkerState;
 
+use CT\AmpCluster\Worker\WorkerState\WorkerStateStorage;
 use PHPUnit\Framework\TestCase;
 
 class WorkerStateStorageTest        extends TestCase

@@ -3,25 +3,29 @@ declare(strict_types=1);
 
 namespace CT\AmpCluster;
 
+use CT\AmpCluster\Worker\PickupStrategy\PickupStrategyInterface;
+use CT\AmpCluster\Worker\RestartStrategy\RestartStrategyInterface;
+use CT\AmpCluster\Worker\ScalingStrategy\ScalingStrategyInterface;
+
 /**
  * Data structure for describing a group of workers.
  */
-final readonly class WorkerGroup implements WorkerGroupInterface
+final class WorkerGroup             implements WorkerGroupInterface
 {
     public function __construct(
-        private string         $entryPointClass,
-        private WorkerTypeEnum $workerType,
-        private int            $workerGroupId,
-        private int            $minWorkers,
-        private int            $maxWorkers,
-        private string         $groupName,
+        private readonly string         $entryPointClass,
+        private readonly WorkerTypeEnum $workerType,
+        private readonly int            $minWorkers,
+        private readonly int            $maxWorkers,
+        private string                  $groupName = '',
         /**
          * @var int[]
          */
-        private array          $jobGroups = [],
-        private ?string        $pickupStrategyClass = null,
-        private ?string        $restartStrategyClass = null,
-        private ?string        $scalingStrategyClass = null
+        private readonly array          $jobGroups = [],
+        private ?PickupStrategyInterface $pickupStrategy = null,
+        private ?RestartStrategyInterface $restartStrategy = null,
+        private ?ScalingStrategyInterface $scalingStrategy = null,
+        private int                     $workerGroupId = 0,
     ) {}
     
     public function getEntryPointClass(): string
@@ -59,18 +63,77 @@ final readonly class WorkerGroup implements WorkerGroupInterface
         return $this->jobGroups;
     }
     
-    public function getPickupStrategyClass(): ?string
+    public function getPickupStrategy(): ?PickupStrategyInterface
     {
-        return $this->pickupStrategyClass;
+        return $this->pickupStrategy;
     }
     
-    public function getRestartStrategyClass(): ?string
+    public function getRestartStrategy(): ?RestartStrategyInterface
     {
-        return $this->restartStrategyClass;
+        return $this->restartStrategy;
     }
     
-    public function getScalingStrategyClass(): ?string
+    public function getScalingStrategyClass(): ?ScalingStrategyInterface
     {
-        return $this->scalingStrategyClass;
+        return $this->scalingStrategy;
+    }
+    
+    public function defineGroupName(string $groupName): self
+    {
+        if($this->groupName !== '') {
+            throw new \LogicException('Group name is already defined');
+        }
+        
+        $this->groupName            = $groupName;
+        
+        return $this;
+    }
+    
+    public function defineWorkerGroupId(int $workerGroupId): self
+    {
+        if($workerGroupId <= 0) {
+            throw new \InvalidArgumentException('Worker group ID must be a positive integer');
+        }
+        
+        if($this->workerGroupId !== 0) {
+            throw new \LogicException('Worker group ID is already defined');
+        }
+        
+        $this->workerGroupId        = $workerGroupId;
+        
+        return $this;
+    }
+    
+    public function definePickupStrategy(PickupStrategyInterface $pickupStrategy): self
+    {
+        if($this->pickupStrategy !== null) {
+            throw new \LogicException('Pickup strategy is already defined');
+        }
+        
+        $this->pickupStrategy       = $pickupStrategy;
+        
+        return $this;
+    }
+    
+    public function defineRestartStrategy(RestartStrategyInterface $restartStrategy): self
+    {
+        if($this->restartStrategy !== null) {
+            throw new \LogicException('Restart strategy is already defined');
+        }
+        
+        $this->restartStrategy      = $restartStrategy;
+        
+        return $this;
+    }
+    
+    public function defineScalingStrategy(ScalingStrategyInterface $scalingStrategy): self
+    {
+        if($this->scalingStrategy !== null) {
+            throw new \LogicException('Scaling strategy is already defined');
+        }
+        
+        $this->scalingStrategy      = $scalingStrategy;
+        
+        return $this;
     }
 }

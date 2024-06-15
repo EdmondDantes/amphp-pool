@@ -372,11 +372,11 @@ class WorkerPool                    implements WorkerPoolInterface
         $baseWorkerId               = $this->getLastWorkerId() + 1;
         
         // All workers in the group will have the same strategies
-        $strategies                 = $this->buildWorkerStrategies($group);
+        $this->buildWorkerStrategies($group);
         
         foreach (range($baseWorkerId, $baseWorkerId + $group->getMinWorkers() - 1) as $id) {
             $this->addWorker(new WorkerDescriptor(
-                $id, $group, $strategies, $id <= ($baseWorkerId + $group->getMinWorkers() - 1
+                $id, $group, $id <= ($baseWorkerId + $group->getMinWorkers() - 1
             )));
         }
     }
@@ -470,17 +470,23 @@ class WorkerPool                    implements WorkerPoolInterface
         EventLoop::queue($this->stop(...));
     }
     
-    protected function buildWorkerStrategies(WorkerGroup $group): WorkerStrategies
+    protected function buildWorkerStrategies(WorkerGroup $group): void
     {
-        $class                      = $group->getPickupStrategyClass() ?? PickupLeastJobs::class;
-        $pickupStrategy             = new $class($this);
+        if($group->getPickupStrategy() === null) {
+            $group->definePickupStrategy(new PickupLeastJobs);
+        }
         
-        $class                      = $group->getScalingStrategyClass() ?? ScalingSimple::class;
-        $scalingStrategy            = new $class($this);
+        if($group->getScalingStrategyClass() === null) {
+            $group->defineScalingStrategy(new ScalingSimple);
+        }
         
-        $class                      = $group->getRestartStrategyClass() ?? RestartAlways::class;
-        $restartStrategy            = new $class($this);
+        if($group->getRestartStrategy() === null) {
+            $group->defineRestartStrategy(new RestartAlways);
+        }
+    }
+    
+    protected function initWorkerStrategies(WorkerGroup $group): void
+    {
         
-        return new WorkerStrategies($pickupStrategy, $scalingStrategy, $restartStrategy);
     }
 }

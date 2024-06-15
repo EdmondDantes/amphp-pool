@@ -3,12 +3,11 @@ declare(strict_types=1);
 
 namespace CT\AmpCluster\Worker\ScalingStrategy;
 
-use CT\AmpCluster\WorkerPoolInterface;
+use CT\AmpCluster\Worker\WorkerStrategyAbstract;
 
-final class ScalingSimple implements ScalingStrategyInterface
+final class ScalingSimple           extends WorkerStrategyAbstract
+                                    implements ScalingStrategyInterface
 {
-    public function __construct(private readonly WorkerPoolInterface $workerPool) {}
-    
     public function adjustWorkerCount(): int
     {
         // TODO: Implement adjustWorkerCount() method.

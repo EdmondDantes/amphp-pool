@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace CT\AmpCluster\Worker\PickupStrategy;
 
 use CT\AmpCluster\Worker\WorkerDescriptor;
-use CT\AmpCluster\WorkerPoolInterface;
+use CT\AmpCluster\Worker\WorkerStrategyAbstract;
 use CT\AmpCluster\WorkerTypeEnum;
 
 /**
@@ -14,16 +14,17 @@ use CT\AmpCluster\WorkerTypeEnum;
  * and use the one that is currently handling the minimum number of tasks.
  *
  */
-final class PickupLeastJobs   implements PickupStrategyInterface
+final class PickupLeastJobs         extends WorkerStrategyAbstract
+                                    implements PickupStrategyInterface
 {
-    public function __construct(private readonly WorkerPoolInterface $workerPool) {}
+    public function __construct() {}
     
     public function pickupWorker(WorkerTypeEnum $workerType = null, array $possibleWorkers = null): ?WorkerDescriptor
     {
         $foundWorker                = null;
         $bestJobCount               = 0;
         
-        foreach ($this->workerPool->getWorkers() as $worker) {
+        foreach ($this->getWorkerPool()?->getWorkers() ?? [] as $worker) {
             if ($workerType !== null && $worker->type !== $workerType->value) {
                 continue;
             }

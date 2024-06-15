@@ -3,12 +3,11 @@ declare(strict_types=1);
 
 namespace CT\AmpCluster\Worker\RestartStrategy;
 
-use CT\AmpCluster\WorkerPoolInterface;
+use CT\AmpCluster\Worker\WorkerStrategyAbstract;
 
-final class RestartAlways implements RestartStrategyInterface
+final class RestartAlways           extends WorkerStrategyAbstract
+                                    implements RestartStrategyInterface
 {
-    public function __construct(private readonly WorkerPoolInterface $workerPool) {}
-    
     public function shouldRestart(mixed $exitResult): int
     {
         // TODO: Implement shouldRestart() method.

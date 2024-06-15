@@ -16,7 +16,6 @@ final class WorkerDescriptor
     public function __construct(
         public readonly int $id,
         public readonly WorkerGroup $group,
-        public readonly WorkerStrategies $strategies,
         public readonly bool $shouldBeStarted = false
     ) {}
     

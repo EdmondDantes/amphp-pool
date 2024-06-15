@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpCluster\WorkerState;
+namespace CT\AmpCluster\Worker\WorkerState;
 
-use CT\AmpCluster\WorkerState\Exceptions\WorkerStateNotAvailable;
-use CT\AmpCluster\WorkerState\Exceptions\WorkerStateReadFailed;
+use CT\AmpCluster\Worker\WorkerState\Exceptions\WorkerStateNotAvailable;
+use CT\AmpCluster\Worker\WorkerState\Exceptions\WorkerStateReadFailed;
 
 /**
  * The class creates an entry in the shared memory area where it writes the state of the Worker, which can be read by another process.

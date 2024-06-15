@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace CT\AmpCluster;
 
 use Amp\Cancellation;
+use CT\AmpCluster\Worker\WorkerDescriptor;
 
 interface WorkerPoolInterface
 {
@@ -23,5 +24,8 @@ interface WorkerPoolInterface
     
     public function getMessageIterator(): iterable;
     
+    /**
+     * @return WorkerDescriptor[]
+     */
     public function getWorkers(): array;
 }

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpCluster\WorkerState;
+namespace CT\AmpCluster\Worker\WorkerState;
 
 final readonly class WorkerState
 {
