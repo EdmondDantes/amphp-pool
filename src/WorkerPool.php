@@ -34,6 +34,8 @@ use CT\AmpPool\Worker\WorkerStrategyInterface;
 use Psr\Log\LoggerInterface as PsrLogger;
 use Revolt\EventLoop;
 use function Amp\async;
+use function Amp\trapSignal;
+use const Amp\Process\IS_WINDOWS;
 
 /**
  * Worker Pool Manager Class.
@@ -61,12 +63,14 @@ class WorkerPool                    implements WorkerPoolInterface
     protected readonly Queue $queue;
     /** @var ConcurrentIterator<ClusterWorkerMessage<TReceive, TSend>> */
     private readonly ConcurrentIterator $iterator;
-    private bool $running = false;
+    private bool $running           = false;
     private SocketPipeProvider $provider;
     
     private ?SocketListenerProvider $listenerProvider = null;
     
     private PoolStateStorage $poolState;
+    
+    private string $awaitOsEventsId         = '';
     
     /**
      * @var WorkerGroupInterface[]
@@ -239,8 +243,53 @@ class WorkerPool                    implements WorkerPoolInterface
     
     public function mainLoop(): void
     {
+        if(IS_WINDOWS) {
+            EventLoop::queue($this->awaitUnixEvents(...));
+        } else {
+            EventLoop::queue($this->awaitWindowsEvents(...));
+        }
+        
         foreach ($this->getMessageIterator() as $message) {
             continue;
+        }
+    }
+    
+    protected function awaitUnixEvents(): void
+    {
+        while (true) {
+            
+            $signal                 = trapSignal([\SIGINT, \SIGTERM, \SIGUSR1, \SIGUSR2]);
+            
+            if($signal === \SIGINT || $signal === \SIGTERM) {
+                $this->stop();
+                break;
+            }
+            
+            if($signal === \SIGUSR1) {
+                $this->logger?->info('Received signal SIGUSR1');
+            }
+            
+            if($signal === \SIGUSR2) {
+                $this->logger?->info('Received signal SIGUSR2');
+            }
+        }
+    }
+    
+    protected function awaitWindowsEvents(): void
+    {
+        $suspension             = EventLoop::getSuspension();
+        $cancellation           = (new DeferredCancellation())->getCancellation();
+        $id                     = $cancellation?->subscribe(static fn (CancelledException $exception) => $suspension->throw($exception));
+        
+        sapi_windows_set_ctrl_handler(static function () use ($suspension) {
+            $suspension->resume();
+        });
+        
+        try {
+            $suspension->suspend();
+        } finally {
+            /** @psalm-suppress PossiblyNullArgument $id will not be null if $cancellation is not null. */
+            $cancellation?->unsubscribe($id);
         }
     }
     
