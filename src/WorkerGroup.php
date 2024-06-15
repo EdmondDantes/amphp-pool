@@ -15,8 +15,8 @@ final class WorkerGroup             implements WorkerGroupInterface
     public function __construct(
         private readonly string         $entryPointClass,
         private readonly WorkerTypeEnum $workerType,
-        private readonly int            $minWorkers,
-        private readonly int            $maxWorkers,
+        private readonly int            $minWorkers = 0,
+        private int                     $maxWorkers = 0,
         private string                  $groupName = '',
         /**
          * @var int[]
@@ -73,7 +73,7 @@ final class WorkerGroup             implements WorkerGroupInterface
         return $this->restartStrategy;
     }
     
-    public function getScalingStrategyClass(): ?ScalingStrategyInterface
+    public function getScalingStrategy(): ?ScalingStrategyInterface
     {
         return $this->scalingStrategy;
     }
@@ -100,6 +100,21 @@ final class WorkerGroup             implements WorkerGroupInterface
         }
         
         $this->workerGroupId        = $workerGroupId;
+        
+        return $this;
+    }
+    
+    public function defineMaxWorkers(int $maxWorkers): self
+    {
+        if($maxWorkers <= 0) {
+            throw new \InvalidArgumentException('Max workers must be a positive integer');
+        }
+        
+        if($this->maxWorkers !== 0) {
+            throw new \LogicException('Max workers is already defined');
+        }
+        
+        $this->maxWorkers           = $maxWorkers;
         
         return $this;
     }

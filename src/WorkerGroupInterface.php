@@ -28,11 +28,13 @@ interface WorkerGroupInterface
     
     public function getRestartStrategy(): ?RestartStrategyInterface;
     
-    public function getScalingStrategyClass(): ?ScalingStrategyInterface;
+    public function getScalingStrategy(): ?ScalingStrategyInterface;
     
     public function defineGroupName(string $groupName): self;
     
     public function defineWorkerGroupId(int $workerGroupId): self;
+    
+    public function defineMaxWorkers(int $maxWorkers): self;
     
     public function definePickupStrategy(PickupStrategyInterface $pickupStrategy): self;
     

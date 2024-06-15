@@ -7,6 +7,8 @@ use CT\AmpCluster\WorkerPool;
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
 use Examples\HttpServer\HttpReactor;
+use CT\AmpCluster\WorkerGroup;
+use CT\AmpCluster\WorkerTypeEnum;
 
 $logger = new Logger('cluster');
 $logger->pushHandler(new StreamHandler('php://stdout'));
@@ -19,7 +21,11 @@ $workerPool = new WorkerPool(logger: $logger);
 // We create a group of workers with the Reactor type, which are intended to handle incoming connections.
 // The HttpReactor class is the entry point for the workers in this group.
 // Please see the HttpReactor class for more details.
-$workerPool->describeReactorGroup(HttpReactor::class, maxCount: 5);
+$workerPool->describeGroup(new WorkerGroup(
+    entryPointClass: HttpReactor::class,
+    workerType: WorkerTypeEnum::REACTOR,
+    maxWorkers: 5
+));
 
 // 3. Run the worker pool
 $workerPool->run();

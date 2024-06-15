@@ -30,6 +30,7 @@ use CT\AmpCluster\Worker\RestartStrategy\RestartAlways;
 use CT\AmpCluster\Worker\ScalingStrategy\ScalingSimple;
 use CT\AmpCluster\Worker\WorkerDescriptor;
 use CT\AmpCluster\Worker\WorkerStrategies;
+use CT\AmpCluster\Worker\WorkerStrategyInterface;
 use Psr\Log\LoggerInterface as PsrLogger;
 use Revolt\EventLoop;
 use function Amp\async;
@@ -95,54 +96,48 @@ class WorkerPool                    implements WorkerPoolInterface
         }
     }
     
-    public function describeGroup(string $workerClass, WorkerTypeEnum $type, int $minCount = 1, int $maxCount = null, string $groupName = null, array $jobGroups = []): self
+    public function describeGroup(WorkerGroupInterface $group): self
     {
-        if(class_exists($workerClass) === false) {
-            throw new \Error("The worker class '{$workerClass}' does not exist");
+        $group                      = clone $group;
+        
+        if(class_exists($group->getEntryPointClass()) === false) {
+            throw new \Error("The worker class '{$group->getEntryPointClass()}' does not exist");
+        }
+        
+        if($group->getMinWorkers() < 0) {
+            throw new \Error('The minimum number of workers must be greater than zero');
+        }
+        
+        if($group->getMaxWorkers() < $group->getMinWorkers()) {
+            throw new \Error('The maximum number of workers must be greater than or equal to the minimum number of workers');
+        }
+        
+        if($group->getMaxWorkers() === 0) {
+            $group->defineMaxWorkers($group->getMinWorkers());
+        }
+        
+        if($group->getMaxWorkers() === 0) {
+            throw new \Error('The maximum number of workers must be greater than zero');
         }
         
         $groupId                    = ++$this->lastGroupId;
-        $maxCount                   ??= $minCount;
         
-        if($groupName === null) {
+        if($group->getGroupName() === '') {
             // If group name undefined, use the worker class name without a namespace
-            $groupName              = \strrchr($workerClass, '\\');
+            $groupName              = \strrchr($group->getEntryPointClass(), '\\');
             
             if($groupName === false) {
                 $groupName          = 'Group'.$groupId;
             } else {
                 $groupName          = \ucfirst(\substr($groupName, 1));
             }
+            
+            $group->defineGroupName($groupName);
         }
         
-        if($minCount <= 0) {
-            throw new \Error('The minimum number of workers must be greater than zero');
-        }
-        
-        if($maxCount < $minCount) {
-            throw new \Error('The maximum number of workers must be greater than or equal to the minimum number of workers');
-        }
-        
-        $this->groupsScheme[$groupId] = new WorkerGroup($workerClass, $type, $groupId, $minCount, $maxCount, $groupName, $jobGroups);
+        $this->groupsScheme[$groupId] = $group->defineWorkerGroupId($groupId);
         
         return $this;
-    }
-    
-    public function describeReactorGroup(string $workerClass, int $minCount = 1, int $maxCount = null, string $groupName = null, int $jobGroup = null): self
-    {
-        $jobGroup                   = $jobGroup ?? $this->lastGroupId + 2;
-        
-        return $this->describeGroup($workerClass, WorkerTypeEnum::REACTOR, $minCount, $maxCount, $groupName, [$jobGroup]);
-    }
-    
-    public function describeJobGroup(string $workerClass, int $minCount = 1, int $maxCount = null, string $groupName = null): self
-    {
-        return $this->describeGroup($workerClass,WorkerTypeEnum::JOB, $minCount, $maxCount, $groupName);
-    }
-    
-    public function describeServiceGroup(string $workerClass, string $groupName, int $minCount = 1, int $maxCount = null, array $jobGroups = []): self
-    {
-        return $this->describeGroup($workerClass,WorkerTypeEnum::SERVICE, $minCount, $maxCount, $groupName);
     }
     
     public function getGroupsScheme(): array
@@ -173,12 +168,16 @@ class WorkerPool                    implements WorkerPoolInterface
             
             $lastGroupId            = $group->getWorkerGroupId();
             
-            if($group->getMinWorkers() <= 0) {
-                throw new \Exception('The minimum number of workers must be greater than zero');
+            if($group->getMinWorkers() < 0) {
+                throw new \Exception('The minimum number of workers must be greater than zero or equal to zero');
             }
             
             if($group->getMaxWorkers() < $group->getMinWorkers()) {
                 throw new \Exception('The maximum number of workers must be greater than or equal to the minimum number of workers');
+            }
+            
+            if($group->getMaxWorkers() === 0) {
+                throw new \Exception('The maximum number of workers must be greater than zero');
             }
             
             foreach ($group->getJobGroups() as $jobGroupId) {
@@ -372,7 +371,8 @@ class WorkerPool                    implements WorkerPoolInterface
         $baseWorkerId               = $this->getLastWorkerId() + 1;
         
         // All workers in the group will have the same strategies
-        $this->buildWorkerStrategies($group);
+        $this->defaultWorkerStrategies($group);
+        $this->initWorkerStrategies($group);
         
         foreach (range($baseWorkerId, $baseWorkerId + $group->getMinWorkers() - 1) as $id) {
             $this->addWorker(new WorkerDescriptor(
@@ -470,13 +470,13 @@ class WorkerPool                    implements WorkerPoolInterface
         EventLoop::queue($this->stop(...));
     }
     
-    protected function buildWorkerStrategies(WorkerGroup $group): void
+    protected function defaultWorkerStrategies(WorkerGroup $group): void
     {
         if($group->getPickupStrategy() === null) {
             $group->definePickupStrategy(new PickupLeastJobs);
         }
         
-        if($group->getScalingStrategyClass() === null) {
+        if($group->getScalingStrategy() === null) {
             $group->defineScalingStrategy(new ScalingSimple);
         }
         
@@ -487,6 +487,22 @@ class WorkerPool                    implements WorkerPoolInterface
     
     protected function initWorkerStrategies(WorkerGroup $group): void
     {
+        $strategy                   = $group->getPickupStrategy();
         
+        if($strategy instanceof WorkerStrategyInterface) {
+            $strategy->setWorkerPool($this)->setWorkerGroup($group);
+        }
+        
+        $strategy                   = $group->getScalingStrategy();
+        
+        if($strategy instanceof WorkerStrategyInterface) {
+            $strategy->setWorkerPool($this)->setWorkerGroup($group);
+        }
+        
+        $strategy                   = $group->getRestartStrategy();
+        
+        if($strategy instanceof WorkerStrategyInterface) {
+            $strategy->setWorkerPool($this)->setWorkerGroup($group);
+        }
     }
 }

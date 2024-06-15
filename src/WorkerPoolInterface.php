@@ -8,10 +8,7 @@ use CT\AmpCluster\Worker\WorkerDescriptor;
 
 interface WorkerPoolInterface
 {
-    public function describeGroup(string $workerClass, WorkerTypeEnum $type, int $minCount = 1, int $maxCount = null, string $groupName = null, array $jobGroups = []): self;
-    public function describeReactorGroup(string $workerClass, int $minCount = 1, int $maxCount = null, string $groupName = null, int $jobGroup = null): self;
-    public function describeJobGroup(string $workerClass, int $minCount = 1, int $maxCount = null, string $groupName = null): self;
-    public function describeServiceGroup(string $workerClass, string $groupName, int $minCount = 1, int $maxCount = null, array $jobGroups = []): self;
+    public function describeGroup(WorkerGroupInterface $group): self;
     
     /**
      * @return WorkerGroup[]
