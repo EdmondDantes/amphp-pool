@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpCluster\JobIpc;
+namespace CT\AmpPool\JobIpc;
 
 final readonly class JobResponse
 {

@@ -1,11 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpCluster;
+namespace CT\AmpPool;
 
-use CT\AmpCluster\Worker\PickupStrategy\PickupStrategyInterface;
-use CT\AmpCluster\Worker\RestartStrategy\RestartStrategyInterface;
-use CT\AmpCluster\Worker\ScalingStrategy\ScalingStrategyInterface;
+use CT\AmpPool\Worker\PickupStrategy\PickupStrategyInterface;
+use CT\AmpPool\Worker\RestartStrategy\RestartStrategyInterface;
+use CT\AmpPool\Worker\ScalingStrategy\ScalingStrategyInterface;
 
 /**
  * Data structure for describing a group of workers.

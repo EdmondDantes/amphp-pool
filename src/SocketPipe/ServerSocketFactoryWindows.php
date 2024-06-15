@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpCluster\SocketPipe;
+namespace CT\AmpPool\SocketPipe;
 
 use Amp\Cancellation;
 use Amp\DeferredFuture;
@@ -15,7 +15,7 @@ use Amp\Socket\Socket;
 use Amp\Socket\SocketAddress;
 use Amp\Socket\SocketException;
 use Amp\Sync\Channel;
-use CT\AmpCluster\Messages\MessageSocketTransfer;
+use CT\AmpPool\Messages\MessageSocketTransfer;
 
 final class ServerSocketFactoryWindows implements ServerSocket
 {

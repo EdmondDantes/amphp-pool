@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpCluster\Integration;
+namespace CT\AmpPool\Integration;
 
-use CT\AmpCluster\WorkerPool;
-use CT\AmpCluster\WorkerTypeEnum;
+use CT\AmpPool\WorkerPool;
+use CT\AmpPool\WorkerTypeEnum;
 use PHPUnit\Framework\TestCase;
 
 class WorkerToWorkerTest            extends TestCase

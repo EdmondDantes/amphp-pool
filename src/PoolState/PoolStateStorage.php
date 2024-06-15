@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpCluster\PoolState;
+namespace CT\AmpPool\PoolState;
 
 /**
  * The class describes the configuration data structure of Workers groups for a pool.

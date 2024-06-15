@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpCluster;
+namespace CT\AmpPool;
 
 use Amp\Cancellation;
 use Amp\CancelledException;
@@ -19,18 +19,18 @@ use Amp\Socket\Socket;
 use Amp\Sync\ChannelException;
 use Amp\TimeoutCancellation;
 use Amp\TimeoutException;
-use CT\AmpCluster\Exceptions\FatalWorkerException;
-use CT\AmpCluster\Exceptions\RemoteException;
-use CT\AmpCluster\Messages\MessageJob;
-use CT\AmpCluster\Messages\MessageJobResult;
-use CT\AmpCluster\Messages\MessageLog;
-use CT\AmpCluster\Messages\MessagePingPong;
-use CT\AmpCluster\Messages\MessageReady;
-use CT\AmpCluster\Messages\MessageSocketFree;
-use CT\AmpCluster\Messages\MessageSocketListen;
-use CT\AmpCluster\Messages\MessageSocketTransfer;
-use CT\AmpCluster\SocketPipe\SocketListenerProvider;
-use CT\AmpCluster\SocketPipe\SocketPipeTransport;
+use CT\AmpPool\Exceptions\FatalWorkerException;
+use CT\AmpPool\Exceptions\RemoteException;
+use CT\AmpPool\Messages\MessageJob;
+use CT\AmpPool\Messages\MessageJobResult;
+use CT\AmpPool\Messages\MessageLog;
+use CT\AmpPool\Messages\MessagePingPong;
+use CT\AmpPool\Messages\MessageReady;
+use CT\AmpPool\Messages\MessageSocketFree;
+use CT\AmpPool\Messages\MessageSocketListen;
+use CT\AmpPool\Messages\MessageSocketTransfer;
+use CT\AmpPool\SocketPipe\SocketListenerProvider;
+use CT\AmpPool\SocketPipe\SocketPipeTransport;
 use Revolt\EventLoop;
 use function Amp\async;
 use function Amp\weakClosure;

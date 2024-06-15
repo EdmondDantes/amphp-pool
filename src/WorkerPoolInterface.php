@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpCluster;
+namespace CT\AmpPool;
 
 use Amp\Cancellation;
-use CT\AmpCluster\Worker\WorkerDescriptor;
+use CT\AmpPool\Worker\WorkerDescriptor;
 
 interface WorkerPoolInterface
 {

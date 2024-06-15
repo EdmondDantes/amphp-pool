@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpCluster\SocketPipe;
+namespace CT\AmpPool\SocketPipe;
 
 use Amp\ByteStream\ResourceStream;
 use Amp\Cancellation;

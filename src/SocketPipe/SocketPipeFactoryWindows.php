@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpCluster\SocketPipe;
+namespace CT\AmpPool\SocketPipe;
 
 use Amp\Serialization\SerializationException;
 use Amp\Socket\BindContext;
@@ -11,8 +11,8 @@ use Amp\Socket\SocketAddress;
 use Amp\Socket\SocketException;
 use Amp\Sync\Channel;
 use Amp\Sync\ChannelException;
-use CT\AmpCluster\Messages\MessageSocketListen;
-use CT\AmpCluster\Worker\Worker;
+use CT\AmpPool\Messages\MessageSocketListen;
+use CT\AmpPool\Worker\Worker;
 
 final class SocketPipeFactoryWindows implements ServerSocketFactory
 {

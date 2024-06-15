@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpCluster\Worker;
+namespace CT\AmpPool\Worker;
 
-use CT\AmpCluster\WorkerGroupInterface;
-use CT\AmpCluster\WorkerPoolInterface;
+use CT\AmpPool\WorkerGroupInterface;
+use CT\AmpPool\WorkerPoolInterface;
 
 interface WorkerStrategyInterface
 {

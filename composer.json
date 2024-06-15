@@ -15,11 +15,11 @@
         "ext-shmop": "*"
     },
     "autoload": {
-        "psr-4": {"CT\\AmpCluster\\": ["./src"]}
+        "psr-4": {"CT\\AmpPool\\": ["./src"]}
     },
     "autoload-dev": {
         "psr-4": {
-            "CT\\AmpCluster\\": "./tests",
+            "CT\\AmpPool\\": "./tests",
             "Examples\\": "./examples"
         }
     },

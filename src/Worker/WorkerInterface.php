@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpCluster\Worker;
+namespace CT\AmpPool\Worker;
 
-use CT\AmpCluster\WorkerGroup;
-use CT\AmpCluster\WorkerTypeEnum;
+use CT\AmpPool\WorkerGroup;
+use CT\AmpPool\WorkerTypeEnum;
 use Psr\Log\LoggerInterface;
 
 interface WorkerInterface

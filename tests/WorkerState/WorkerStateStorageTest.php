@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpCluster\WorkerState;
+namespace CT\AmpPool\WorkerState;
 
-use CT\AmpCluster\Worker\WorkerState\WorkerStateStorage;
+use CT\AmpPool\Worker\WorkerState\WorkerStateStorage;
 use PHPUnit\Framework\TestCase;
 
 class WorkerStateStorageTest        extends TestCase

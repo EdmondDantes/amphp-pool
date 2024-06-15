@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpCluster\Messages;
+namespace CT\AmpPool\Messages;
 
 final readonly class MessageJobResult
 {

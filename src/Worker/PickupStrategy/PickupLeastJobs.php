@@ -1,11 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpCluster\Worker\PickupStrategy;
+namespace CT\AmpPool\Worker\PickupStrategy;
 
-use CT\AmpCluster\Worker\WorkerDescriptor;
-use CT\AmpCluster\Worker\WorkerStrategyAbstract;
-use CT\AmpCluster\WorkerTypeEnum;
+use CT\AmpPool\Worker\WorkerDescriptor;
+use CT\AmpPool\Worker\WorkerStrategyAbstract;
+use CT\AmpPool\WorkerTypeEnum;
 
 /**
  * The algorithm selects a worker based on the number of tasks assigned to them.

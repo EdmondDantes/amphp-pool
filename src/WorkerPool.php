@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpCluster;
+namespace CT\AmpPool;
 
 use Amp\Cancellation;
 use Amp\CancelledException;
@@ -20,17 +20,16 @@ use Amp\Parallel\Worker\TaskFailureThrowable;
 use Amp\Pipeline\ConcurrentIterator;
 use Amp\Pipeline\Queue;
 use Amp\Sync\ChannelException;
-use CT\AmpCluster\Exceptions\FatalWorkerException;
-use CT\AmpCluster\Exceptions\TerminateWorkerException;
-use CT\AmpCluster\PoolState\PoolStateStorage;
-use CT\AmpCluster\SocketPipe\SocketListenerProvider;
-use CT\AmpCluster\SocketPipe\SocketPipeProvider;
-use CT\AmpCluster\Worker\PickupStrategy\PickupLeastJobs;
-use CT\AmpCluster\Worker\RestartStrategy\RestartAlways;
-use CT\AmpCluster\Worker\ScalingStrategy\ScalingSimple;
-use CT\AmpCluster\Worker\WorkerDescriptor;
-use CT\AmpCluster\Worker\WorkerStrategies;
-use CT\AmpCluster\Worker\WorkerStrategyInterface;
+use CT\AmpPool\Exceptions\FatalWorkerException;
+use CT\AmpPool\Exceptions\TerminateWorkerException;
+use CT\AmpPool\PoolState\PoolStateStorage;
+use CT\AmpPool\SocketPipe\SocketListenerProvider;
+use CT\AmpPool\SocketPipe\SocketPipeProvider;
+use CT\AmpPool\Worker\PickupStrategy\PickupLeastJobs;
+use CT\AmpPool\Worker\RestartStrategy\RestartAlways;
+use CT\AmpPool\Worker\ScalingStrategy\ScalingSimple;
+use CT\AmpPool\Worker\WorkerDescriptor;
+use CT\AmpPool\Worker\WorkerStrategyInterface;
 use Psr\Log\LoggerInterface as PsrLogger;
 use Revolt\EventLoop;
 use function Amp\async;
@@ -303,7 +302,6 @@ class WorkerPool                    implements WorkerPoolInterface
             async($this->provider->provideFor(...), $socketTransport, $deferredCancellation->getCancellation())->ignore();
             
             $id                         = $workerDescriptor->id;
-            $allowRestart               = $workerDescriptor->shouldBeRestarted;
             
             try {
                 try {

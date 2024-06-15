@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpCluster\JobIpc;
+namespace CT\AmpPool\JobIpc;
 
 use Amp\ByteStream\ReadableResourceStream;
 use Amp\ByteStream\StreamChannel;

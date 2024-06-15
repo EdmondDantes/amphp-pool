@@ -3,11 +3,11 @@ declare(strict_types=1);
 
 use Amp\Future;
 use Amp\Sync\Channel;
-use CT\AmpCluster\Worker\WorkerEntryPointInterface;
-use CT\AmpCluster\Worker\Worker;
-use CT\AmpCluster\Exceptions\FatalWorkerException;
-use CT\AmpCluster\Exceptions\RemoteException;
-use CT\AmpCluster\WorkerGroupInterface;
+use CT\AmpPool\Worker\WorkerEntryPointInterface;
+use CT\AmpPool\Worker\Worker;
+use CT\AmpPool\Exceptions\FatalWorkerException;
+use CT\AmpPool\Exceptions\RemoteException;
+use CT\AmpPool\WorkerGroupInterface;
 use function Amp\async;
 
 return static function (Channel $channel): void

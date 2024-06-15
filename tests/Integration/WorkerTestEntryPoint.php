@@ -1,15 +1,15 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpCluster\Integration;
+namespace CT\AmpPool\Integration;
 
 use Amp\DeferredCancellation;
-use CT\AmpCluster\Exceptions\FatalWorkerException;
-use CT\AmpCluster\JobIpc\IpcClient;
-use CT\AmpCluster\JobIpc\IpcServer;
-use CT\AmpCluster\Worker\WorkerEntryPointInterface;
-use CT\AmpCluster\Worker\WorkerInterface;
-use CT\AmpCluster\WorkerTypeEnum;
+use CT\AmpPool\Exceptions\FatalWorkerException;
+use CT\AmpPool\JobIpc\IpcClient;
+use CT\AmpPool\JobIpc\IpcServer;
+use CT\AmpPool\Worker\WorkerEntryPointInterface;
+use CT\AmpPool\Worker\WorkerInterface;
+use CT\AmpPool\WorkerTypeEnum;
 use Revolt\EventLoop;
 
 final class WorkerTestEntryPoint    implements WorkerEntryPointInterface

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpCluster\Worker\ScalingStrategy;
+namespace CT\AmpPool\Worker\ScalingStrategy;
 
 /**
  * Worker Scaling Strategy, which defines the rules by which a worker group can be scaled.
