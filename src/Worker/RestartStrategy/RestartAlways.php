@@ -4,17 +4,22 @@ declare(strict_types=1);
 namespace CT\AmpPool\Worker\RestartStrategy;
 
 use CT\AmpPool\Worker\WorkerStrategyAbstract;
+use CT\AmpPool\WorkerGroupInterface;
 
 final class RestartAlways           extends WorkerStrategyAbstract
                                     implements RestartStrategyInterface
 {
     public function shouldRestart(mixed $exitResult): int
     {
-        // TODO: Implement shouldRestart() method.
+        return RestartStrategyInterface::RESTART_IMMEDIATELY;
     }
     
     public function getFailReason(): string
     {
-        // TODO: Implement getFailReason() method.
+        return '';
+    }
+    
+    public function onWorkerStart(int $workerId, WorkerGroupInterface $group): void
+    {
     }
 }

@@ -5,6 +5,7 @@ namespace CT\AmpPool;
 
 use CT\AmpPool\Worker\PickupStrategy\PickupStrategyInterface;
 use CT\AmpPool\Worker\RestartStrategy\RestartStrategyInterface;
+use CT\AmpPool\Worker\RunnerStrategy\RunnerStrategyInterface;
 use CT\AmpPool\Worker\ScalingStrategy\ScalingStrategyInterface;
 
 /**
@@ -22,6 +23,7 @@ final class WorkerGroup             implements WorkerGroupInterface
          * @var int[]
          */
         private readonly array          $jobGroups = [],
+        private ?RunnerStrategyInterface $runnerStrategy = null,
         private ?PickupStrategyInterface $pickupStrategy = null,
         private ?RestartStrategyInterface $restartStrategy = null,
         private ?ScalingStrategyInterface $scalingStrategy = null,
@@ -61,6 +63,11 @@ final class WorkerGroup             implements WorkerGroupInterface
     public function getJobGroups(): array
     {
         return $this->jobGroups;
+    }
+    
+    public function getRunnerStrategy(): ?RunnerStrategyInterface
+    {
+        return $this->runnerStrategy;
     }
     
     public function getPickupStrategy(): ?PickupStrategyInterface
@@ -115,6 +122,17 @@ final class WorkerGroup             implements WorkerGroupInterface
         }
         
         $this->maxWorkers           = $maxWorkers;
+        
+        return $this;
+    }
+    
+    public function defineRunnerStrategy(RunnerStrategyInterface $runnerStrategy): self
+    {
+        if($this->runnerStrategy !== null) {
+            throw new \LogicException('Runner strategy is already defined');
+        }
+        
+        $this->runnerStrategy       = $runnerStrategy;
         
         return $this;
     }

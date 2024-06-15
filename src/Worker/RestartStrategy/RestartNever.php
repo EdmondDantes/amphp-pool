@@ -3,19 +3,21 @@ declare(strict_types=1);
 
 namespace CT\AmpPool\Worker\RestartStrategy;
 
-use CT\AmpPool\WorkerPoolInterface;
+use CT\AmpPool\WorkerGroupInterface;
 
 final class RestartNever implements RestartStrategyInterface
 {
-    public function __construct(private readonly WorkerPoolInterface $workerPool) {}
-    
     public function shouldRestart(mixed $exitResult): int
     {
-        // TODO: Implement shouldRestart() method.
+        return RestartStrategyInterface::RESTART_NEVER;
     }
     
     public function getFailReason(): string
     {
-        // TODO: Implement getFailReason() method.
+        return 'Worker should never be restarted';
+    }
+    
+    public function onWorkerStart(int $workerId, WorkerGroupInterface $group): void
+    {
     }
 }

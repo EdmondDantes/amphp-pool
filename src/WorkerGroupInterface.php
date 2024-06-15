@@ -5,6 +5,7 @@ namespace CT\AmpPool;
 
 use CT\AmpPool\Worker\PickupStrategy\PickupStrategyInterface;
 use CT\AmpPool\Worker\RestartStrategy\RestartStrategyInterface;
+use CT\AmpPool\Worker\RunnerStrategy\RunnerStrategyInterface;
 use CT\AmpPool\Worker\ScalingStrategy\ScalingStrategyInterface;
 
 /**
@@ -24,6 +25,8 @@ interface WorkerGroupInterface
      */
     public function getJobGroups(): array;
     
+    public function getRunnerStrategy(): ?RunnerStrategyInterface;
+    
     public function getPickupStrategy(): ?PickupStrategyInterface;
     
     public function getRestartStrategy(): ?RestartStrategyInterface;
@@ -35,6 +38,8 @@ interface WorkerGroupInterface
     public function defineWorkerGroupId(int $workerGroupId): self;
     
     public function defineMaxWorkers(int $maxWorkers): self;
+    
+    public function defineRunnerStrategy(RunnerStrategyInterface $runnerStrategy): self;
     
     public function definePickupStrategy(PickupStrategyInterface $pickupStrategy): self;
     

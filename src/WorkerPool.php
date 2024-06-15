@@ -27,6 +27,7 @@ use CT\AmpPool\SocketPipe\SocketListenerProvider;
 use CT\AmpPool\SocketPipe\SocketPipeProvider;
 use CT\AmpPool\Worker\PickupStrategy\PickupLeastJobs;
 use CT\AmpPool\Worker\RestartStrategy\RestartAlways;
+use CT\AmpPool\Worker\RunnerStrategy\DefaultRunner;
 use CT\AmpPool\Worker\ScalingStrategy\ScalingSimple;
 use CT\AmpPool\Worker\WorkerDescriptor;
 use CT\AmpPool\Worker\WorkerStrategyInterface;
@@ -93,6 +94,11 @@ class WorkerPool                    implements WorkerPoolInterface
         if(PHP_OS_FAMILY === 'Windows') {
             $this->listenerProvider = new SocketListenerProvider($this);
         }
+    }
+    
+    public function getIpcHub(): IpcHub
+    {
+        return $this->hub;
     }
     
     public function describeGroup(WorkerGroupInterface $group): self
@@ -247,25 +253,35 @@ class WorkerPool                    implements WorkerPoolInterface
     
     private function startWorker(WorkerDescriptor $workerDescriptor): void
     {
-        $context                    = $this->contextFactory->start($this->script);
-        $key                        = $this->hub->generateKey();
+        $runnerStrategy             = $workerDescriptor->group->getRunnerStrategy();
         
-        $context->send([
-            'id'                    => $workerDescriptor->id,
-            'uri'                   => $this->hub->getUri(),
-            'key'                   => $key,
-            'group'                 => $workerDescriptor->group,
-            'groupsScheme'          => $this->groupsScheme,
-        ]);
+        if($runnerStrategy === null) {
+            throw new \Error('The runner strategy is not defined');
+        }
+        
+        $context                    = $this->contextFactory->start($runnerStrategy->getScript());
+        $socketTransport            = null;
         
         try {
-            $socketTransport        = $this->provider->createSocketTransport($key);
+            $key                    = $runnerStrategy->sendPoolContext(
+                $context,
+                $workerDescriptor->id,
+                $workerDescriptor->group
+            );
+            
+            if($runnerStrategy->shouldProvideSocketTransport()) {
+                $socketTransport    = $this->provider->createSocketTransport($key);
+            }
+        
         } catch (\Throwable $exception) {
+            
             if (!$context->isClosed()) {
                 $context->close();
             }
             
-            throw new \Exception("Starting the worker '{$workerDescriptor->id}' failed. Socket provider start failed", previous: $exception);
+            throw new \Exception(
+                "Starting the worker '{$workerDescriptor->id}' failed. Sending the pool context failed", previous: $exception
+            );
         }
         
         $deferredCancellation       = new DeferredCancellation();
@@ -292,6 +308,8 @@ class WorkerPool                    implements WorkerPoolInterface
             return;
         }
         
+        $workerDescriptor->group->getRestartStrategy()->onWorkerStart($workerDescriptor->id, $workerDescriptor->group);
+        
         $workerDescriptor->setFuture(async(function () use (
             $worker,
             $context,
@@ -302,21 +320,33 @@ class WorkerPool                    implements WorkerPoolInterface
             async($this->provider->provideFor(...), $socketTransport, $deferredCancellation->getCancellation())->ignore();
             
             $id                         = $workerDescriptor->id;
+            $exitResult                 = null;
             
             try {
                 try {
                     $worker->runWorkerLoop();
                     
-                    $worker->info("Worker {$id} terminated cleanly" . ($this->running ? ", restarting..." : ""));
-                } catch (CancelledException) {
-                    $worker->info("Worker {$id} forcefully terminated as part of watcher shutdown");
+                    $restarting         = $workerDescriptor->group->getRestartStrategy()->shouldRestart($exitResult);
+                    
+                    $worker->info("Worker {$id} terminated cleanly" . ($restarting >= 0 ? ", restarting..." : ""));
+                    
+                } catch (CancelledException $exception) {
+                    
+                    /**
+                     * The IPC socket has broken the connection,
+                     * and communication with the child process has been disrupted.
+                     * We interpret this as an abnormal termination of the worker.
+                     */
+                    $exitResult         = $exception;
+                    $worker->info("Worker {$id} forcefully terminated");
+                    
                 } catch (ChannelException $exception) {
                     $worker->error(
                         "Worker {$id} died unexpectedly: {$exception->getMessage()}" .
                         ($this->running ? ", restarting..." : "")
                     );
                     
-                    $remoteException = $exception->getPrevious();
+                    $remoteException    = $exception->getPrevious();
                     
                     if (($remoteException instanceof TaskFailureThrowable
                          || $remoteException
@@ -328,23 +358,51 @@ class WorkerPool                    implements WorkerPoolInterface
                         $this->logger?->error('Server shutdown due to fatal worker error');
                         throw $remoteException;
                     }
-                } catch (TerminateWorkerException) {
+                } catch (TerminateWorkerException $exception) {
+                    
+                    // The worker has terminated itself cleanly.
+                    $exitResult         = $exception;
                     $worker->info("Worker {$id} terminated cleanly without restart");
+                    
                 } catch (\Throwable $exception) {
-                    $worker->error(
-                        "Worker {$id} failed: " . (string) $exception,
-                        ['exception' => $exception],
-                    );
+                    
+                    $worker->error("Worker {$id} failed: " . $exception, ['exception' => $exception]);
                     throw $exception;
+                    
                 } finally {
-                    $deferredCancellation->cancel();
+                    
+                    if(!$deferredCancellation->isCancelled()) {
+                        $deferredCancellation->cancel();
+                    }
+                    
                     $workerDescriptor->reset();
-                    $context->close();
+                    
+                    if (!$context->isClosed()) {
+                        $context->close();
+                    }
                 }
                 
-                if ($this->running) {
-                    $this->startWorker($workerDescriptor);
+                $restarting         = $workerDescriptor->group->getRestartStrategy()->shouldRestart($exitResult);
+                
+                // Restart the worker if the server is still running and the worker should be restarted.
+                // We always terminate the worker if the server is not running
+                // or $exitResult is an instance of TerminateWorkerException.
+                if ($this->running && false === $exitResult instanceof TerminateWorkerException && $restarting >= 0) {
+                    
+                    if($restarting > 0) {
+                        $worker->info("Worker {$id} will be restarted in {$restarting} seconds");
+                        EventLoop::delay($restarting, fn () => $this->startWorker($workerDescriptor));
+                    } else {
+                        $this->startWorker($workerDescriptor);
+                    }
+                    
+                } else if($restarting < 0) {
+                    $worker->info(
+                        "Worker {$id} will not be restarted: " .
+                                  $workerDescriptor->group->getRestartStrategy()->getFailReason()
+                    );
                 }
+                
             } catch (\Throwable $exception) {
                 $this->stop();
                 throw $exception;
@@ -470,6 +528,10 @@ class WorkerPool                    implements WorkerPoolInterface
     
     protected function defaultWorkerStrategies(WorkerGroup $group): void
     {
+        if($group->getRunnerStrategy() === null) {
+            $group->defineRunnerStrategy(new DefaultRunner);
+        }
+        
         if($group->getPickupStrategy() === null) {
             $group->definePickupStrategy(new PickupLeastJobs);
         }
@@ -485,6 +547,12 @@ class WorkerPool                    implements WorkerPoolInterface
     
     protected function initWorkerStrategies(WorkerGroup $group): void
     {
+        $strategy                   = $group->getRunnerStrategy();
+        
+        if($strategy instanceof WorkerStrategyInterface) {
+            $strategy->setWorkerPool($this)->setWorkerGroup($group);
+        }
+        
         $strategy                   = $group->getPickupStrategy();
         
         if($strategy instanceof WorkerStrategyInterface) {

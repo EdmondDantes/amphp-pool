@@ -4,11 +4,14 @@ declare(strict_types=1);
 namespace CT\AmpPool;
 
 use Amp\Cancellation;
+use Amp\Parallel\Ipc\IpcHub;
 use CT\AmpPool\Worker\WorkerDescriptor;
 
 interface WorkerPoolInterface
 {
     public function describeGroup(WorkerGroupInterface $group): self;
+    
+    public function getIpcHub(): IpcHub;
     
     /**
      * @return WorkerGroup[]
