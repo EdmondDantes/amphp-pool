@@ -11,6 +11,7 @@ abstract class PickupStrategyAbstract       extends WorkerStrategyAbstract
     protected function iterate(array $possibleGroups = [], array $possibleWorkers = []): iterable
     {
         $groupsState                = $this->getPoolStateStorage()->getGroupsState();
+        $currentWorkerId            = $this->getCurrentWorkerId();
         
         foreach ($groupsState as $groupId => [$lowestWorkerId, $highestWorkerId]) {
             
@@ -19,6 +20,10 @@ abstract class PickupStrategyAbstract       extends WorkerStrategyAbstract
             }
             
             foreach (range($lowestWorkerId, $highestWorkerId) as $workerId) {
+                
+                if($workerId === $currentWorkerId) {
+                    continue;
+                }
                 
                 if($possibleWorkers !== [] && false === in_array($workerId, $possibleWorkers, true)) {
                     continue;

@@ -20,7 +20,11 @@ use CT\AmpPool\Messages\MessagePingPong;
 use CT\AmpPool\PoolState\PoolStateReadableInterface;
 use CT\AmpPool\PoolState\PoolStateStorage;
 use CT\AmpPool\SocketPipe\SocketPipeFactoryWindows;
+use CT\AmpPool\Worker\WorkerState\WorkersInfo;
+use CT\AmpPool\Worker\WorkerState\WorkersInfoInterface;
+use CT\AmpPool\Worker\WorkerState\WorkerStateInterface;
 use CT\AmpPool\Worker\WorkerState\WorkerStateStorage;
+use CT\AmpPool\Worker\WorkerState\WorkerStateStorageInterface;
 use CT\AmpPool\WorkerGroup;
 use CT\AmpPool\WorkerTypeEnum;
 use Psr\Log\LoggerInterface;
@@ -55,6 +59,8 @@ class Worker                        implements WorkerInterface
     private JobHandlerInterface|null $jobHandler  = null;
     private WorkerStateStorage|null  $workerState = null;
     private PoolStateReadableInterface $poolState;
+    private WorkerStateStorageInterface $workerStateStorage;
+    private WorkersInfoInterface $workersInfo;
     
     public function __construct(
         private readonly int     $id,
@@ -77,6 +83,8 @@ class Worker                        implements WorkerInterface
         }
         
         $this->poolState            = new PoolStateStorage;
+        $this->workerStateStorage   = new WorkerStateStorage($this->id, $this->group->getWorkerGroupId(), true);
+        $this->workersInfo          = new WorkersInfo;
         
         if($logger !== null) {
             $this->logger           = $logger;
@@ -102,6 +110,16 @@ class Worker                        implements WorkerInterface
     public function getPoolStateStorage(): PoolStateReadableInterface
     {
         return $this->poolState;
+    }
+    
+    public function getWorkerStateStorage(): WorkerStateStorageInterface
+    {
+        return $this->workerStateStorage;
+    }
+    
+    public function getWorkersInfo(): WorkersInfoInterface
+    {
+        return $this->workersInfo;
     }
     
     public function getLogger(): LoggerInterface

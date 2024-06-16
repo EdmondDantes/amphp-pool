@@ -18,43 +18,37 @@ final class PickupLeastJobs         extends PickupStrategyAbstract
 {
     public function pickupWorker(array $possibleGroups = [], array $possibleWorkers = []): ?int
     {
-        foreach ($this->iterate($possibleGroups, $possibleWorkers) as $workerId) {
+        $workersInfo                = $this->getWorkersInfo();
         
+        if($workersInfo === null) {
+            return null;
         }
-    }
-    
-    
-    public function xpickupWorker(WorkerTypeEnum $workerType = null, array $possibleWorkers = null): ?WorkerDescriptor
-    {
-        $foundWorker                = null;
+        
+        $foundWorkerId              = null;
         $bestJobCount               = 0;
         
-        foreach ($this->getWorkerPool()?->getWorkers() ?? [] as $worker) {
-            if ($workerType !== null && $worker->type !== $workerType->value) {
+        foreach ($this->iterate($possibleGroups, $possibleWorkers) as $workerId) {
+            
+            $workerState            = $workersInfo->getWorkerState($workerId);
+            
+            if($workerState === null) {
                 continue;
             }
             
-            if ($possibleWorkers !== null && false === in_array($worker->id, $possibleWorkers)) {
+            if($workerState->isReady() === false) {
                 continue;
             }
             
-            if(false === $worker->getWorker()->isReady()) {
-                continue;
+            if($workerState->getJobCount() === 0) {
+                return $workerId;
             }
             
-            if($bestJobCount === 0) {
-                $bestJobCount       = $worker->getWorker()->getJobsCount();
-                $foundWorker        = $worker;
-            } elseif ($worker->getWorker()->getJobsCount() < $bestJobCount) {
-                $bestJobCount       = $worker->getWorker()->getJobsCount();
-                $foundWorker        = $worker;
-            }
-            
-            if($bestJobCount === 0) {
-                return $foundWorker;
+            if($workerState->getJobCount() < $bestJobCount) {
+                $bestJobCount       = $workerState->getJobCount();
+                $foundWorkerId      = $workerId;
             }
         }
         
-        return $foundWorker;
+        return $foundWorkerId;
     }
 }

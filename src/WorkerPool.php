@@ -32,6 +32,8 @@ use CT\AmpPool\Worker\RestartStrategy\RestartAlways;
 use CT\AmpPool\Worker\RunnerStrategy\DefaultRunner;
 use CT\AmpPool\Worker\ScalingStrategy\ScalingSimple;
 use CT\AmpPool\Worker\WorkerDescriptor;
+use CT\AmpPool\Worker\WorkerState\WorkersInfo;
+use CT\AmpPool\Worker\WorkerState\WorkersInfoInterface;
 use CT\AmpPool\Worker\WorkerStrategyInterface;
 use Psr\Log\LoggerInterface as PsrLogger;
 use Revolt\EventLoop;
@@ -72,6 +74,8 @@ class WorkerPool                    implements WorkerPoolInterface
     
     private ?DeferredCancellation $mainCancellation = null;
     
+    private WorkersInfoInterface $workersInfo;
+    
     /**
      * @var WorkerGroupInterface[]
      */
@@ -91,6 +95,7 @@ class WorkerPool                    implements WorkerPoolInterface
         
         $this->provider             = new SocketPipeProvider($this->hub);
         $this->contextFactory       ??= new DefaultContextFactory(ipcHub: $this->hub);
+        $this->workersInfo          = new WorkersInfo;
         
         // For Windows, we should use the SocketListenerProvider instead of the SocketPipeProvider
         if(PHP_OS_FAMILY === 'Windows') {
@@ -106,6 +111,11 @@ class WorkerPool                    implements WorkerPoolInterface
     public function getPoolStateStorage(): PoolStateReadableInterface
     {
         return $this->poolState;
+    }
+    
+    public function getWorkersInfo(): WorkersInfoInterface
+    {
+        return $this->workersInfo;
     }
     
     public function describeGroup(WorkerGroupInterface $group): self

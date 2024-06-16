@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace CT\AmpPool\Worker;
 
 use CT\AmpPool\PoolState\PoolStateReadableInterface;
+use CT\AmpPool\Worker\WorkerState\WorkersInfoInterface;
 use CT\AmpPool\WorkerGroupInterface;
 use CT\AmpPool\WorkerPoolInterface;
 
@@ -73,6 +74,33 @@ abstract class WorkerStrategyAbstract implements WorkerStrategyInterface
         }
         
         return null;
+    }
+    
+    protected function getWorkersInfo(): ?WorkersInfoInterface
+    {
+        if($this->workerPool?->get() !== null) {
+            return $this->workerPool->get()->getWorkersInfo();
+        }
+        
+        if($this->worker?->get() !== null) {
+            return $this->worker->get()->getWorkersInfo();
+        }
+        
+        return null;
+    }
+    
+    protected function getCurrentWorkerId(): ?int
+    {
+        if($this->worker?->get() !== null) {
+            return $this->worker->get()->getWorkerId();
+        }
+        
+        return null;
+    }
+    
+    protected function isWorker(): bool
+    {
+        return $this->worker !== null && $this->workerPool === null;
     }
     
     public function __serialize(): array
