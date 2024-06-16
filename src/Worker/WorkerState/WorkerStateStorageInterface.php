@@ -3,15 +3,10 @@ declare(strict_types=1);
 
 namespace CT\AmpPool\Worker\WorkerState;
 
-interface WorkerStateStorageInterface
+interface WorkerStateStorageInterface extends WorkerStateStorageReadableInterface
 {
-    public function getWorkerId(): int;
-    
-    public function update(): void;
-
-    public function isWorkerReady(): bool;
-
-    public function getJobCount(): int;
-
-    public function getWorkerGroupId(): int;
+    public function workerReady(): void;
+    public function workerBusy(): void;
+    public function incrementJobCount(): void;
+    public function decrementJobCount(): void;
 }

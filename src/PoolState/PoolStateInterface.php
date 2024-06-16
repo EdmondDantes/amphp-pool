@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace CT\AmpPool\PoolState;
 
-interface PoolStateWriteableInterface extends PoolStateReadableInterface
+interface PoolStateInterface        extends PoolStateReadableInterface
 {
     public function setGroupsState(array $groups): void;
     

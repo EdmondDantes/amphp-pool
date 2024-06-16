@@ -7,7 +7,7 @@ namespace CT\AmpPool\PoolState;
  * The class describes the configuration data structure of Workers groups for a pool.
  * The information is in shared memory and is available for reading by different processes.
  */
-final class PoolStateStorage        implements PoolStateWriteableInterface
+final class PoolStateStorage        implements PoolStateInterface
 {
     /**
      * Structure of the shared memory area:
