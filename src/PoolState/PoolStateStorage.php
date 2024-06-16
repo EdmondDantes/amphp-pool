@@ -7,7 +7,7 @@ namespace CT\AmpPool\PoolState;
  * The class describes the configuration data structure of Workers groups for a pool.
  * The information is in shared memory and is available for reading by different processes.
  */
-final class PoolStateStorage
+final class PoolStateStorage        implements PoolStateWriteableInterface
 {
     /**
      * Structure of the shared memory area:
@@ -49,7 +49,7 @@ final class PoolStateStorage
         return self::GROUP_INFO_SIZE * $this->groupsCount;
     }
     
-    public function getGroups(): array
+    public function getGroupsState(): array
     {
         $groups                     = [];
         
@@ -64,7 +64,7 @@ final class PoolStateStorage
         return $groups;
     }
     
-    public function setGroups(array $groups): void
+    public function setGroupsState(array $groups): void
     {
         foreach ($groups as $groupId => [$lowestWorkerId, $highestWorkerId]) {
             
@@ -80,7 +80,7 @@ final class PoolStateStorage
         $this->commit();
     }
     
-    public function setWorkerGroupInfo(int $groupId, int $lowestWorkerId, int $highestWorkerId): void
+    public function setWorkerGroupState(int $groupId, int $lowestWorkerId, int $highestWorkerId): void
     {
         if($groupId === 0) {
             throw new \RuntimeException('Group ID is out of range: not allowed to use 0');
@@ -94,7 +94,7 @@ final class PoolStateStorage
         $this->commit();
     }
     
-    public function findGroupInfo(int $groupId): array
+    public function findGroupState(int $groupId): array
     {
         if($this->updatedAt + $this->updateInterval < \time()) {
             $this->update();

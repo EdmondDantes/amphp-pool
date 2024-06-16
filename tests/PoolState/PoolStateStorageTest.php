@@ -17,9 +17,9 @@ class PoolStateStorageTest          extends TestCase
             3 => [4, 6],
         ];
         
-        $poolStateStorage->setGroups($groups);
+        $poolStateStorage->setGroupsState($groups);
         
-        $this->assertEquals($groups, $poolStateStorage->getGroups());
+        $this->assertEquals($groups, $poolStateStorage->getGroupsState());
     }
     
     public function testReadGroup(): void
@@ -33,10 +33,10 @@ class PoolStateStorageTest          extends TestCase
             3 => [4, 6],
         ];
         
-        $poolStateStorage->setGroups($groups);
+        $poolStateStorage->setGroupsState($groups);
         $poolStateStorageRead->update();
         
-        $this->assertEquals($groups, $poolStateStorageRead->getGroups());
+        $this->assertEquals($groups, $poolStateStorageRead->getGroupsState());
         
     }
     
@@ -45,15 +45,15 @@ public function testSetWorkerGroupInfo(): void
         $poolStateStorage           = new PoolStateStorage(3);
         $poolStateStorageRead       = new PoolStateStorage;
         
-        $poolStateStorage->setWorkerGroupInfo(1, 1, 2);
-        $poolStateStorage->setWorkerGroupInfo(2, 3, 3);
-        $poolStateStorage->setWorkerGroupInfo(3, 4, 6);
+        $poolStateStorage->setWorkerGroupState(1, 1, 2);
+        $poolStateStorage->setWorkerGroupState(2, 3, 3);
+        $poolStateStorage->setWorkerGroupState(3, 4, 6);
         
         $this->assertEquals([
             1 => [1, 2],
             2 => [3, 3],
             3 => [4, 6],
-        ], $poolStateStorage->getGroups());
+        ], $poolStateStorage->getGroupsState());
         
         $poolStateStorageRead->update();
         
@@ -61,6 +61,6 @@ public function testSetWorkerGroupInfo(): void
             1 => [1, 2],
             2 => [3, 3],
             3 => [4, 6],
-        ], $poolStateStorageRead->getGroups());
+        ], $poolStateStorageRead->getGroupsState());
     }
 }

@@ -17,6 +17,8 @@ use Amp\TimeoutCancellation;
 use CT\AmpPool\JobIpc\IpcServer;
 use CT\AmpPool\JobIpc\JobHandlerInterface;
 use CT\AmpPool\Messages\MessagePingPong;
+use CT\AmpPool\PoolState\PoolStateReadableInterface;
+use CT\AmpPool\PoolState\PoolStateStorage;
 use CT\AmpPool\SocketPipe\SocketPipeFactoryWindows;
 use CT\AmpPool\Worker\WorkerState\WorkerStateStorage;
 use CT\AmpPool\WorkerGroup;
@@ -52,6 +54,7 @@ class Worker                        implements WorkerInterface
     private IpcServer|null           $jobIpc      = null;
     private JobHandlerInterface|null $jobHandler  = null;
     private WorkerStateStorage|null  $workerState = null;
+    private PoolStateReadableInterface $poolState;
     
     public function __construct(
         private readonly int     $id,
@@ -73,6 +76,8 @@ class Worker                        implements WorkerInterface
             $this->jobIpc           = new IpcServer($this->id);
         }
         
+        $this->poolState            = new PoolStateStorage;
+        
         if($logger !== null) {
             $this->logger           = $logger;
         } else {
@@ -92,6 +97,11 @@ class Worker                        implements WorkerInterface
     public function getGroupsScheme(): array
     {
         return $this->groupsScheme;
+    }
+    
+    public function getPoolStateStorage(): PoolStateReadableInterface
+    {
+        return $this->poolState;
     }
     
     public function getLogger(): LoggerInterface

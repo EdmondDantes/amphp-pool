@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace CT\AmpPool\Worker;
 
+use CT\AmpPool\PoolState\PoolStateReadableInterface;
 use CT\AmpPool\WorkerGroupInterface;
 use CT\AmpPool\WorkerPoolInterface;
 
@@ -46,6 +47,32 @@ abstract class WorkerStrategyAbstract implements WorkerStrategyInterface
         $this->workerGroup          = \WeakReference::create($workerGroup);
         
         return $this;
+    }
+    
+    protected function getGroupsScheme(): array
+    {
+        if($this->worker?->get() !== null) {
+            return $this->worker->get()->getGroupsScheme();
+        }
+        
+        if($this->workerPool?->get() !== null) {
+            return $this->workerPool->get()->getGroupsScheme();
+        }
+        
+        return [];
+    }
+    
+    protected function getPoolStateStorage(): ?PoolStateReadableInterface
+    {
+        if($this->workerPool?->get() !== null) {
+            return $this->workerPool->get()->getPoolStateStorage();
+        }
+        
+        if($this->worker?->get() !== null) {
+            return $this->worker->get()->getPoolsStateStorage();
+        }
+        
+        return null;
     }
     
     public function __serialize(): array

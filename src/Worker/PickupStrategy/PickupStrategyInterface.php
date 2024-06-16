@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace CT\AmpPool\Worker\PickupStrategy;
 
 use CT\AmpPool\Worker\WorkerDescriptor;
+use CT\AmpPool\Worker\WorkerInterface;
 use CT\AmpPool\WorkerTypeEnum;
 
 /**
@@ -12,12 +13,12 @@ use CT\AmpPool\WorkerTypeEnum;
 interface PickupStrategyInterface
 {
     /**
-     * Pickup a worker from the pool
+     * Pickup a worker from the pool.
      *
-     * @param WorkerTypeEnum|null   $workerType
-     * @param array|null            $possibleWorkers
+     * @param array               $possibleGroups
+     * @param array               $possibleWorkers
      *
-     * @return WorkerDescriptor|null
+     * @return int|null
      */
-    public function pickupWorker(WorkerTypeEnum $workerType = null, array $possibleWorkers = null): ?WorkerDescriptor;
+    public function pickupWorker(array $possibleGroups = [], array $possibleWorkers = []): ?int;
 }

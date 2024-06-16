@@ -24,6 +24,7 @@ use Amp\TimeoutCancellation;
 use CT\AmpPool\Exceptions\FatalWorkerException;
 use CT\AmpPool\Exceptions\TerminateWorkerException;
 use CT\AmpPool\PoolState\PoolStateStorage;
+use CT\AmpPool\PoolState\PoolStateReadableInterface;
 use CT\AmpPool\SocketPipe\SocketListenerProvider;
 use CT\AmpPool\SocketPipe\SocketPipeProvider;
 use CT\AmpPool\Worker\PickupStrategy\PickupLeastJobs;
@@ -57,9 +58,6 @@ class WorkerPool                    implements WorkerPoolInterface
      * @var WorkerDescriptor[]
      */
     protected array $workers        = [];
-    
-    /** @var array<int, Future<void>> */
-    protected array $workerFutures  = [];
     
     /** @var Queue<ClusterWorkerMessage<TReceive, TSend>> */
     protected readonly Queue $queue;
@@ -103,6 +101,11 @@ class WorkerPool                    implements WorkerPoolInterface
     public function getIpcHub(): IpcHub
     {
         return $this->hub;
+    }
+    
+    public function getPoolStateStorage(): PoolStateReadableInterface
+    {
+        return $this->poolState;
     }
     
     public function describeGroup(WorkerGroupInterface $group): self
@@ -225,7 +228,7 @@ class WorkerPool                    implements WorkerPoolInterface
             
             if($this->poolState === null) {
                 $this->poolState    = new PoolStateStorage(count($this->groupsScheme));
-                $this->poolState->setGroups($this->groupsScheme);
+                $this->poolState->setGroupsState($this->groupsScheme);
             }
             
             foreach ($this->workers as $worker) {
@@ -504,7 +507,13 @@ class WorkerPool                    implements WorkerPoolInterface
     
     public function getWorkers(): array
     {
-        return $this->workers;
+        $workers                    = [];
+        
+        foreach ($this->workers as $workerDescriptor) {
+            $workers[]              = $workerDescriptor->getWorker();
+        }
+        
+        return $workers;
     }
     
     /**
@@ -643,5 +652,4 @@ class WorkerPool                    implements WorkerPoolInterface
         
         return $exceptions;
     }
-    
 }

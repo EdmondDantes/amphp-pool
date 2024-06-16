@@ -5,13 +5,17 @@ namespace CT\AmpPool;
 
 use Amp\Cancellation;
 use Amp\Parallel\Ipc\IpcHub;
+use CT\AmpPool\PoolState\PoolStateReadableInterface;
 use CT\AmpPool\Worker\WorkerDescriptor;
+use CT\AmpPool\Worker\WorkerInterface;
 
 interface WorkerPoolInterface
 {
     public function describeGroup(WorkerGroupInterface $group): self;
     
     public function getIpcHub(): IpcHub;
+    
+    public function getPoolStateStorage(): PoolStateReadableInterface;
     
     /**
      * @return WorkerGroup[]
@@ -39,7 +43,7 @@ interface WorkerPoolInterface
     public function awaitTermination(): void;
     
     /**
-     * @return WorkerDescriptor[]
+     * @return WorkerInterface[]
      */
     public function getWorkers(): array;
 }

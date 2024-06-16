@@ -4,58 +4,45 @@ declare(strict_types=1);
 namespace CT\AmpPool\Worker\PickupStrategy;
 
 use CT\AmpPool\Worker\WorkerDescriptor;
+use CT\AmpPool\Worker\WorkerInterface;
+use CT\AmpPool\Worker\WorkerStrategyAbstract;
 use CT\AmpPool\WorkerPoolInterface;
 use CT\AmpPool\WorkerTypeEnum;
 
 /**
  * The class implements the strategy of selecting workers in a round-robin manner
  */
-final class PickupRoundRobin implements PickupStrategyInterface
+final class PickupRoundRobin        extends PickupStrategyAbstract
 {
-    /**
-     * @var array<string, array<WorkerDescriptor>>
-     */
-    private array $poolByType     = [];
+    private array                   $usedWorkers    = [];
     
-    public function __construct(private readonly WorkerPoolInterface $workerPool) {}
-    
-    public function pickupWorker(WorkerTypeEnum $workerType = null, array $possibleWorkers = null): ?WorkerDescriptor
+    public function pickupWorker(array $possibleGroups = [], array $possibleWorkers = []): ?int
     {
-        $type                       = $workerType?->value ?? '';
+        $anyFound                   = false;
         
-        if(false === array_key_exists($type, $this->poolByType) || empty($this->poolByType[$type])) {
-            $this->initPool($workerType, $possibleWorkers);
+        // Try to return a worker that has not been used yet
+        foreach ($this->iterate($possibleGroups, $possibleWorkers) as $workerId) {
+            
+            $anyFound               = true;
+            
+            if(false === in_array($workerId, $this->usedWorkers, true)) {
+                $this->usedWorkers[] = $workerId;
+                return $workerId;
+            }
         }
-
-        if(empty($this->poolByType[$type])) {
+        
+        if(false === $anyFound) {
             return null;
         }
         
-        return array_shift($this->poolByType[$type]);
-    }
-    
-    private function initPool(WorkerTypeEnum $workerType = null, array $possibleWorkers = null): void
-    {
-        $type                       = $workerType?->value ?? '';
+        $this->usedWorkers          = [];
         
-        $pool                       = [];
-        
-        foreach ($this->workerPool->getWorkers() as $worker) {
-            if ($type !== null && $worker->type !== $type) {
-                continue;
-            }
-            
-            if ($possibleWorkers !== null && false === in_array($worker->id, $possibleWorkers)) {
-                continue;
-            }
-            
-            if(false === $worker->getWorker()->isReady()) {
-                continue;
-            }
-            
-            $pool[]                 = $worker;
+        // Returns first available worker
+        foreach ($this->iterate($possibleGroups, $possibleWorkers) as $workerId) {
+            $this->usedWorkers[]     = $workerId;
+            return $workerId;
         }
         
-        $this->poolByType[$type]    = $pool;
+        return null;
     }
 }

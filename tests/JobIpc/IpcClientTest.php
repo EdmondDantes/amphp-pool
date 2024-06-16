@@ -24,7 +24,7 @@ class IpcClientTest                 extends TestCase
     protected function setUp(): void
     {
         $this->poolState            = new PoolStateStorage(1);
-        $this->poolState->setWorkerGroupInfo(1, 1, 1);
+        $this->poolState->setWorkerGroupState(1, 1, 1);
         
         $this->workerState          = new WorkerStateStorage(1, 1, true);
         $this->workerState->workerReady();

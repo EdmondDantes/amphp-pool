@@ -219,7 +219,7 @@ final class IpcClient
             return $workerId;
         }
         
-        [$lowestWorkerId, $highestWorkerId] = $this->poolState->findGroupInfo($workerGroupId);
+        [$lowestWorkerId, $highestWorkerId] = $this->poolState->findGroupState($workerGroupId);
         
         $lastJobCount               = 0;
         $lastWorkerId               = null;
