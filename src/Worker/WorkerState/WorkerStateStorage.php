@@ -14,7 +14,7 @@ use CT\AmpPool\Worker\WorkerState\Exceptions\WorkerStateReadFailed;
  * Whether the worker is ready to accept incoming JOBs.
  * The number of JOBs the worker is currently processing.
  */
-final class WorkerStateStorage
+final class WorkerStateStorage      implements WorkerStateStorageInterface
 {
     private int $key;
     private \Shmop|null $shmop      = null;

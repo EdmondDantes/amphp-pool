@@ -16,7 +16,7 @@ use Amp\TimeoutException;
 use CT\AmpPool\Exceptions\NoWorkersAvailable;
 use CT\AmpPool\Exceptions\SendJobException;
 use CT\AmpPool\PoolState\PoolStateStorage;
-use CT\AmpPool\Worker\WorkerState\WorkersStateInfo;
+use CT\AmpPool\Worker\WorkerState\WorkersInfo;
 use Revolt\EventLoop;
 use function Amp\delay;
 use function Amp\Socket\socketConnector;
@@ -33,9 +33,9 @@ final class IpcClient
      * @var StreamChannel[]
      */
     private array                 $workerChannels = [];
-    private JobSerializerI|null   $jobTransport   = null;
-    private WorkersStateInfo|null $workersInfo    = null;
-    private PoolStateStorage|null $poolState      = null;
+    private JobSerializerI|null   $jobTransport = null;
+    private WorkersInfo|null      $workersInfo  = null;
+    private PoolStateStorage|null $poolState    = null;
     /**
      * List of futures that are waiting for the result of the job with SocketId, and time when the job was sent
      * @var array [Future, int, int]
@@ -62,7 +62,7 @@ final class IpcClient
         private readonly int               $retryInterval = 1
     )
     {
-        $this->workersInfo          = new WorkersStateInfo();
+        $this->workersInfo          = new WorkersInfo();
         $this->poolState            = new PoolStateStorage();
         $this->jobTransport         = $jobSerializer ?? new JobSerializer();
     }

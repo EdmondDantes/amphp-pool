@@ -3,11 +3,26 @@ declare(strict_types=1);
 
 namespace CT\AmpPool\Worker\WorkerState;
 
-final readonly class WorkerState
+class WorkerState                   implements WorkerStateInterface
 {
     const int SIZE = 4 * 4;
     
-    public function __construct(public bool $isReady, public int $jobCount, public int $groupId) {}
+    public function __construct(protected bool $isReady, protected int $jobCount, protected int $groupId) {}
+    
+    public function isReady(): bool
+    {
+        return $this->isReady;
+    }
+    
+    public function getJobCount(): int
+    {
+        return $this->jobCount;
+    }
+    
+    public function getGroupId(): int
+    {
+        return $this->groupId;
+    }
     
     public function pack(): string
     {

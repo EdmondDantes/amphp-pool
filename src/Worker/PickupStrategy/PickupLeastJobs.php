@@ -14,12 +14,17 @@ use CT\AmpPool\WorkerTypeEnum;
  * and use the one that is currently handling the minimum number of tasks.
  *
  */
-final class PickupLeastJobs         extends WorkerStrategyAbstract
-                                    implements PickupStrategyInterface
+final class PickupLeastJobs         extends PickupStrategyAbstract
 {
-    public function __construct() {}
+    public function pickupWorker(array $possibleGroups = [], array $possibleWorkers = []): ?int
+    {
+        foreach ($this->iterate($possibleGroups, $possibleWorkers) as $workerId) {
+        
+        }
+    }
     
-    public function pickupWorker(WorkerTypeEnum $workerType = null, array $possibleWorkers = null): ?WorkerDescriptor
+    
+    public function xpickupWorker(WorkerTypeEnum $workerType = null, array $possibleWorkers = null): ?WorkerDescriptor
     {
         $foundWorker                = null;
         $bestJobCount               = 0;

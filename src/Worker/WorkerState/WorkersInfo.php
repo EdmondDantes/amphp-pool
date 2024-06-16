@@ -9,7 +9,7 @@ use CT\AmpPool\Worker\WorkerState\Exceptions\WorkerStateReadFailed;
 /**
  * The class provides information about the state of the workers.
  */
-final class WorkersStateInfo
+final class WorkersInfo             implements WorkersInfoInterface
 {
     /**
      * @var array<int, WorkerStateStorage>

@@ -5,8 +5,8 @@ namespace CT\AmpPool\Worker\PickupStrategy;
 
 use CT\AmpPool\Worker\WorkerStrategyAbstract;
 
-class PickupStrategyAbstract        extends WorkerStrategyAbstract
-                                    implements PickupStrategyInterface
+abstract class PickupStrategyAbstract       extends WorkerStrategyAbstract
+                                            implements PickupStrategyInterface
 {
     protected function iterate(array $possibleGroups = [], array $possibleWorkers = []): iterable
     {
