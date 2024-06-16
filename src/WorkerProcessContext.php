@@ -71,13 +71,11 @@ class WorkerProcessContext          implements \Psr\Log\LoggerInterface, \Psr\Lo
     /**
      * @param positive-int $id
      * @param Context<mixed> $context
-     * @param Queue<ClusterWorkerMessage<TReceive, TSend>> $queue
      */
     public function __construct(
         private readonly int                  $id,
         private readonly Context              $context,
         private readonly SocketPipeTransport|SocketListenerProvider|null $socketTransport,
-        private readonly Queue                $queue,
         private readonly DeferredCancellation $deferredCancellation
     ) {
         $this->lastActivity         = \time();

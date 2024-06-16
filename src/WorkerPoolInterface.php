@@ -22,7 +22,21 @@ interface WorkerPoolInterface
     public function run(): void;
     public function stop(?Cancellation $cancellation = null): void;
     
-    public function getMessageIterator(): iterable;
+    /**
+     * The method stops all workers and restarts them.
+     *
+     * @param Cancellation|null $cancellation
+     *
+     * @return void
+     */
+    public function restart(?Cancellation $cancellation = null): void;
+    
+    /**
+     * The method will block current fiber until all workers are stopped.
+     *
+     * @return void
+     */
+    public function awaitTermination(): void;
     
     /**
      * @return WorkerDescriptor[]

@@ -31,5 +31,5 @@ $logger->useLoggingLoopDetection(false);
 $workerPool                         = new WorkerPool(reactorCount: 5, jobCount: 5, logger: $logger);
 $workerPool->fillWorkersWith(WorkerEntryPoint::class);
 $workerPool->run();
-$workerPool->mainLoop();
+$workerPool->awaitTermination();
 ```

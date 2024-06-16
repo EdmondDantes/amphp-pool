@@ -17,7 +17,7 @@ class WorkerToWorkerTest            extends TestCase
         $workerPool->fillWorkersGroup(WorkerTestEntryPoint::class, WorkerTypeEnum::REACTOR, 1);
         //$workerPool->fillWorkersGroup(WorkerTestEntryPoint::class, WorkerTypeEnum::JOB, 1);
         $workerPool->run();
-        $workerPool->mainLoop();
+        $workerPool->awaitTermination();
         
         $tmpFile                    = sys_get_temp_dir() . WorkerTestEntryPoint::RESULT_FILE;
         $this->assertFileExists($tmpFile);

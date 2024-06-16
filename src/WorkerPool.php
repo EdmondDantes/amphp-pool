@@ -20,6 +20,7 @@ use Amp\Parallel\Worker\TaskFailureThrowable;
 use Amp\Pipeline\ConcurrentIterator;
 use Amp\Pipeline\Queue;
 use Amp\Sync\ChannelException;
+use Amp\TimeoutCancellation;
 use CT\AmpPool\Exceptions\FatalWorkerException;
 use CT\AmpPool\Exceptions\TerminateWorkerException;
 use CT\AmpPool\PoolState\PoolStateStorage;
@@ -49,6 +50,7 @@ use const Amp\Process\IS_WINDOWS;
 class WorkerPool                    implements WorkerPoolInterface
 {
     protected int $workerStartTimeout = 5;
+    protected int $workerStopTimeout  = 5;
     private int $lastGroupId        = 0;
     
     /**
@@ -68,9 +70,9 @@ class WorkerPool                    implements WorkerPoolInterface
     
     private ?SocketListenerProvider $listenerProvider = null;
     
-    private PoolStateStorage $poolState;
+    private ?PoolStateStorage $poolState    = null;
     
-    private string $awaitOsEventsId         = '';
+    private ?DeferredCancellation $mainCancellation = null;
     
     /**
      * @var WorkerGroupInterface[]
@@ -91,8 +93,6 @@ class WorkerPool                    implements WorkerPoolInterface
         
         $this->provider             = new SocketPipeProvider($this->hub);
         $this->contextFactory       ??= new DefaultContextFactory(ipcHub: $this->hub);
-        $this->queue                = new Queue();
-        $this->iterator             = $this->queue->iterate();
         
         // For Windows, we should use the SocketListenerProvider instead of the SocketPipeProvider
         if(PHP_OS_FAMILY === 'Windows') {
@@ -207,8 +207,8 @@ class WorkerPool                    implements WorkerPoolInterface
      */
     public function run(): void
     {
-        if ($this->running || $this->queue->isComplete()) {
-            throw new \Exception('The cluster watcher is already running or has already run');
+        if ($this->running) {
+            throw new \Exception('The server watcher is already running or has already run');
         }
         
         $this->validateGroupsScheme();
@@ -219,11 +219,14 @@ class WorkerPool                    implements WorkerPoolInterface
         }
         
         $this->running              = true;
+        $this->mainCancellation     = new DeferredCancellation();
 
         try {
             
-            $this->poolState        = new PoolStateStorage(count($this->groupsScheme));
-            $this->poolState->setGroups($this->groupsScheme);
+            if($this->poolState === null) {
+                $this->poolState    = new PoolStateStorage(count($this->groupsScheme));
+                $this->poolState->setGroups($this->groupsScheme);
+            }
             
             foreach ($this->workers as $worker) {
                 if($worker->shouldBeStarted) {
@@ -236,21 +239,12 @@ class WorkerPool                    implements WorkerPoolInterface
         }
     }
     
-    public function getMessageIterator(): iterable
-    {
-        return $this->iterator;
-    }
-    
-    public function mainLoop(): void
+    public function awaitTermination(): void
     {
         if(IS_WINDOWS) {
-            EventLoop::queue($this->awaitUnixEvents(...));
+            $this->awaitUnixEvents();
         } else {
-            EventLoop::queue($this->awaitWindowsEvents(...));
-        }
-        
-        foreach ($this->getMessageIterator() as $message) {
-            continue;
+            $this->awaitWindowsEvents();
         }
     }
     
@@ -258,19 +252,23 @@ class WorkerPool                    implements WorkerPoolInterface
     {
         while (true) {
             
-            $signal                 = trapSignal([\SIGINT, \SIGTERM, \SIGUSR1, \SIGUSR2]);
+            try {
+                $signal             = trapSignal(
+                    [\SIGINT, \SIGTERM, \SIGUSR1], true, $this->mainCancellation->getCancellation()
+                );
+            } catch (CancelledException) {
+                break;
+            }
             
             if($signal === \SIGINT || $signal === \SIGTERM) {
+                $this->logger?->info('Server will stop due to signal SIGINT or SIGTERM');
                 $this->stop();
                 break;
             }
             
             if($signal === \SIGUSR1) {
-                $this->logger?->info('Received signal SIGUSR1');
-            }
-            
-            if($signal === \SIGUSR2) {
-                $this->logger?->info('Received signal SIGUSR2');
+                $this->logger?->info('Server should reload due to signal SIGUSR1');
+                $this->restart();
             }
         }
     }
@@ -278,7 +276,7 @@ class WorkerPool                    implements WorkerPoolInterface
     protected function awaitWindowsEvents(): void
     {
         $suspension             = EventLoop::getSuspension();
-        $cancellation           = (new DeferredCancellation())->getCancellation();
+        $cancellation           = $this->mainCancellation->getCancellation();
         $id                     = $cancellation?->subscribe(static fn (CancelledException $exception) => $suspension->throw($exception));
         
         sapi_windows_set_ctrl_handler(static function () use ($suspension) {
@@ -339,7 +337,6 @@ class WorkerPool                    implements WorkerPoolInterface
             $workerDescriptor->id,
             $context,
             $socketTransport ?? $this->listenerProvider,
-            $this->queue,
             $deferredCancellation
         );
         
@@ -511,63 +508,57 @@ class WorkerPool                    implements WorkerPoolInterface
     }
     
     /**
-     * Stops all cluster workers. Workers are killed if the cancellation token is cancelled.
+     * Stops all server workers. Workers are killed if the cancellation token is canceled.
      *
      * @param Cancellation|null $cancellation Token to request cancellation of waiting for shutdown.
-     * When cancelled, the workers are forcefully killed. If null, the workers are killed immediately.
+     *                                        When canceled, the workers are forcefully killed. If null, the workers
+     *                                        are killed immediately.
+     *
+     * @throws ClusterException
      */
     public function stop(?Cancellation $cancellation = null): void
     {
-        if ($this->queue->isComplete() || false === $this->running) {
+        if (false === $this->running) {
             return;
         }
         
         $this->running              = false;
+        
+        $cancellation               ??= new TimeoutCancellation($this->workerStopTimeout);
         $this->listenerProvider?->close();
         
-        $futures                    = [];
+        $exceptions                 = $this->stopWorkers($cancellation);
         
-        foreach ($this->workers as $workerDescriptor) {
-            $futures[]              = async(static function () use ($workerDescriptor, $cancellation): void {
-                $future             = $workerDescriptor->getFuture();
-                
-                try {
-                    $workerDescriptor->getWorker()?->shutdown($cancellation);
-                } catch (ContextException) {
-                    // Ignore if the worker has already died unexpectedly.
-                }
-                
-                // We need to await this future here, otherwise we may not log things properly if the
-                // event-loop exits immediately after.
-                $future?->await();
-            });
+        if (!$exceptions) {
+            return;
         }
         
-        [$exceptions]               = Future\awaitAll($futures);
-        
-        try {
-            if (!$exceptions) {
-                $this->queue->complete();
-                return;
-            }
+        if (\count($exceptions) === 1) {
+            $exception              = \array_shift($exceptions);
             
-            if (\count($exceptions) === 1) {
-                $exception          = \array_shift($exceptions);
-                $this->queue->error(new ClusterException(
-                    "Stopping the cluster failed: " . $exception->getMessage(),
-                    previous: $exception,
-                ));
-                
-                return;
-            }
-            
-            $exception              = new CompositeException($exceptions);
-            $message                = \implode('; ', \array_map(static fn (\Throwable $e) => $e->getMessage(), $exceptions));
-            
-            $this->queue->error(new ClusterException("Stopping the cluster failed: " . $message, previous: $exception));
-        } finally {
-            $this->workers          = [];
+            throw new ClusterException(
+                'Stopping the server failed: ' . $exception->getMessage(),
+                previous: $exception,
+            );
         }
+        
+        $exception              = new CompositeException($exceptions);
+        $message                = \implode('; ', \array_map(static fn (\Throwable $e) => $e->getMessage(), $exceptions));
+        
+        throw new ClusterException('Stopping the server failed: ' . $message, previous: $exception);
+    }
+    
+    public function restart(?Cancellation $cancellation = null): void
+    {
+        $this->stop($cancellation);
+        
+        if(PHP_OS_FAMILY === 'Windows') {
+            $this->listenerProvider = new SocketListenerProvider($this);
+        }
+        
+        $this->run();
+        
+        $this->logger?->info('Server reloaded');
     }
     
     public function __destruct()
@@ -620,4 +611,37 @@ class WorkerPool                    implements WorkerPoolInterface
             $strategy->setWorkerPool($this)->setWorkerGroup($group);
         }
     }
+    
+    protected function stopWorkers(Cancellation $cancellation): array
+    {
+        $futures                    = [];
+        
+        foreach ($this->workers as $workerDescriptor) {
+            $futures[]              = async(static function () use ($workerDescriptor, $cancellation): void {
+                
+                $future             = $workerDescriptor->getFuture();
+                
+                try {
+                    $workerDescriptor->getWorker()?->shutdown($cancellation);
+                } catch (ContextException) {
+                    // Ignore if the worker has already died unexpectedly.
+                }
+
+                try {
+                    // We need to await this future here, otherwise we may not log things properly if the
+                    // event-loop exits immediately after.
+                    $future?->await($cancellation);
+                } catch (CancelledException) {
+                    $this->logger?->error('Worker did not die normally within a cancellation window');
+                }
+            });
+        }
+        
+        [$exceptions]               = Future\awaitAll($futures);
+        
+        $this->workers              = [];
+        
+        return $exceptions;
+    }
+    
 }
