@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace CT\AmpPool\Worker\PickupStrategy;
 
-class PickFirstAvailable        extends PickupStrategyAbstract
+final class PickFirstAvailable      extends PickupStrategyAbstract
 {
     public function pickupWorker(array $possibleGroups = [], array $possibleWorkers = []): ?int
     {
