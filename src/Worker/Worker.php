@@ -32,6 +32,7 @@ use CT\AmpPool\WorkerGroup;
 use CT\AmpPool\WorkerTypeEnum;
 use Psr\Log\LoggerInterface;
 use Revolt\EventLoop;
+use function Amp\delay;
 
 /**
  * Abstraction of Worker Representation within the worker process.
@@ -300,6 +301,7 @@ class Worker                        implements WorkerInterface
                             break;
                         } catch (\Throwable $exception) {
                             $this->logger->error('Error sending job result (try number '.$i.')', ['exception' => $exception]);
+                            delay(0.5, true, $cancellation);
                         }
                     }
                 }
