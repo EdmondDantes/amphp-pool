@@ -38,6 +38,8 @@ interface WorkerPoolInterface
      */
     public function restart(?Cancellation $cancellation = null): void;
     
+    public function countWorkers(int $groupId, bool $onlyRunning = false, bool $notRunning = false): int;
+    
     /**
      * The method will block current fiber until all workers are stopped.
      *
@@ -46,7 +48,7 @@ interface WorkerPoolInterface
     public function awaitTermination(): void;
     
     /**
-     * @return WorkerInterface[]
+     * @return int[]
      */
     public function getWorkers(): array;
     

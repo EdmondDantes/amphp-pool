@@ -3,14 +3,16 @@ declare(strict_types=1);
 
 namespace CT\AmpPool\Worker;
 
+use CT\AmpPool\JobIpc\JobHandlerInterface;
 use CT\AmpPool\PoolState\PoolStateReadableInterface;
 use CT\AmpPool\Worker\WorkerState\WorkersInfoInterface;
 use CT\AmpPool\Worker\WorkerState\WorkerStateStorageInterface;
+use CT\AmpPool\WorkerEventEmitterAwareInterface;
 use CT\AmpPool\WorkerGroup;
 use CT\AmpPool\WorkerTypeEnum;
 use Psr\Log\LoggerInterface;
 
-interface WorkerInterface
+interface WorkerInterface   extends WorkerEventEmitterAwareInterface
 {
     /**
      * @return array<int, WorkerGroup>
@@ -27,6 +29,10 @@ interface WorkerInterface
     public function getWorkerGroup(): WorkerGroup;
     public function getWorkerGroupId(): int;
     public function getWorkerType(): WorkerTypeEnum;
+    
+    public function getJobHandler(): JobHandlerInterface|null;
+    public function setJobHandler(JobHandlerInterface $jobHandler): self;
+    public function mainLoop(): void;
     
     public function getLogger(): LoggerInterface;
 }

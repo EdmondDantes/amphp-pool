@@ -17,6 +17,7 @@ use Amp\TimeoutCancellation;
 use CT\AmpPool\JobIpc\IpcServer;
 use CT\AmpPool\JobIpc\JobHandlerInterface;
 use CT\AmpPool\Messages\MessagePingPong;
+use CT\AmpPool\Messages\MessageShutdown;
 use CT\AmpPool\PoolState\PoolStateReadableInterface;
 use CT\AmpPool\PoolState\PoolStateStorage;
 use CT\AmpPool\SocketPipe\SocketPipeFactoryWindows;
@@ -25,6 +26,8 @@ use CT\AmpPool\Worker\WorkerState\WorkersInfoInterface;
 use CT\AmpPool\Worker\WorkerState\WorkerStateInterface;
 use CT\AmpPool\Worker\WorkerState\WorkerStateStorage;
 use CT\AmpPool\Worker\WorkerState\WorkerStateStorageInterface;
+use CT\AmpPool\WorkerEventEmitter;
+use CT\AmpPool\WorkerEventEmitterInterface;
 use CT\AmpPool\WorkerGroup;
 use CT\AmpPool\WorkerTypeEnum;
 use Psr\Log\LoggerInterface;
@@ -61,6 +64,7 @@ class Worker                        implements WorkerInterface
     private PoolStateReadableInterface $poolState;
     private WorkerStateStorageInterface $workerStateStorage;
     private WorkersInfoInterface $workersInfo;
+    private WorkerEventEmitterInterface $eventEmitter;
     
     public function __construct(
         private readonly int     $id,
@@ -85,6 +89,7 @@ class Worker                        implements WorkerInterface
         $this->poolState            = new PoolStateStorage;
         $this->workerStateStorage   = new WorkerStateStorage($this->id, $this->group->getWorkerGroupId(), true);
         $this->workersInfo          = new WorkersInfo;
+        $this->eventEmitter         = new WorkerEventEmitter;
         
         if($logger !== null) {
             $this->logger           = $logger;
@@ -174,6 +179,11 @@ class Worker                        implements WorkerInterface
         return $this->ipcForTransferSocket;
     }
     
+    public function getWorkerEventEmitter(): WorkerEventEmitterInterface
+    {
+        return $this->eventEmitter;
+    }
+    
     public function getSocketPipeFactory(): ServerSocketFactory
     {
         if (PHP_OS_FAMILY === 'Windows') {
@@ -217,12 +227,16 @@ class Worker                        implements WorkerInterface
                     continue;
                 }
                 
-                try {
-                    foreach ($this->messageHandlers as $eventHandler) {
-                        if($eventHandler($message)) {
-                            break;
-                        }
+                if($message instanceof MessageShutdown) {
+                    $this->logger->info('Received shutdown message');
+                    
+                    if(false === $message->afterLastJob) {
+                        break;
                     }
+                }
+                
+                try {
+                    $this->eventEmitter->emitWorkerEvent($message);
                 } catch (\Throwable $exception) {
                     $this->logger->error('Error processing message', ['exception' => $exception]);
                 }
@@ -230,7 +244,7 @@ class Worker                        implements WorkerInterface
         } catch (\Throwable) {
             // IPC Channel manually closed
         } finally {
-            $this->messageHandlers = [];
+            $this->eventEmitter->free();
             $this->loopCancellation->cancel();
             $this->queue->complete();
             $this->ipcForTransferSocket?->close();

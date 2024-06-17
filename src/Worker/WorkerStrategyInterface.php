@@ -17,4 +17,7 @@ interface WorkerStrategyInterface
     public function setWorker(WorkerInterface $worker): self;
     
     public function setWorkerGroup(WorkerGroupInterface $workerGroup): self;
+    
+    public function onStarted(): void;
+    public function onStopped(): void;
 }

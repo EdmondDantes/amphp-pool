@@ -27,4 +27,9 @@ final class WorkerEventEmitter implements WorkerEventEmitterInterface
             $listener($event);
         }
     }
+    
+    public function free(): void
+    {
+        $this->listeners            = [];
+    }
 }

@@ -19,6 +19,7 @@ use CT\AmpPool\Exceptions\RemoteException;
 use CT\AmpPool\Messages\MessageLog;
 use CT\AmpPool\Messages\MessagePingPong;
 use CT\AmpPool\Messages\MessageReady;
+use CT\AmpPool\Messages\MessageShutdown;
 use CT\AmpPool\Messages\MessageSocketFree;
 use CT\AmpPool\Messages\MessageSocketListen;
 use CT\AmpPool\Messages\MessageSocketTransfer;
@@ -216,7 +217,7 @@ class WorkerProcessContext          implements \Psr\Log\LoggerInterface, \Psr\Lo
         try {
             if (!$this->context->isClosed()) {
                 try {
-                    $this->context->send(null);
+                    $this->context->send(new MessageShutdown);
                 } catch (ChannelException) {
                     // Ignore if the worker has already exited
                 }
@@ -229,6 +230,17 @@ class WorkerProcessContext          implements \Psr\Log\LoggerInterface, \Psr\Lo
             }
         } finally {
             $this->close();
+        }
+    }
+    
+    public function shutdownSoftly(): void
+    {
+        if (false === $this->context->isClosed()) {
+            try {
+                $this->context->send(new MessageShutdown(true));
+            } catch (ChannelException) {
+                // Ignore if the worker has already exited
+            }
         }
     }
     

@@ -6,10 +6,21 @@ namespace CT\AmpPool\Worker\ScalingStrategy;
 use CT\AmpPool\Worker\WorkerStrategyAbstract;
 use CT\AmpPool\WorkerEventEmitterAwareInterface;
 use CT\AmpPool\WorkerPoolInterface;
+use Revolt\EventLoop;
 
 final class ScalingSimple           extends WorkerStrategyAbstract
                                     implements ScalingStrategyInterface
 {
+    private int $lastScalingRequest   = 0;
+    private mixed $handleScalingRequest;
+    private string $decreaseCallbackId = '';
+    
+    public function __construct(
+        private readonly int $decreaseTimeout = 5 * 60,
+        private readonly int $decreaseCheckInterval = 5 * 60,
+    ) {}
+    
+    
     public function requestScaling(int $fromWorkerId = 0): bool
     {
         $workerGroup                = $this->getWorkerGroup();
@@ -29,13 +40,36 @@ final class ScalingSimple           extends WorkerStrategyAbstract
         return true;
     }
     
-    public function setWorkerPool(WorkerPoolInterface $workerPool): WorkerStrategyAbstract
+    public function onStarted(): void
     {
+        $workerPool                 = $this->getWorkerPool();
+        
         if($workerPool instanceof WorkerEventEmitterAwareInterface) {
-            $workerPool->getWorkerEventEmitter()->addWorkerEventListener($this->handleScalingRequest(...));
+            $this->handleScalingRequest = $this->handleScalingRequest(...);
+            $workerPool->getWorkerEventEmitter()->addWorkerEventListener($this->handleScalingRequest);
+            
+            $this->decreaseCallbackId = EventLoop::repeat($this->decreaseCheckInterval, $this->decreaseWorkers(...));
+        }
+    }
+    
+    public function onStopped(): void
+    {
+        $workerPool                 = $this->getWorkerPool();
+    
+        if($workerPool instanceof WorkerEventEmitterAwareInterface && $this->handleScalingRequest !== null) {
+            $workerPool->getWorkerEventEmitter()->removeWorkerEventListener($this->handleScalingRequest);
         }
         
-        return parent::setWorkerPool($workerPool);
+        if($this->decreaseCallbackId !== '') {
+            EventLoop::cancel($this->decreaseCallbackId);
+        }
+    }
+    
+    public function __destruct()
+    {
+        if($this->decreaseCallbackId !== '') {
+            EventLoop::cancel($this->decreaseCallbackId);
+        }
     }
     
     public function adjustWorkerCount(): int
@@ -55,12 +89,37 @@ final class ScalingSimple           extends WorkerStrategyAbstract
             return;
         }
         
+        $this->lastScalingRequest   = \time();
+        
         $workerPool                 = $this->getWorkerPool();
         
         if($workerPool === null) {
             return;
         }
         
+        $workerPool->scaleWorkers($workerGroup->getWorkerGroupId(), 1);
+    }
+    
+    private function decreaseWorkers(): void
+    {
+        $workerPool                 = $this->getWorkerPool();
         
+        if($workerPool === null) {
+            return;
+        }
+        
+        if($this->lastScalingRequest + $this->decreaseTimeout <= \time()) {
+            return;
+        }
+
+        $runningWorkers             = $workerPool->countWorkers($this->getWorkerGroup()?->getWorkerGroupId(), onlyRunning: true);
+        
+        if($runningWorkers <= $this->getWorkerGroup()->getMinWorkers()) {
+            return;
+        }
+        
+        $workerPool->scaleWorkers(
+            $this->getWorkerGroup()->getWorkerGroupId(), $this->getWorkerGroup()->getMinWorkers()
+        );
     }
 }

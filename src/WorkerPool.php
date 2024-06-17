@@ -291,7 +291,7 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
             }
             
             if($isDecrease && $worker->shouldBeStarted === false && $worker->getWorker() !== null) {
-                $worker->getWorker()->shutdown();
+                $worker->getWorker()->shutdownSoftly();
                 $handled++;
                 $stoppedWorkers[]   = $worker->id;
             } elseif(false === $isDecrease && $worker->getWorker() === null) {
@@ -584,7 +584,7 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
         $workers                    = [];
         
         foreach ($this->workers as $workerDescriptor) {
-            $workers[]              = $workerDescriptor->getWorker();
+            $workers[]              = $workerDescriptor->id;
         }
         
         return $workers;
@@ -642,6 +642,27 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
         $this->run();
         
         $this->logger?->info('Server reloaded');
+    }
+    
+    public function countWorkers(int $groupId, bool $onlyRunning = false, bool $notRunning = false): int
+    {
+        $count                      = 0;
+        
+        foreach ($this->workers as $worker) {
+            if($worker->group->getWorkerGroupId() !== $groupId) {
+                continue;
+            }
+            
+            if($onlyRunning && $worker->getWorker() !== null) {
+                $count++;
+            } elseif ($notRunning && $worker->getWorker() === null) {
+                $count++;
+            } else {
+                $count++;
+            }
+        }
+        
+        return $count;
     }
     
     public function __destruct()
@@ -725,18 +746,5 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
         $this->workers              = [];
         
         return $exceptions;
-    }
-    
-    protected function countRunningWorkers(int $groupId): int
-    {
-        $count                      = 0;
-        
-        foreach ($this->workers as $worker) {
-            if($worker->group->getWorkerGroupId() === $groupId && $worker->getWorker() === null) {
-                $count++;
-            }
-        }
-        
-        return $count;
     }
 }

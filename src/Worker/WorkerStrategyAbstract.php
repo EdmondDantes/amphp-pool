@@ -103,6 +103,14 @@ abstract class WorkerStrategyAbstract implements WorkerStrategyInterface
         return $this->worker !== null && $this->workerPool === null;
     }
     
+    public function onStarted(): void
+    {
+    }
+    
+    public function onStopped(): void
+    {
+    }
+    
     public function __serialize(): array
     {
         return [];
