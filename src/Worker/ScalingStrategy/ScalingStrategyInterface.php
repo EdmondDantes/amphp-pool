@@ -9,6 +9,15 @@ namespace CT\AmpPool\Worker\ScalingStrategy;
 interface ScalingStrategyInterface
 {
     /**
+     * Returns whether the worker group can be scaled.
+     *
+     * @param int $fromWorkerId
+     *
+     * @return  bool
+     */
+    public function requestScaling(int $fromWorkerId = 0): bool;
+    
+    /**
      * Adjusts the worker count based on the current state of the worker group.
      *
      * @return  int    Returns the number of workers to add or remove.
