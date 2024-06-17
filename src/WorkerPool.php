@@ -30,7 +30,7 @@ use CT\AmpPool\SocketPipe\SocketPipeProvider;
 use CT\AmpPool\Worker\PickupStrategy\PickupLeastJobs;
 use CT\AmpPool\Worker\RestartStrategy\RestartAlways;
 use CT\AmpPool\Worker\RunnerStrategy\DefaultRunner;
-use CT\AmpPool\Worker\ScalingStrategy\ScalingSimple;
+use CT\AmpPool\Worker\ScalingStrategy\ScalingByRequest;
 use CT\AmpPool\Worker\WorkerDescriptor;
 use CT\AmpPool\Worker\WorkerState\WorkersInfo;
 use CT\AmpPool\Worker\WorkerState\WorkersInfoInterface;
@@ -681,7 +681,7 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
         }
         
         if($group->getScalingStrategy() === null) {
-            $group->defineScalingStrategy(new ScalingSimple);
+            $group->defineScalingStrategy(new ScalingByRequest);
         }
         
         if($group->getRestartStrategy() === null) {

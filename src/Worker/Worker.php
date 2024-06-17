@@ -75,7 +75,7 @@ class Worker                        implements WorkerInterface
         /**
          * @var array<int, WorkerGroup>
          */
-        private array $groupsScheme,
+        private readonly array $groupsScheme,
         LoggerInterface          $logger = null
     ) {
         $this->queue                = new Queue();
@@ -229,17 +229,10 @@ class Worker                        implements WorkerInterface
                 
                 if($message instanceof MessageShutdown) {
                     $this->logger->info('Received shutdown message');
-                    
-                    if(false === $message->afterLastJob) {
-                        break;
-                    }
+                    break;
                 }
                 
-                try {
-                    $this->eventEmitter->emitWorkerEvent($message);
-                } catch (\Throwable $exception) {
-                    $this->logger->error('Error processing message', ['exception' => $exception]);
-                }
+                $this->eventEmitter->emitWorkerEvent($message);
             }
         } catch (\Throwable) {
             // IPC Channel manually closed
@@ -300,8 +293,11 @@ class Worker                        implements WorkerInterface
                             $channel->send($result);
                             break;
                         } catch (\Throwable $exception) {
-                            $this->logger->error('Error sending job result (try number '.$i.')', ['exception' => $exception]);
-                            delay(0.5, true, $cancellation);
+                            $this->logger->notice('Error sending job result (try number '.$i.')', ['exception' => $exception]);
+                            
+                            if($i === 1) {
+                                delay(0.5, true, $cancellation);
+                            }
                         }
                     }
                 }

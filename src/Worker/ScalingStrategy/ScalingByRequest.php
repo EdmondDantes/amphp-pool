@@ -5,10 +5,9 @@ namespace CT\AmpPool\Worker\ScalingStrategy;
 
 use CT\AmpPool\Worker\WorkerStrategyAbstract;
 use CT\AmpPool\WorkerEventEmitterAwareInterface;
-use CT\AmpPool\WorkerPoolInterface;
 use Revolt\EventLoop;
 
-final class ScalingSimple           extends WorkerStrategyAbstract
+final class ScalingByRequest        extends WorkerStrategyAbstract
                                     implements ScalingStrategyInterface
 {
     private int $lastScalingRequest   = 0;
@@ -70,11 +69,6 @@ final class ScalingSimple           extends WorkerStrategyAbstract
         if($this->decreaseCallbackId !== '') {
             EventLoop::cancel($this->decreaseCallbackId);
         }
-    }
-    
-    public function adjustWorkerCount(): int
-    {
-        // TODO: Implement adjustWorkerCount() method.
     }
     
     private function handleScalingRequest(mixed $message): void
