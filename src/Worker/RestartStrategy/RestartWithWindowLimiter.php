@@ -7,19 +7,24 @@ use CT\AmpPool\Worker\WorkerStrategyAbstract;
 use CT\AmpPool\WorkerGroupInterface;
 
 /**
- * Restart worker with interval limiter.
+ * The worker will not be restarted if the following conditions are met:
  *
- * The worker will be restarted with an increasing interval between restarts.
+ * The previous restart occurred within the time window specified in the parameter $windowDuration.
+ * The number of restart attempts within the time window has been exhausted.
+ * An error occurred if the parameter $isError is specified.
  */
-final class RestartWithLimiter      extends WorkerStrategyAbstract
+final class RestartWithWindowLimiter extends WorkerStrategyAbstract
                                     implements RestartStrategyInterface
 {
     private int $restartsCount      = 0;
     private ?int $currentInterval   = null;
+    private int $lastRestartWindow  = 0;
     
     public function __construct(
+        private readonly bool $isError = true,
         private readonly int $maxRestarts = 3,
-        private readonly int $restartInterval = 60,
+        private readonly int $windowDuration = 10,
+        private readonly int $restartInterval = 0,
         private readonly int $step = 10,
         private readonly int $intervalThreshold = 120,
     ) {}
@@ -27,11 +32,24 @@ final class RestartWithLimiter      extends WorkerStrategyAbstract
     
     public function shouldRestart(mixed $exitResult): int
     {
+        if($this->isError && false === $exitResult instanceof \Throwable) {
+            return RestartStrategyInterface::RESTART_IMMEDIATELY;
+        }
+        
+        if(($this->lastRestartWindow + $this->windowDuration) <= time()) {
+            $this->currentInterval  = null;
+            $this->restartsCount    = 0;
+        }
+        
         if($this->restartsCount >= $this->maxRestarts) {
             return RestartStrategyInterface::RESTART_NEVER;
         }
         
         $this->restartsCount++;
+        
+        if($this->lastRestartWindow === 0) {
+            $this->lastRestartWindow = time();
+        }
         
         if($this->currentInterval === null) {
             $this->currentInterval = $this->restartInterval;
