@@ -57,7 +57,6 @@ class Worker                        implements WorkerInterface
     protected ?ServerSocketFactory $socketPipeFactory = null;
     
     private LoggerInterface $logger;
-    private array            $messageHandlers = [];
     private IpcServer|null           $jobIpc      = null;
     private JobHandlerInterface|null $jobHandler  = null;
     private WorkerStateStorage|null  $workerState = null;
@@ -244,6 +243,7 @@ class Worker                        implements WorkerInterface
         } catch (\Throwable) {
             // IPC Channel manually closed
         } finally {
+            $this->jobHandler       = null;
             $this->eventEmitter->free();
             $this->loopCancellation->cancel();
             $this->queue->complete();
@@ -264,7 +264,7 @@ class Worker                        implements WorkerInterface
         
         while ($jobQueueIterator->continue($cancellation)) {
             
-            if(null === $this->jobHandler) {
+            if($this->jobHandler === null) {
                 return;
             }
             
