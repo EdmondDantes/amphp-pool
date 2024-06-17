@@ -5,24 +5,17 @@ namespace CT\AmpPool;
 
 use Amp\Cancellation;
 use Amp\CancelledException;
-use Amp\Cluster\ClusterWorkerMessage;
 use Amp\DeferredCancellation;
 use Amp\ForbidCloning;
 use Amp\ForbidSerialization;
 use Amp\Future;
 use Amp\Parallel\Context\Context;
 use Amp\Parallel\Context\ProcessContext;
-use Amp\Pipeline\Queue;
-use Amp\Serialization\SerializationException;
 use Amp\Socket\ResourceSocket;
 use Amp\Socket\Socket;
 use Amp\Sync\ChannelException;
 use Amp\TimeoutCancellation;
-use Amp\TimeoutException;
-use CT\AmpPool\Exceptions\FatalWorkerException;
 use CT\AmpPool\Exceptions\RemoteException;
-use CT\AmpPool\Messages\MessageJob;
-use CT\AmpPool\Messages\MessageJobResult;
 use CT\AmpPool\Messages\MessageLog;
 use CT\AmpPool\Messages\MessagePingPong;
 use CT\AmpPool\Messages\MessageReady;
@@ -76,7 +69,8 @@ class WorkerProcessContext          implements \Psr\Log\LoggerInterface, \Psr\Lo
         private readonly int                  $id,
         private readonly Context              $context,
         private readonly SocketPipeTransport|SocketListenerProvider|null $socketTransport,
-        private readonly DeferredCancellation $deferredCancellation
+        private readonly DeferredCancellation $deferredCancellation,
+        private readonly WorkerEventEmitterInterface $eventEmitter
     ) {
         $this->lastActivity         = \time();
         $this->joinFuture           = async($this->context->join(...));
@@ -144,16 +138,6 @@ class WorkerProcessContext          implements \Psr\Log\LoggerInterface, \Psr\Lo
         return $this;
     }
     
-    /**
-     * @throws SerializationException
-     * @throws ChannelException
-     */
-    public function sendJob(mixed $data): void
-    {
-        $this->context->send(new MessageJob($data));
-        $this->jobsCount++;
-    }
-    
     public function runWorkerLoop(): void
     {
         $cancellation               = $this->deferredCancellation->getCancellation();
@@ -184,13 +168,8 @@ class WorkerProcessContext          implements \Psr\Log\LoggerInterface, \Psr\Lo
                     $this->freeTransferredSocket($message->socketId);
                 } elseif($message instanceof MessageLog) {
                     $this->logger?->log($message->level, $message->message, $message->context);
-                } elseif($message instanceof MessageJobResult) {
-                    $this->isReady  = true;
-                    $this->jobsCount--;
-                    
-                    if($this->jobsCount < 0) {
-                        $this->jobsCount = 0;
-                    }
+                } elseif ($message !== null) {
+                    $this->eventEmitter->emitWorkerEvent($message);
                 }
             }
             

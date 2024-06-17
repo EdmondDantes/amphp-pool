@@ -50,7 +50,7 @@ use const Amp\Process\IS_WINDOWS;
  * @template-covariant TReceive
  * @template TSend
  */
-class WorkerPool                    implements WorkerPoolInterface
+class WorkerPool                    implements WorkerPoolInterface, WorkerEventEmitterAwareInterface
 {
     protected int $workerStartTimeout = 5;
     protected int $workerStopTimeout  = 5;
@@ -81,6 +81,8 @@ class WorkerPool                    implements WorkerPoolInterface
      */
     private array $groupsScheme             = [];
     
+    private WorkerEventEmitterInterface $eventEmitter;
+    
     public function __construct(
         protected readonly IpcHub $hub      = new LocalIpcHub(),
         protected ?ContextFactory $contextFactory = null,
@@ -96,6 +98,7 @@ class WorkerPool                    implements WorkerPoolInterface
         $this->provider             = new SocketPipeProvider($this->hub);
         $this->contextFactory       ??= new DefaultContextFactory(ipcHub: $this->hub);
         $this->workersInfo          = new WorkersInfo;
+        $this->eventEmitter         = new WorkerEventEmitter;
         
         // For Windows, we should use the SocketListenerProvider instead of the SocketPipeProvider
         if(PHP_OS_FAMILY === 'Windows') {
@@ -261,6 +264,11 @@ class WorkerPool                    implements WorkerPoolInterface
         }
     }
     
+    public function getWorkerEventEmitter(): WorkerEventEmitterInterface
+    {
+        return $this->eventEmitter;
+    }
+    
     protected function awaitUnixEvents(): void
     {
         while (true) {
@@ -350,7 +358,8 @@ class WorkerPool                    implements WorkerPoolInterface
             $workerDescriptor->id,
             $context,
             $socketTransport ?? $this->listenerProvider,
-            $deferredCancellation
+            $deferredCancellation,
+            $this->eventEmitter,
         );
         
         if($this->logger !== null) {
