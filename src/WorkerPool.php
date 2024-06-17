@@ -264,6 +264,61 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
         }
     }
     
+    public function scaleWorkers(int $groupId, int $count): int
+    {
+        if($count === 0) {
+            return 0;
+        }
+        
+        $group                      = $this->groupsScheme[$groupId] ?? null;
+        
+        if($group === null) {
+            throw new \Error("The worker group with ID '{$groupId}' is not found");
+        }
+
+        $isDecrease                 = $count < 0;
+        $count                      = \abs($count);
+        $handled                    = 0;
+        $stoppedWorkers             = [];
+        
+        foreach ($this->workers as $worker) {
+            if($worker->group->getWorkerGroupId() !== $groupId) {
+                continue;
+            }
+            
+            if($handled >= $count) {
+                break;
+            }
+            
+            if($isDecrease && $worker->shouldBeStarted === false && $worker->getWorker() !== null) {
+                $worker->getWorker()->shutdown();
+                $handled++;
+                $stoppedWorkers[]   = $worker->id;
+            } elseif(false === $isDecrease && $worker->getWorker() === null) {
+                $this->startWorker($worker);
+                $handled++;
+            }
+        }
+        
+        $lowestWorkerId             = 0;
+        $highestWorkerId            = 0;
+
+        foreach ($this->workers as $worker) {
+            if($worker->group->getWorkerGroupId() === $groupId && $worker->getWorker() !== null) {
+                if($lowestWorkerId === 0) {
+                    $lowestWorkerId = $worker->id;
+                } else if(false === in_array($worker->id, $stoppedWorkers, true)) {
+                    $highestWorkerId = $worker->id;
+                }
+            }
+        }
+        
+        // Update state of the worker group
+        $this->poolState->setWorkerGroupState($groupId, $lowestWorkerId, $highestWorkerId);
+        
+        return $handled;
+    }
+    
     public function getWorkerEventEmitter(): WorkerEventEmitterInterface
     {
         return $this->eventEmitter;
@@ -670,5 +725,18 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
         $this->workers              = [];
         
         return $exceptions;
+    }
+    
+    protected function countRunningWorkers(int $groupId): int
+    {
+        $count                      = 0;
+        
+        foreach ($this->workers as $worker) {
+            if($worker->group->getWorkerGroupId() === $groupId && $worker->getWorker() === null) {
+                $count++;
+            }
+        }
+        
+        return $count;
     }
 }

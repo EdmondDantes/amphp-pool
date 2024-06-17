@@ -99,6 +99,11 @@ class Worker                        implements WorkerInterface
         $this->getSocketPipeFactory();
     }
 
+    public function sendMessageToWatcher(mixed $message): void
+    {
+        $this->ipcChannel->send($message);
+    }
+    
     /**
      * @return array<int, WorkerGroup>
      */

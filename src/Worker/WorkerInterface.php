@@ -17,6 +17,8 @@ interface WorkerInterface
      */
     public function getGroupsScheme(): array;
     
+    public function sendMessageToWatcher(mixed $message): void;
+    
     public function getPoolStateStorage(): PoolStateReadableInterface;
     public function getWorkerStateStorage(): WorkerStateStorageInterface;
     public function getWorkersInfo(): WorkersInfoInterface;

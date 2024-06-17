@@ -49,4 +49,18 @@ interface WorkerPoolInterface
      * @return WorkerInterface[]
      */
     public function getWorkers(): array;
+    
+    /**
+     * Scale workers in the group.
+     * Returns the number of workers that were actually scaled (started or shutdown).
+     *
+     * The parameter $count can be negative
+     * in this case, the method will try to stop the workers.
+     *
+     * @param       int $groupId
+     * @param       int $count
+     *
+     * @return      int
+     */
+    public function scaleWorkers(int $groupId, int $count): int;
 }
