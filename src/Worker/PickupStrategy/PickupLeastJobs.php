@@ -16,7 +16,7 @@ use CT\AmpPool\WorkerTypeEnum;
  */
 final class PickupLeastJobs         extends PickupStrategyAbstract
 {
-    public function pickupWorker(array $possibleGroups = [], array $possibleWorkers = []): ?int
+    public function pickupWorker(array $possibleGroups = [], array $possibleWorkers = [], array $ignoredWorkers = []): ?int
     {
         $workersInfo                = $this->getWorkersInfo();
         
@@ -27,7 +27,7 @@ final class PickupLeastJobs         extends PickupStrategyAbstract
         $foundWorkerId              = null;
         $bestJobCount               = 0;
         
-        foreach ($this->iterate($possibleGroups, $possibleWorkers) as $workerId) {
+        foreach ($this->iterate($possibleGroups, $possibleWorkers, $ignoredWorkers) as $workerId) {
             
             $workerState            = $workersInfo->getWorkerState($workerId);
             

@@ -8,7 +8,7 @@ namespace CT\AmpPool\JobIpc;
  *
  * The interface is responsible for serializing and deserializing JOBs.
  */
-interface JobSerializerI
+interface JobSerializerInterface
 {
     public function createRequest(int $jobId, int $fromWorkerId, int $workerGroupId, string $data): string;
     public function parseRequest(string $request): JobRequest;

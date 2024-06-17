@@ -15,10 +15,11 @@ interface PickupStrategyInterface
     /**
      * Pickup a worker from the pool.
      *
-     * @param array               $possibleGroups
-     * @param array               $possibleWorkers
+     * @param array $possibleGroups
+     * @param array $possibleWorkers
+     * @param array $ignoredWorkers
      *
      * @return int|null
      */
-    public function pickupWorker(array $possibleGroups = [], array $possibleWorkers = []): ?int;
+    public function pickupWorker(array $possibleGroups = [], array $possibleWorkers = [], array $ignoredWorkers = []): ?int;
 }

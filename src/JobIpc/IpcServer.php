@@ -21,7 +21,7 @@ use const Amp\Process\IS_WINDOWS;
  * Allows organizing a connection pool for communication between workers.
  * The method getJobQueue() returns the task queue where Job, accepted via an IPC channel, is written.
  */
-final class IpcServer
+final class IpcServer               implements IpcServerInterface
 {
     use ForbidCloning;
     use ForbidSerialization;
@@ -51,8 +51,8 @@ final class IpcServer
      *
      * @throws Socket\SocketException
      */
-    public function __construct(int $workerId) {
-        
+    public function __construct(int $workerId)
+    {
         $address                    = self::getSocketAddress($workerId);
         
         if (!IS_WINDOWS) {

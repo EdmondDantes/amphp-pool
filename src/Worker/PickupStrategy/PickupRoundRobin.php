@@ -16,12 +16,12 @@ final class PickupRoundRobin        extends PickupStrategyAbstract
 {
     private array                   $usedWorkers    = [];
     
-    public function pickupWorker(array $possibleGroups = [], array $possibleWorkers = []): ?int
+    public function pickupWorker(array $possibleGroups = [], array $possibleWorkers = [], array $ignoredWorkers = []): ?int
     {
         $anyFound                   = false;
         
         // Try to return a worker that has not been used yet
-        foreach ($this->iterate($possibleGroups, $possibleWorkers) as $workerId) {
+        foreach ($this->iterate($possibleGroups, $possibleWorkers, $ignoredWorkers) as $workerId) {
             
             $anyFound               = true;
             
@@ -38,7 +38,7 @@ final class PickupRoundRobin        extends PickupStrategyAbstract
         $this->usedWorkers          = [];
         
         // Returns first available worker
-        foreach ($this->iterate($possibleGroups, $possibleWorkers) as $workerId) {
+        foreach ($this->iterate($possibleGroups, $possibleWorkers, $ignoredWorkers) as $workerId) {
             $this->usedWorkers[]     = $workerId;
             return $workerId;
         }

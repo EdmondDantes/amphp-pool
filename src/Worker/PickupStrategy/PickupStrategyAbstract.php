@@ -8,7 +8,7 @@ use CT\AmpPool\Worker\WorkerStrategyAbstract;
 abstract class PickupStrategyAbstract       extends WorkerStrategyAbstract
                                             implements PickupStrategyInterface
 {
-    protected function iterate(array $possibleGroups = [], array $possibleWorkers = []): iterable
+    protected function iterate(array $possibleGroups = [], array $possibleWorkers = [], array $ignoredWorkers = []): iterable
     {
         $groupsState                = $this->getPoolStateStorage()->getGroupsState();
         $currentWorkerId            = $this->getCurrentWorkerId();
@@ -26,6 +26,10 @@ abstract class PickupStrategyAbstract       extends WorkerStrategyAbstract
                 }
                 
                 if($possibleWorkers !== [] && false === in_array($workerId, $possibleWorkers, true)) {
+                    continue;
+                }
+                
+                if($ignoredWorkers !== [] && in_array($workerId, $ignoredWorkers, true)) {
                     continue;
                 }
 

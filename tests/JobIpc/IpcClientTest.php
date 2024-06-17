@@ -17,9 +17,9 @@ class IpcClientTest                 extends TestCase
     private IpcServer $ipcServer;
     private PoolStateStorage $poolState;
     private WorkerStateStorage $workerState;
-    private DeferredCancellation $jobsLoopCancellation;
-    private JobSerializerI       $jobSerializer;
-    private mixed                $jobHandler = null;
+    private DeferredCancellation   $jobsLoopCancellation;
+    private JobSerializerInterface $jobSerializer;
+    private mixed                  $jobHandler = null;
 
     protected function setUp(): void
     {

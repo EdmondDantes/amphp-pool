@@ -16,6 +16,9 @@ use Amp\TimeoutException;
 use CT\AmpPool\Exceptions\NoWorkersAvailable;
 use CT\AmpPool\Exceptions\SendJobException;
 use CT\AmpPool\PoolState\PoolStateStorage;
+use CT\AmpPool\Worker\PickupStrategy\PickupStrategyInterface;
+use CT\AmpPool\Worker\ScalingStrategy\ScalingStrategyInterface;
+use CT\AmpPool\Worker\WorkerInterface;
 use CT\AmpPool\Worker\WorkerState\WorkersInfo;
 use Revolt\EventLoop;
 use function Amp\delay;
@@ -24,7 +27,7 @@ use function Amp\Socket\socketConnector;
 /**
  * The class is responsible for sending JOBs to other workers.
  */
-final class IpcClient
+final class IpcClient                   implements IpcClientInterface
 {
     use ForbidCloning;
     use ForbidSerialization;
@@ -32,9 +35,9 @@ final class IpcClient
     /**
      * @var StreamChannel[]
      */
-    private array                 $workerChannels = [];
-    private JobSerializerI|null   $jobTransport = null;
-    private WorkersInfo|null      $workersInfo  = null;
+    private array                       $workerChannels = [];
+    private JobSerializerInterface|null $jobTransport   = null;
+    private WorkersInfo|null            $workersInfo    = null;
     private PoolStateStorage|null $poolState    = null;
     /**
      * List of futures that are waiting for the result of the job with SocketId, and time when the job was sent
@@ -44,26 +47,28 @@ final class IpcClient
     private int $maxTryCount        = 3;
     private int $futureTimeout      = 60 * 10;
     private string $futureTimeoutCallbackId;
+    private PickupStrategyInterface $pickupStrategy;
+    private ScalingStrategyInterface $scalingStrategy;
     
     /**
      * IpcClient constructor.
      *
-     * @param int                 $workerId         Current worker ID
-     * @param int                 $workerGroupId    Current worker group ID
-     * @param JobSerializerI|null $jobSerializer    Job serializer
-     * @param Cancellation|null   $cancellation     Cancellation
-     * @param int                 $retryInterval    Retry interval for sending a job
+     * @param WorkerInterface             $worker        Worker
+     * @param JobSerializerInterface|null $jobSerializer Job serializer
+     * @param Cancellation|null           $cancellation  Cancellation
+     * @param int                         $retryInterval Retry interval for sending a job
      */
     public function __construct(
-        private readonly int               $workerId,
-        private readonly int               $workerGroupId = 0,
-        JobSerializerI                     $jobSerializer = null,
+        private readonly WorkerInterface   $worker,
+        JobSerializerInterface             $jobSerializer = null,
         private readonly Cancellation|null $cancellation = null,
         private readonly int               $retryInterval = 1
     )
     {
-        $this->workersInfo          = new WorkersInfo();
-        $this->poolState            = new PoolStateStorage();
+        $this->workersInfo          = $this->worker->getWorkersInfo();
+        $this->poolState            = $this->worker->getPoolStateStorage();
+        $this->pickupStrategy       = $this->worker->getWorkerGroup()->getPickupStrategy();
+        $this->scalingStrategy      = $this->worker->getWorkerGroup()->getScalingStrategy();
         $this->jobTransport         = $jobSerializer ?? new JobSerializer();
     }
     
@@ -73,25 +78,9 @@ final class IpcClient
     }
     
     /**
-     * Send a job to the worker asynchronously in the separate fiber.
-     * If $awaitResult equals True than method returns a Future that will be completed when the job is done.
-     *
-     * However, the duration of a Job should not exceed the JobTimeout. Therefore, if you want to perform very long tasks,
-     * you should consider how to properly organize work between workers or increase the JobTimeout.
-     *
-     * Please note that if the Job-Worker process terminates unexpectedly, all Futures will be completed with an error.
-     *
-     * Every time the job should be sent maxTryCount times with a retryInterval between attempts.
-     * If retryInterval equals 0, the method will throw an exception if it cannot send the job.
-     *
-     * @param string   $data
-     * @param int      $workerGroupId
-     * @param bool     $awaitResult
-     * @param int|null $workerId
-     *
-     * @return Future|null
+     * @inheritDoc
      */
-    public function sendJob(string $data, int $workerGroupId, bool $awaitResult = false, int $workerId = null): Future|null
+    public function sendJob(string $data, array $allowedGroups = [], array $allowedWorkers = [], bool $awaitResult = false): Future|null
     {
         $deferred                   = null;
         
@@ -99,7 +88,7 @@ final class IpcClient
             $deferred               = new DeferredFuture();
         }
         
-        EventLoop::queue($this->sendJobImmediately(...), $data, $workerGroupId, $deferred, $workerId);
+        EventLoop::queue($this->sendJobImmediately(...), $data, $allowedGroups, $allowedWorkers, $deferred);
         
         return $deferred?->getFuture();
     }
@@ -108,14 +97,14 @@ final class IpcClient
      * Try to send a job to the worker immediately in the current fiber.
      *
      * @param string              $data
-     * @param int                 $workerGroupId
+     * @param array               $allowedGroups
+     * @param array               $allowedWorkers
      * @param bool|DeferredFuture $awaitResult
-     * @param int|null            $workerId
      *
      * @return Future|null
      * @throws \Throwable
      */
-    public function sendJobImmediately(string $data, int $workerGroupId, bool|DeferredFuture $awaitResult = false, int $workerId = null): Future|null
+    public function sendJobImmediately(string $data, array $allowedGroups = [], array $allowedWorkers = [], bool|DeferredFuture $awaitResult = false): Future|null
     {
         $tryCount                   = 0;
         $ignoreWorkers              = [];
@@ -128,7 +117,7 @@ final class IpcClient
         
         while($tryCount < $this->maxTryCount) {
             try {
-                $socketId           = $this->tryToSendJob($data, $workerGroupId, $workerId, $ignoreWorkers, $deferred);
+                $socketId           = $this->tryToSendJob($data, $allowedGroups, $allowedWorkers, $ignoreWorkers, $deferred);
                 
                 if($deferred !== null) {
                     $this->resultsFutures[spl_object_id($deferred)] = [$deferred, $socketId, time()];
@@ -162,9 +151,9 @@ final class IpcClient
         throw new SendJobException($workerGroupId, $this->maxTryCount);
     }
     
-    private function tryToSendJob(string $data, int $workerGroupId, int $workerId = null, array $ignoreWorkers = [], DeferredFuture $deferred = null): int
+    private function tryToSendJob(string $data, array $allowedGroups = [], array $allowedWorkers = [], array $ignoreWorkers = [], DeferredFuture $deferred = null): int
     {
-        $foundedWorkerId            = $this->pickupWorker($workerGroupId, $workerId, $ignoreWorkers);
+        $foundedWorkerId            = $this->pickupWorker($allowedGroups, $allowedWorkers, $ignoreWorkers);
         
         if($foundedWorkerId === null) {
             throw new NoWorkersAvailable($workerGroupId);
@@ -205,43 +194,24 @@ final class IpcClient
         }
     }
     
-    private function pickupWorker(int $workerGroupId, int $workerId = null, array $ignoreWorkers = []): int|null
+    private function pickupWorker(array $allowedGroups = [], array $allowedWorkers = [], array $ignoreWorkers = []): int|null
     {
-        if($this->workerId === $workerId) {
-            throw new \RuntimeException('Worker cannot send job to itself');
+        if($allowedGroups === []) {
+            $allowedGroups          = $this->worker->getWorkerGroup()->getJobGroups();
+        }
+
+        // Add self-worker to ignore list
+        if(false === in_array($this->worker->getWorkerId(), $ignoreWorkers, true)) {
+            $ignoreWorkers[]        = $this->worker->getWorkerId();
+        }
+
+        $workerId                   = $this->pickupStrategy->pickupWorker($allowedGroups, $allowedWorkers, $ignoreWorkers);
+
+        if($workerId === null) {
+            $this->scalingStrategy->adjustWorkerCount();
         }
         
-        if($this->workerGroupId === $workerGroupId) {
-            throw new \RuntimeException('Worker cannot send job to the same group');
-        }
         
-        if($workerId !== null) {
-            return $workerId;
-        }
-        
-        [$lowestWorkerId, $highestWorkerId] = $this->poolState->findGroupState($workerGroupId);
-        
-        $lastJobCount               = 0;
-        $lastWorkerId               = null;
-        
-        for($workerId = $lowestWorkerId; $workerId <= $highestWorkerId; $workerId++) {
-            $workerState            = $this->workersInfo->getWorkerState($workerId);
-            
-            if($workerState === null || false === $workerState->isReady || in_array($workerId, $ignoreWorkers, true)) {
-                continue;
-            }
-            
-            if($workerState->jobCount === 0) {
-                return $workerId;
-            }
-            
-            if($workerState->jobCount < $lastJobCount) {
-                $lastJobCount       = $workerState->jobCount;
-                $lastWorkerId       = $workerId;
-            }
-        }
-        
-        return $lastWorkerId;
     }
     
     private function getWorkerChannel(int $workerId): StreamChannel
