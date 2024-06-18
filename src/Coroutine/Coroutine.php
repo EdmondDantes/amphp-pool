@@ -3,6 +3,9 @@ declare(strict_types=1);
 
 namespace CT\AmpPool\Coroutine;
 
+use Amp\Cancellation;
+use Amp\DeferredFuture;
+use Amp\Future;
 use Revolt\EventLoop;
 use Revolt\EventLoop\Suspension;
 
@@ -12,6 +15,7 @@ final class Coroutine
     private static ?Suspension $managerSuspension = null;
     private static string $managerCallbackId = '';
     private static bool $isRunning = true;
+    private static ?DeferredFuture $future = null;
     
     private static function init(): void
     {
@@ -19,6 +23,7 @@ final class Coroutine
             return;
         }
         
+        self::$future               = new DeferredFuture();
         self::$managerCallbackId    = EventLoop::defer(self::manageCoroutines(...));
     }
     
@@ -26,13 +31,18 @@ final class Coroutine
     {
         self::$managerSuspension    = EventLoop::getSuspension();
         
-        while (self::$isRunning) {
+        while (self::$coroutines !== []) {
             
             $heightPriority         = 0;
             $lowestPriority         = 0;
             
             // Find the highest priority if exists
             foreach (self::$coroutines as $coroutine) {
+                
+                if($coroutine->suspension === null) {
+                    continue;
+                }
+                
                 if($coroutine->getPriority() > $heightPriority) {
                     $heightPriority = $coroutine->getPriority();
                 }
@@ -45,21 +55,23 @@ final class Coroutine
             if($lowestPriority === $heightPriority) {
                 // Resume all
                 foreach (self::$coroutines as $descriptor) {
-                    $descriptor->suspension->resume();
+                    $descriptor->suspension?->resume();
                 }
-                
-                self::$managerSuspension->suspend();
             } else {
                 // Resume only the highest priority
                 foreach (self::$coroutines as $descriptor) {
                     if($descriptor->getPriority() === $heightPriority) {
-                        $descriptor->suspension->resume();
+                        $descriptor->suspension?->resume();
                     }
                 }
             }
+            
+            self::$managerSuspension->suspend();
         }
         
-        self::$managerSuspension->suspend();
+        self::$future->complete();
+        self::$future               = null;
+        self::$managerCallbackId    = '';
     }
     
     public static function run(\Closure $coroutine, int $priority = 0): void
@@ -84,6 +96,15 @@ final class Coroutine
         });
         
         self::$coroutines[$callbackId] = new self($priority);
+    }
+    
+    public static function awaitAll(Cancellation $cancellation = null): void
+    {
+        if(self::$coroutines === [] || self::$future === null) {
+            return;
+        }
+        
+        self::$future->getFuture()->await($cancellation);
     }
     
     public static function stopAll(): void
