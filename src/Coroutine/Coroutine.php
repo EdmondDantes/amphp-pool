@@ -11,7 +11,12 @@ use Revolt\EventLoop\Suspension;
 
 final class Coroutine
 {
+    /**
+     * @var array<Coroutine>
+     */
     private static array $coroutines = [];
+    private static array $coroutinesQueue = [];
+    private static int $highestPriority = 0;
     private static ?Suspension $managerSuspension = null;
     private static string $managerCallbackId = '';
     private static bool $isRunning = true;
@@ -31,40 +36,27 @@ final class Coroutine
     {
         self::$managerSuspension    = EventLoop::getSuspension();
         
-        while (self::$coroutines !== []) {
+        while (self::$coroutines !== [] && self::$isRunning) {
             
-            $heightPriority         = 0;
-            $lowestPriority         = 0;
-            
-            // Find the highest priority if exists
-            foreach (self::$coroutines as $coroutine) {
+            if(self::$coroutinesQueue === []) {
                 
-                if($coroutine->suspension === null) {
-                    continue;
-                }
+                self::$highestPriority = 0;
                 
-                if($coroutine->getPriority() > $heightPriority) {
-                    $heightPriority = $coroutine->getPriority();
+                foreach (self::$coroutines as $coroutine) {
+                    if($coroutine->getPriority() > self::$highestPriority) {
+                        self::$highestPriority = $coroutine->getPriority();
+                    }
                 }
                 
-                if($coroutine->getPriority() < $lowestPriority) {
-                    $lowestPriority = $coroutine->getPriority();
-                }
-            }
-            
-            if($lowestPriority === $heightPriority) {
-                // Resume all
-                foreach (self::$coroutines as $descriptor) {
-                    $descriptor->suspension?->resume();
-                }
-            } else {
-                // Resume only the highest priority
-                foreach (self::$coroutines as $descriptor) {
-                    if($descriptor->getPriority() === $heightPriority) {
-                        $descriptor->suspension?->resume();
+                foreach (self::$coroutines as $coroutine) {
+                    if($coroutine->getPriority() === self::$highestPriority) {
+                        self::$coroutinesQueue[] = $coroutine;
                     }
                 }
             }
+            
+            $coroutine              = array_shift(self::$coroutinesQueue);
+            $coroutine->suspension?->resume();
             
             self::$managerSuspension->suspend();
         }
@@ -96,6 +88,10 @@ final class Coroutine
         });
         
         self::$coroutines[$callbackId] = new self($priority);
+        
+        if($priority >= self::$highestPriority) {
+            self::$coroutinesQueue  = [];
+        }
     }
     
     public static function awaitAll(Cancellation $cancellation = null): void
