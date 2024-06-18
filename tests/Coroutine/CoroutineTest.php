@@ -89,6 +89,55 @@ class CoroutineTest                 extends TestCase
         $this->assertEquals([1, 2, 4, 5, 8], $this->runLog);
     }
     
+    public function testStopAll(): void
+    {
+        Coroutine::run(function () {
+            $this->runLog[] = 1;
+        });
+        
+        Coroutine::stopAll();
+        
+        Coroutine::awaitAll(new TimeoutCancellation(5));
+        
+        $this->assertEquals([], $this->runLog);
+    }
+    
+    public function testStopAllWithException(): void
+    {
+        Coroutine::run(function () {
+            $this->runLog[] = 1;
+        });
+        
+        Coroutine::stopAllWithException(new \Exception());
+        
+        Coroutine::awaitAll(new TimeoutCancellation(5));
+        
+        $this->assertEquals([], $this->runLog);
+    }
+    
+    public function testStopAllWithExceptionUntilRunning(): void
+    {
+        Coroutine::run(function (Coroutine $coroutine) {
+            $this->runLog[] = 1;
+            
+            try {
+                $coroutine->suspend();
+            } catch (\Exception $exception) {
+                $this->runLog[] = $exception->getMessage();
+            }
+            
+            $this->runLog[] = 2;
+        });
+        
+        Coroutine::run(function () {
+            Coroutine::stopAllWithException(new \Exception('Stop all with exception'));
+        });
+        
+        Coroutine::awaitAll(new TimeoutCancellation(5));
+        
+        $this->assertEquals([1, 'Stop all with exception', 2], $this->runLog);
+    }
+    
     protected function setUp(): void
     {
         $this->runLog              = [];
