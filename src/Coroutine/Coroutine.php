@@ -5,7 +5,6 @@ namespace CT\AmpPool\Coroutine;
 
 use Amp\Cancellation;
 use Amp\DeferredFuture;
-use Amp\Future;
 use Revolt\EventLoop;
 use Revolt\EventLoop\Suspension;
 
