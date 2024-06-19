@@ -6,6 +6,7 @@ namespace CT\AmpPool\Coroutine;
 use Amp\TimeoutCancellation;
 use PHPUnit\Framework\TestCase;
 use Revolt\EventLoop;
+use function Amp\Future\awaitAll;
 
 class CoroutineTest                 extends TestCase
 {
@@ -28,17 +29,23 @@ class CoroutineTest                 extends TestCase
     
     public function testTwoJobs(): void
     {
-        Coroutine::run(function (Coroutine $coroutine) {
+        $future1 = Coroutine::run(function (Coroutine $coroutine) {
             $this->runLog[] = 1;
             $coroutine->suspend();
             $this->runLog[] = 2;
+            
+            return 1;
         });
         
-        Coroutine::run(function (Coroutine $coroutine) {
+        $future2 = Coroutine::run(function (Coroutine $coroutine) {
             $this->runLog[] = 4;
             $coroutine->suspend();
             $this->runLog[] = 5;
+            
+            return 2;
         });
+        
+        $this->assertEquals([[], [1, 2]], awaitAll([$future1, $future2], new TimeoutCancellation(5)));
         
         Coroutine::awaitAll(new TimeoutCancellation(5));
         
@@ -108,7 +115,7 @@ class CoroutineTest                 extends TestCase
             $this->runLog[] = 1;
         });
         
-        Coroutine::stopAllWithException(new \Exception());
+        Coroutine::stopAll(new \Exception('Stop all with exception'));
         
         Coroutine::awaitAll(new TimeoutCancellation(5));
         
@@ -130,7 +137,7 @@ class CoroutineTest                 extends TestCase
         });
         
         Coroutine::run(function () {
-            Coroutine::stopAllWithException(new \Exception('Stop all with exception'));
+            Coroutine::stopAll(new \Exception('Stop all with exception'));
         });
         
         Coroutine::awaitAll(new TimeoutCancellation(5));

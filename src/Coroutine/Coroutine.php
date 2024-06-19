@@ -5,6 +5,9 @@ namespace CT\AmpPool\Coroutine;
 
 use Amp\Cancellation;
 use Amp\DeferredFuture;
+use Amp\Future;
+use CT\AmpPool\Coroutine\Exceptions\CoroutineNotStarted;
+use CT\AmpPool\Coroutine\Exceptions\CoroutineTerminationException;
 use Revolt\EventLoop;
 use Revolt\EventLoop\Suspension;
 
@@ -65,52 +68,91 @@ final class Coroutine
             self::$managerSuspension->suspend();
         }
         
-        if(self::$stopException !== null) {
-            foreach (self::$coroutines as $coroutine) {
-                $coroutine->suspension?->throw(self::$stopException);
+        try {
+            
+            if(self::$stopException !== null) {
+                foreach (self::$coroutines as $callbackId => $coroutine) {
+                    
+                    if($coroutine->suspension === null) {
+                        EventLoop::cancel($callbackId);
+                    } else {
+                        $coroutine->suspension->throw(self::$stopException);
+                    }
+                }
             }
+            
+        } finally {
+            
+            $future                     = self::$future;
+            
+            self::$stopException        = null;
+            self::$future               = null;
+            self::$managerCallbackId    = '';
+            self::$coroutinesQueue      = [];
+            self::$coroutines           = [];
+            self::$stopException        = null;
+            self::$future               = null;
+            self::$managerCallbackId    = '';
+            
+            $future->complete(self::$stopException);
         }
-        
-        self::$coroutinesQueue      = [];
-        self::$coroutines           = [];
-        self::$future->complete(self::$stopException);
-        self::$stopException        = null;
-        self::$future               = null;
-        self::$managerCallbackId    = '';
     }
     
-    public static function run(\Closure $coroutine, int $priority = 0): void
+    public static function run(\Closure $closure, int $priority = 0): Future
     {
         self::init();
         
-        $callbackId = EventLoop::defer(static function (string $callbackId) use ($coroutine, $priority): void {
+        $coroutine                  = new self($priority);
+        
+        $callbackId                 = EventLoop::defer(static function (string $callbackId)
+                                    use ($closure, $coroutine, $priority): void {
+            
             $suspension             = EventLoop::getSuspension();
             
             if(false === array_key_exists($callbackId, self::$coroutines)) {
+                
+                if(false === $coroutine->coroutineFuture->isComplete()) {
+                    $coroutine->coroutineFuture->error(new CoroutineNotStarted);
+                }
+                
                 return;
             }
             
-            self::$coroutines[$callbackId]->suspension = $suspension;
+            $coroutine->suspension = $suspension;
             
             try {
-                $coroutine(self::$coroutines[$callbackId]);
+                $result             = $closure($coroutine);
+                
+                if(false === $coroutine->coroutineFuture->isComplete()) {
+                    $coroutine->coroutineFuture->complete($result);
+                }
             } catch (\Throwable $exception) {
+                
+                if(false === $coroutine->coroutineFuture->isComplete()) {
+                    $coroutine->coroutineFuture->error($exception);
+                }
                 
                 if($exception !== self::$stopException) {
                     throw $exception;
                 }
                 
             } finally {
+                if(false === $coroutine->coroutineFuture->isComplete()) {
+                    $coroutine->coroutineFuture->complete();
+                }
+                
                 unset(self::$coroutines[$callbackId]);
                 self::managerResume();
             }
         });
         
-        self::$coroutines[$callbackId] = new self($priority);
+        self::$coroutines[$callbackId] = $coroutine;
         
         if($priority >= self::$highestPriority) {
             self::$coroutinesQueue  = [];
         }
+        
+        return $coroutine->getFuture();
     }
     
     protected static function managerResume(): void
@@ -132,28 +174,24 @@ final class Coroutine
         self::$future->getFuture()->await($cancellation);
     }
     
-    public static function stopAll(): void
+    public static function stopAll(\Throwable $exception = null): void
     {
-        self::$isRunning            = false;
-        
-        if(self::$managerSuspension !== null) {
-            self::managerResume();
-        } else {
-            self::$coroutinesQueue  = [];
-            self::$coroutines       = [];
-            self::$managerCallbackId = '';
-        }
-    }
-    
-    public static function stopAllWithException(\Throwable $exception): void
-    {
+        $exception                  ??= new CoroutineTerminationException();
         self::$isRunning            = false;
         self::$stopException        = $exception;
         self::managerResume();
     }
     
+    private DeferredFuture $coroutineFuture;
+    
     public function __construct(private int $priority, private Suspension|null $suspension = null, private int $startAt = 0)
     {
+        $this->coroutineFuture      = new DeferredFuture;
+    }
+    
+    public function getFuture(): Future
+    {
+        return $this->coroutineFuture->getFuture();
     }
     
     public function suspend(): void
