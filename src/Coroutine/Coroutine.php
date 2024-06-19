@@ -184,9 +184,18 @@ final class Coroutine
     
     private DeferredFuture $coroutineFuture;
     
-    public function __construct(private int $priority, private Suspension|null $suspension = null, private int $startAt = 0)
+    public function __construct(
+        private readonly int $priority,
+        private Suspension|null $suspension = null,
+        private int $startAt = 0,
+        private readonly int $timeLimit = 0
+    )
     {
         $this->coroutineFuture      = new DeferredFuture;
+        
+        if($this->startAt === 0) {
+            $this->startAt          = time();
+        }
     }
     
     public function getFuture(): Future
@@ -208,5 +217,15 @@ final class Coroutine
     public function getStartAt(): int
     {
         return $this->startAt;
+    }
+    
+    public function getTimeLimit(): int
+    {
+        return $this->timeLimit;
+    }
+    
+    public function getCoroutinesCount(): int
+    {
+        return count(self::$coroutines);
     }
 }

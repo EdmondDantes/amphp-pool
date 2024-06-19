@@ -15,15 +15,14 @@ use Amp\Socket\ServerSocketFactory;
 use Amp\Sync\Channel;
 use Amp\TimeoutCancellation;
 use CT\AmpPool\JobIpc\IpcServer;
-use CT\AmpPool\JobIpc\JobHandlerInterface;
 use CT\AmpPool\Messages\MessagePingPong;
 use CT\AmpPool\Messages\MessageShutdown;
 use CT\AmpPool\PoolState\PoolStateReadableInterface;
 use CT\AmpPool\PoolState\PoolStateStorage;
 use CT\AmpPool\SocketPipe\SocketPipeFactoryWindows;
+use CT\AmpPool\Worker\JobRunner\JobRunnerInterface;
 use CT\AmpPool\Worker\WorkerState\WorkersInfo;
 use CT\AmpPool\Worker\WorkerState\WorkersInfoInterface;
-use CT\AmpPool\Worker\WorkerState\WorkerStateInterface;
 use CT\AmpPool\Worker\WorkerState\WorkerStateStorage;
 use CT\AmpPool\Worker\WorkerState\WorkerStateStorageInterface;
 use CT\AmpPool\WorkerEventEmitter;
@@ -58,9 +57,9 @@ class Worker                        implements WorkerInterface
     protected ?ServerSocketFactory $socketPipeFactory = null;
     
     private LoggerInterface $logger;
-    private IpcServer|null           $jobIpc      = null;
-    private JobHandlerInterface|null $jobHandler  = null;
-    private WorkerStateStorage|null  $workerState = null;
+    private IpcServer|null          $jobIpc      = null;
+    private JobRunnerInterface|null $jobHandler  = null;
+    private WorkerStateStorage|null $workerState = null;
     private PoolStateReadableInterface $poolState;
     private WorkerStateStorageInterface $workerStateStorage;
     private WorkersInfoInterface $workersInfo;
@@ -199,12 +198,12 @@ class Worker                        implements WorkerInterface
         return $this->socketPipeFactory;
     }
     
-    public function getJobHandler(): JobHandlerInterface|null
+    public function getJobHandler(): JobRunnerInterface|null
     {
         return $this->jobHandler;
     }
     
-    public function setJobHandler(JobHandlerInterface $jobHandler): self
+    public function setJobHandler(JobRunnerInterface $jobHandler): self
     {
         $this->jobHandler           = $jobHandler;
         
@@ -279,7 +278,7 @@ class Worker                        implements WorkerInterface
                 $result             = null;
                 
                 try {
-                    $result         = $this->jobHandler->invokeJob($data, $this, $cancellation);
+                    $result         = $this->jobHandler->runJob($data, $this, $cancellation);
                 } catch (\Throwable $exception) {
                     $this->logger->error('Error processing job', ['exception' => $exception]);
                 } finally {
