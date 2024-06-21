@@ -3,6 +3,13 @@ declare(strict_types=1);
 
 namespace CT\AmpPool;
 
+use Amp\Parallel\Context\ContextException;
+use CT\AmpPool\EntryPoints\FatalWorkerEntryPoint;
+use CT\AmpPool\EntryPoints\RestartStrategies\RestartNeverWithLastError;
+use CT\AmpPool\EntryPoints\RestartStrategies\RestartTwice;
+use CT\AmpPool\EntryPoints\Runners\RunnerLostChannel;
+use CT\AmpPool\EntryPoints\TestEntryPoint;
+use CT\AmpPool\EntryPoints\TestEntryPointWaitTermination;
 use CT\AmpPool\Strategies\RestartStrategy\RestartNever;
 use PHPUnit\Framework\TestCase;
 
@@ -81,5 +88,25 @@ class WorkerPoolTest                extends TestCase
         $workerPool->awaitTermination();
         
         $this->assertEquals(0, $restartStrategy->restarts, 'Worker should not be restarted');
+    }
+    
+    public function testChannelLost(): void
+    {
+        $restartStrategy            = new RestartNeverWithLastError;
+        
+        $workerPool                 = new WorkerPool;
+        
+        $workerPool->describeGroup(new WorkerGroup(
+            TestEntryPoint::class,
+            WorkerTypeEnum::JOB,
+            minWorkers     : 1,
+            runnerStrategy : new RunnerLostChannel,
+            restartStrategy: $restartStrategy
+        ));
+        
+        $workerPool->run();
+        $workerPool->awaitTermination();
+        
+        $this->assertInstanceOf(ContextException::class, $restartStrategy->lastError);
     }
 }

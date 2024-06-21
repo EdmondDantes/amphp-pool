@@ -1,12 +1,12 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool;
+namespace CT\AmpPool\EntryPoints;
 
 use CT\AmpPool\Worker\WorkerEntryPointInterface;
 use CT\AmpPool\Worker\WorkerInterface;
 
-class FatalWorkerEntryPoint implements WorkerEntryPointInterface
+final class FatalWorkerEntryPoint implements WorkerEntryPointInterface
 {
     public function initialize(WorkerInterface $worker): void
     {

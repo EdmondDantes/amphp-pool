@@ -1,9 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool;
+namespace CT\AmpPool\EntryPoints\RestartStrategies;
 
 use CT\AmpPool\Strategies\RestartStrategy\RestartStrategyInterface;
+use CT\AmpPool\WorkerGroupInterface;
 
 final class RestartTwice implements RestartStrategyInterface
 {

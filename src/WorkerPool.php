@@ -571,6 +571,9 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
             $workerProcess->info("Worker {$id} forcefully terminated");
             
         } catch (ChannelException $exception) {
+            
+            $exitResult         = $exception;
+            
             $workerProcess->error(
                 "Worker {$id} died unexpectedly: {$exception->getMessage()}" .
                 ($this->running ? ", restarting..." : "")

@@ -1,12 +1,12 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool;
+namespace CT\AmpPool\EntryPoints;
 
 use CT\AmpPool\Worker\WorkerEntryPointInterface;
 use CT\AmpPool\Worker\WorkerInterface;
 
-final class TestEntryPoint implements WorkerEntryPointInterface
+final class TestEntryPointWaitTermination implements WorkerEntryPointInterface
 {
     public static function getFile(): string
     {
@@ -26,12 +26,18 @@ final class TestEntryPoint implements WorkerEntryPointInterface
         }
     }
     
+    private WorkerInterface $worker;
+    
     public function initialize(WorkerInterface $worker): void
     {
+        $this->worker = $worker;
     }
     
     public function run(): void
     {
-        file_put_contents(self::getFile(), 'Hello, World!');
+        // Wait worker to be stopped
+        $this->worker->awaitTermination();
+        
+        \file_put_contents(self::getFile(), 'Hello, World!');
     }
 }
