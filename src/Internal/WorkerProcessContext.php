@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool;
+namespace CT\AmpPool\Internal;
 
 use Amp\Cancellation;
 use Amp\CancelledException;
@@ -25,6 +25,7 @@ use CT\AmpPool\Messages\MessageShutdown;
 use CT\AmpPool\Messages\MessageSocketFree;
 use CT\AmpPool\Messages\MessageSocketListen;
 use CT\AmpPool\Messages\MessageSocketTransfer;
+use CT\AmpPool\WorkerEventEmitterInterface;
 use Revolt\EventLoop;
 use function Amp\async;
 use function Amp\weakClosure;
@@ -37,7 +38,7 @@ use function Amp\weakClosure;
  * @template-covariant TReceive
  * @template TSend
  */
-class WorkerProcessContext          implements \Psr\Log\LoggerInterface, \Psr\Log\LoggerAwareInterface
+final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Psr\Log\LoggerAwareInterface
 {
     use \Psr\Log\LoggerAwareTrait;
     use \Psr\Log\LoggerTrait;
@@ -209,7 +210,10 @@ class WorkerProcessContext          implements \Psr\Log\LoggerInterface, \Psr\Lo
         
         $this->context->close();
         $this->socketTransport?->close();
-        $this->deferredCancellation->cancel();
+        
+        if(false === $this->deferredCancellation->isCancelled()) {
+            $this->deferredCancellation->cancel();
+        }
     }
     
     public function shutdown(?Cancellation $cancellation = null): void

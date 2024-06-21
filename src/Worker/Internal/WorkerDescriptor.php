@@ -4,13 +4,14 @@ declare(strict_types=1);
 namespace CT\AmpPool\Worker\Internal;
 
 use Amp\Future;
+use CT\AmpPool\Internal\WorkerProcessContext;
 use CT\AmpPool\WorkerGroup;
-use CT\AmpPool\WorkerProcessContext;
 
 final class WorkerDescriptor
 {
-    protected ?WorkerProcessContext $worker = null;
-    protected ?Future               $future = null;
+    private ?WorkerProcessContext $workerProcess = null;
+    private ?Future               $future        = null;
+    private bool                  $stopped       = false;
     
     public function __construct(
         public readonly int $id,
@@ -18,14 +19,14 @@ final class WorkerDescriptor
         public readonly bool $shouldBeStarted = false
     ) {}
     
-    public function getWorker(): ?WorkerProcessContext
+    public function getWorkerProcess(): ?WorkerProcessContext
     {
-        return $this->worker;
+        return $this->workerProcess;
     }
     
-    public function setWorker(WorkerProcessContext $worker): void
+    public function setWorkerProcess(WorkerProcessContext $workerProcess): void
     {
-        $this->worker               = $worker;
+        $this->workerProcess        = $workerProcess;
     }
     
     public function getFuture(): ?Future
@@ -38,9 +39,19 @@ final class WorkerDescriptor
         $this->future               = $future;
     }
     
+    public function isStopped(): bool
+    {
+        return $this->stopped;
+    }
+    
+    public function markAsStopped(): void
+    {
+        $this->stopped              = true;
+    }
+    
     public function reset(): void
     {
-        $this->worker               = null;
-        $this->future               = null;
+        $this->workerProcess = null;
+        $this->future        = null;
     }
 }

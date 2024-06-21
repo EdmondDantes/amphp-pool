@@ -23,8 +23,10 @@ use Amp\Sync\ChannelException;
 use Amp\TimeoutCancellation;
 use CT\AmpPool\Exceptions\FatalWorkerException;
 use CT\AmpPool\Exceptions\TerminateWorkerException;
+use CT\AmpPool\Exceptions\WorkerPoolException;
 use CT\AmpPool\Internal\SocketPipe\SocketListenerProvider;
 use CT\AmpPool\Internal\SocketPipe\SocketPipeProvider;
+use CT\AmpPool\Internal\WorkerProcessContext;
 use CT\AmpPool\PoolState\PoolStateReadableInterface;
 use CT\AmpPool\PoolState\PoolStateStorage;
 use CT\AmpPool\Strategies\PickupStrategy\PickupLeastJobs;
@@ -127,12 +129,12 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
             throw new \Error('The minimum number of workers must be greater than zero');
         }
         
-        if($group->getMaxWorkers() < $group->getMinWorkers()) {
-            throw new \Error('The maximum number of workers must be greater than or equal to the minimum number of workers');
-        }
-        
         if($group->getMaxWorkers() === 0) {
             $group->defineMaxWorkers($group->getMinWorkers());
+        }
+        
+        if($group->getMaxWorkers() < $group->getMinWorkers()) {
+            throw new \Error('The maximum number of workers must be greater than or equal to the minimum number of workers');
         }
         
         if($group->getMaxWorkers() === 0) {
@@ -229,13 +231,12 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
         }
         
         $this->running              = true;
-        $this->mainCancellation     = new DeferredCancellation();
+        $this->mainCancellation     = new DeferredCancellation;
 
         try {
             
             if($this->poolState === null) {
                 $this->poolState    = new PoolStateStorage(count($this->groupsScheme));
-                $this->poolState->setGroupsState($this->groupsScheme);
             }
             
             foreach ($this->workers as $worker) {
@@ -243,6 +244,9 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
                     $this->startWorker($worker);
                 }
             }
+            
+            $this->updateGroupsState();
+            
         } catch (\Throwable $exception) {
             $this->stop();
             throw $exception;
@@ -251,10 +255,42 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
     
     public function awaitTermination(): void
     {
+        if(false === $this->running) {
+            return;
+        }
+        
+        EventLoop::queue(function () {
+            while ($this->running) {
+                
+                $futures            = [];
+                
+                foreach ($this->workers as $workerDescriptor) {
+                    if($workerDescriptor->getFuture() !== null && false === $workerDescriptor->isStopped()) {
+                        $futures[]  = $workerDescriptor->getFuture();
+                    }
+                }
+                
+                if(empty($futures)) {
+                    
+                    if(false === $this->mainCancellation->isCancelled()) {
+                        $this->mainCancellation->cancel();
+                    }
+                    
+                    break;
+                }
+                
+                try {
+                    Future\awaitAll($futures, $this->mainCancellation->getCancellation());
+                } catch (CancelledException) {
+                    break;
+                }
+            }
+        });
+        
         if(IS_WINDOWS) {
-            $this->awaitUnixEvents();
-        } else {
             $this->awaitWindowsEvents();
+        } else {
+            $this->awaitUnixEvents();
         }
     }
     
@@ -275,8 +311,13 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
         $handled                    = 0;
         $stoppedWorkers             = [];
         
-        foreach ($this->workers as $worker) {
-            if($worker->group->getWorkerGroupId() !== $groupId) {
+        foreach ($this->workers as $workerDescriptor) {
+            if($workerDescriptor->group->getWorkerGroupId() !== $groupId) {
+                continue;
+            }
+            
+            // Skip stopped workers
+            if($workerDescriptor->isStopped()) {
                 continue;
             }
             
@@ -284,12 +325,12 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
                 break;
             }
             
-            if($isDecrease && $worker->shouldBeStarted === false && $worker->getWorker() !== null) {
-                $worker->getWorker()->shutdownSoftly();
+            if($isDecrease && $workerDescriptor->shouldBeStarted === false && $workerDescriptor->getWorkerProcess() !== null) {
+                $workerDescriptor->getWorkerProcess()->shutdownSoftly();
                 $handled++;
-                $stoppedWorkers[]   = $worker->id;
-            } elseif(false === $isDecrease && $worker->getWorker() === null) {
-                $this->startWorker($worker);
+                $stoppedWorkers[]   = $workerDescriptor->id;
+            } elseif(false === $isDecrease && $workerDescriptor->getWorkerProcess() === null) {
+                $this->startWorker($workerDescriptor);
                 $handled++;
             }
         }
@@ -297,12 +338,12 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
         $lowestWorkerId             = 0;
         $highestWorkerId            = 0;
 
-        foreach ($this->workers as $worker) {
-            if($worker->group->getWorkerGroupId() === $groupId && $worker->getWorker() !== null) {
+        foreach ($this->workers as $workerDescriptor) {
+            if($workerDescriptor->group->getWorkerGroupId() === $groupId && $workerDescriptor->getWorkerProcess() !== null) {
                 if($lowestWorkerId === 0) {
-                    $lowestWorkerId = $worker->id;
-                } else if(false === in_array($worker->id, $stoppedWorkers, true)) {
-                    $highestWorkerId = $worker->id;
+                    $lowestWorkerId = $workerDescriptor->id;
+                } else if(false === in_array($workerDescriptor->id, $stoppedWorkers, true)) {
+                    $highestWorkerId = $workerDescriptor->id;
                 }
             }
         }
@@ -320,7 +361,7 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
     
     protected function awaitUnixEvents(): void
     {
-        while (true) {
+        while ($this->mainCancellation !== null) {
             
             try {
                 $signal             = trapSignal(
@@ -345,11 +386,15 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
     
     protected function awaitWindowsEvents(): void
     {
+        if($this->mainCancellation === null) {
+            return;
+        }
+        
         $suspension             = EventLoop::getSuspension();
         $cancellation           = $this->mainCancellation->getCancellation();
         $id                     = $cancellation?->subscribe(static fn (CancelledException $exception) => $suspension->throw($exception));
         
-        sapi_windows_set_ctrl_handler(static function () use ($suspension) {
+        \sapi_windows_set_ctrl_handler(static function () use ($suspension) {
             $suspension->resume();
         });
         
@@ -415,7 +460,7 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
             $worker->setLogger($this->logger);
         }
         
-        $workerDescriptor->setWorker($worker);
+        $workerDescriptor->setWorkerProcess($worker);
         
         $worker->info(\sprintf('Started %s worker #%d', $workerDescriptor->group->getWorkerType()->value, $workerDescriptor->id));
         
@@ -445,7 +490,7 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
                     
                     $restarting         = $workerDescriptor->group->getRestartStrategy()?->shouldRestart($exitResult) ?? -1;
                     
-                    $worker->info("Worker {$id} terminated cleanly" . ($restarting >= 0 ? ", restarting..." : ""));
+                    $worker->info("Worker {$id} terminated cleanly" . ($restarting >= 0 ? ', restarting...' : ''));
                     
                 } catch (CancelledException $exception) {
                     
@@ -514,6 +559,9 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
                     }
                     
                 } else if($restarting < 0) {
+                    
+                    $workerDescriptor->markAsStopped();
+                    
                     $worker->info(
                         "Worker {$id} will not be restarted: " .
                                   $workerDescriptor->group->getRestartStrategy()?->getFailReason() ?? ''
@@ -606,6 +654,9 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
         
         $exceptions                 = $this->stopWorkers($cancellation);
         
+        $this->mainCancellation?->cancel();
+        $this->mainCancellation     = null;
+        
         if (!$exceptions) {
             return;
         }
@@ -613,7 +664,7 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
         if (\count($exceptions) === 1) {
             $exception              = \array_shift($exceptions);
             
-            throw new ClusterException(
+            throw new WorkerPoolException(
                 'Stopping the server failed: ' . $exception->getMessage(),
                 previous: $exception,
             );
@@ -622,7 +673,7 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
         $exception              = new CompositeException($exceptions);
         $message                = \implode('; ', \array_map(static fn (\Throwable $e) => $e->getMessage(), $exceptions));
         
-        throw new ClusterException('Stopping the server failed: ' . $message, previous: $exception);
+        throw new WorkerPoolException('Stopping the server failed: ' . $message, previous: $exception);
     }
     
     public function restart(?Cancellation $cancellation = null): void
@@ -647,9 +698,9 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
                 continue;
             }
             
-            if($onlyRunning && $worker->getWorker() !== null) {
+            if($onlyRunning && $worker->getWorkerProcess() !== null) {
                 $count++;
-            } elseif ($notRunning && $worker->getWorker() === null) {
+            } elseif ($notRunning && $worker->getWorkerProcess() === null) {
                 $count++;
             } else {
                 $count++;
@@ -661,7 +712,7 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
     
     public function __destruct()
     {
-        EventLoop::queue($this->stop(...));
+        $this->stop();
     }
     
     protected function defaultWorkerStrategies(WorkerGroup $group): void
@@ -720,7 +771,7 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
                 $future             = $workerDescriptor->getFuture();
                 
                 try {
-                    $workerDescriptor->getWorker()?->shutdown($cancellation);
+                    $workerDescriptor->getWorkerProcess()?->shutdown($cancellation);
                 } catch (ContextException) {
                     // Ignore if the worker has already died unexpectedly.
                 }
@@ -740,5 +791,27 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
         $this->workers              = [];
         
         return $exceptions;
+    }
+    
+    protected function updateGroupsState(): void
+    {
+        $groupsState                = [];
+        
+        foreach ($this->workers as $workerDescriptor) {
+            if($workerDescriptor->getWorkerProcess() === null) {
+                continue;
+            }
+            
+            $group                  = $workerDescriptor->group;
+            $groupId                = $group->getWorkerGroupId();
+            
+            if(false === array_key_exists($groupId, $groupsState)) {
+                $groupsState[$groupId] = [$workerDescriptor->id, $workerDescriptor->id];
+            } elseif ($groupsState[$groupId][1] < $workerDescriptor->id) {
+                $groupsState[$groupId][1] = $workerDescriptor->id;
+            }
+        }
+        
+        $this->poolState->setGroupsState($groupsState);
     }
 }
