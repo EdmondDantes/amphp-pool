@@ -481,6 +481,11 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
             $deferredCancellation,
             $workerDescriptor
         ): void {
+            
+            if(false === $this->running) {
+                return;
+            }
+            
             async($this->provider->provideFor(...), $socketTransport, $deferredCancellation->getCancellation())->ignore();
             
             $id                         = $workerDescriptor->id;
@@ -488,11 +493,9 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
             
             try {
                 try {
+                    
                     $worker->runWorkerLoop();
-                    
-                    $restarting         = $workerDescriptor->group->getRestartStrategy()?->shouldRestart($exitResult) ?? -1;
-                    
-                    $worker->info("Worker {$id} terminated cleanly" . ($restarting >= 0 ? ', restarting...' : ''));
+                    $worker->info("Worker {$id} terminated cleanly");
                     
                 } catch (CancelledException $exception) {
                     
