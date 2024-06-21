@@ -6,8 +6,6 @@ namespace CT\AmpPool;
 use Amp\Cancellation;
 use Amp\Parallel\Ipc\IpcHub;
 use CT\AmpPool\PoolState\PoolStateReadableInterface;
-use CT\AmpPool\Worker\WorkerDescriptor;
-use CT\AmpPool\Worker\WorkerInterface;
 use CT\AmpPool\Worker\WorkerState\WorkersInfoInterface;
 
 interface WorkerPoolInterface

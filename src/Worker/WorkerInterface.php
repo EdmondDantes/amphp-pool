@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace CT\AmpPool\Worker;
 
 use CT\AmpPool\PoolState\PoolStateReadableInterface;
-use CT\AmpPool\Worker\JobRunner\JobRunnerInterface;
+use CT\AmpPool\Strategies\JobRunner\JobRunnerInterface;
 use CT\AmpPool\Worker\WorkerState\WorkersInfoInterface;
 use CT\AmpPool\Worker\WorkerState\WorkerStateStorageInterface;
 use CT\AmpPool\WorkerEventEmitterAwareInterface;

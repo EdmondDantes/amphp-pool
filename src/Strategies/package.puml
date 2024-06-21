@@ -1,0 +1,61 @@
+@startuml package-related-diagram
+skinparam linetype ortho
+  package CT.AmpPool.Strategies as Strategies {
+    package JobRunner {
+    }
+    package PickupStrategy {
+    }
+    package RestartStrategy {
+    }
+    package RunnerStrategy {
+    }
+    package ScalingStrategy {
+    }
+  }
+  package CT #DDDDDD {
+    package AmpPool #DDDDDD {
+      package PoolState #DDDDDD {
+      }
+      package Worker #DDDDDD {
+        package WorkerState #DDDDDD {
+        }
+      }
+      package Coroutine #DDDDDD {
+      }
+      package Exceptions #DDDDDD {
+      }
+    }
+  }
+  package Amp #DDDDDD {
+    package Parallel #DDDDDD {
+      package Context #DDDDDD {
+      }
+    }
+    package Serialization #DDDDDD {
+    }
+    package Sync #DDDDDD {
+    }
+  }
+  package Revolt #DDDDDD {
+  }
+  Strategies --> PoolState
+  Strategies --> Worker
+  Strategies --> WorkerState
+  Strategies --> AmpPool
+  JobRunner --> Amp
+  JobRunner --> Coroutine
+  PickupStrategy --> Strategies
+  RestartStrategy --> Strategies
+  RestartStrategy --> AmpPool
+  RunnerStrategy --> Amp
+  RunnerStrategy --> Context
+  RunnerStrategy --> Serialization
+  RunnerStrategy --> Sync
+  RunnerStrategy --> Exceptions
+  RunnerStrategy --> Strategies
+  RunnerStrategy --> Worker
+  RunnerStrategy --> AmpPool
+  ScalingStrategy --> Strategies
+  ScalingStrategy --> AmpPool
+  ScalingStrategy --> Revolt
+@enduml

@@ -3,10 +3,10 @@ declare(strict_types=1);
 
 namespace CT\AmpPool;
 
-use CT\AmpPool\Worker\PickupStrategy\PickupStrategyInterface;
-use CT\AmpPool\Worker\RestartStrategy\RestartStrategyInterface;
-use CT\AmpPool\Worker\RunnerStrategy\RunnerStrategyInterface;
-use CT\AmpPool\Worker\ScalingStrategy\ScalingStrategyInterface;
+use CT\AmpPool\Strategies\PickupStrategy\PickupStrategyInterface;
+use CT\AmpPool\Strategies\RestartStrategy\RestartStrategyInterface;
+use CT\AmpPool\Strategies\RunnerStrategy\RunnerStrategyInterface;
+use CT\AmpPool\Strategies\ScalingStrategy\ScalingStrategyInterface;
 
 /**
  * Worker Group Interface, which defines the configuration of a worker group.
