@@ -7,6 +7,7 @@ namespace CT\AmpPool\Internal\Messages;
  * Request shutdown the worker.
  *
  * @package CT\AmpPool\Messages
+ * @internal
  */
 final readonly class MessageShutdown
 {

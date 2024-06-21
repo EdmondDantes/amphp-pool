@@ -3,6 +3,9 @@ declare(strict_types=1);
 
 namespace CT\AmpPool\Internal\Messages;
 
+/**
+ * @internal
+ */
 final readonly class MessageLog
 {
     public function __construct(

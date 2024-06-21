@@ -7,6 +7,9 @@ use Amp\Future;
 use CT\AmpPool\Internal\WorkerProcessContext;
 use CT\AmpPool\WorkerGroup;
 
+/**
+ * @internal
+ */
 final class WorkerDescriptor
 {
     private ?WorkerProcessContext $workerProcess = null;

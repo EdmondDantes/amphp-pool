@@ -15,6 +15,7 @@ use Psr\Log\LogLevel;
 /**
  * Worker Log Handler.
  * The log handler sends log messages to the worker channel.
+ * @internal
  */
 final class WorkerLogHandler        extends AbstractProcessingHandler
 {
