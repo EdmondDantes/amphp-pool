@@ -161,6 +161,11 @@ final class Scheduler               implements SchedulerInterface
         $this->resume();
     }
     
+    public function getCoroutinesCount(): int
+    {
+        return count($this->coroutines);
+    }
+    
     protected function resume(): void
     {
         if($this->managerResumed) {

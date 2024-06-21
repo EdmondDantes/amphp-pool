@@ -11,4 +11,5 @@ interface SchedulerInterface
     public function run(CoroutineInterface $coroutine): Future;
     public function awaitAll(Cancellation $cancellation = null): void;
     public function stopAll(\Throwable $exception = null): void;
+    public function getCoroutinesCount(): int;
 }
