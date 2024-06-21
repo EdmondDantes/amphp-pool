@@ -24,6 +24,11 @@ final class SocketPipeProvider
         }
     }
     
+    public function used(): bool
+    {
+        return $this->provider !== null;
+    }
+    
     public function createSocketTransport(string $ipcKey): SocketPipeTransport|null
     {
         if($this->provider === null) {

@@ -415,7 +415,7 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
         }
     }
     
-    private function startWorker(WorkerDescriptor $workerDescriptor): void
+    protected function startWorker(WorkerDescriptor $workerDescriptor): void
     {
         $runnerStrategy             = $workerDescriptor->group->getRunnerStrategy();
         
@@ -450,7 +450,7 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
         
         $deferredCancellation       = new DeferredCancellation();
         
-        $worker                     = new WorkerProcessContext(
+        $workerProcess              = new WorkerProcessContext(
             $workerDescriptor->id,
             $context,
             $socketTransport ?? $this->listenerProvider,
@@ -459,125 +459,160 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
         );
         
         if($this->logger !== null) {
-            $worker->setLogger($this->logger);
+            $workerProcess->setLogger($this->logger);
         }
         
-        $workerDescriptor->setWorkerProcess($worker);
+        $workerDescriptor->setWorkerProcess($workerProcess);
         
-        $worker->info(\sprintf('Started %s worker #%d', $workerDescriptor->group->getWorkerType()->value, $workerDescriptor->id));
+        $workerProcess->info(\sprintf('Started %s worker #%d', $workerDescriptor->group->getWorkerType()->value, $workerDescriptor->id));
         
         // Server stopped while worker was starting, so immediately throw everything away.
         if (false === $this->running) {
-            $worker->shutdown();
+            $workerProcess->shutdown();
             return;
         }
         
         $workerDescriptor->group->getRestartStrategy()?->onWorkerStart($workerDescriptor->id, $workerDescriptor->group);
         
-        $workerDescriptor->setFuture(async(function () use (
-            $worker,
-            $context,
-            $socketTransport,
-            $deferredCancellation,
-            $workerDescriptor
-        ): void {
+        $workerDescriptor->setFuture(async($this->workerWatcher(...), $workerDescriptor, $deferredCancellation)->ignore());
+    }
+    
+    /**
+     * Watcher for the worker process and restarts it if necessary.
+     *
+     * @param WorkerDescriptor     $workerDescriptor
+     * @param DeferredCancellation $deferredCancellation
+     *
+     * @return void
+     * @throws ClusterException
+     * @throws TaskFailureThrowable
+     * @throws \Throwable
+     */
+    protected function workerWatcher(WorkerDescriptor $workerDescriptor, DeferredCancellation $deferredCancellation): void
+    {
+        if(false === $this->running) {
+            return;
+        }
+        
+        if($this->provider->used()) {
+            async(
+                $this->provider->provideFor(...),
+                $workerDescriptor->getWorkerProcess()->getSocketTransport(),
+                $deferredCancellation->getCancellation()
+            )->ignore();
+        }
+        
+        $id                         = $workerDescriptor->id;
+        $workerProcess              = $workerDescriptor->getWorkerProcess();
+        
+        try {
             
-            if(false === $this->running) {
-                return;
-            }
+            $exitResult             = $this->workerEventLoop($workerDescriptor, $deferredCancellation);
             
-            async($this->provider->provideFor(...), $socketTransport, $deferredCancellation->getCancellation())->ignore();
+            $restarting             = $workerDescriptor->group->getRestartStrategy()?->shouldRestart($exitResult) ?? -1;
             
-            $id                         = $workerDescriptor->id;
-            $exitResult                 = null;
-            
-            try {
-                try {
-                    
-                    $worker->runWorkerLoop();
-                    $worker->info("Worker {$id} terminated cleanly");
-                    
-                } catch (CancelledException $exception) {
-                    
-                    /**
-                     * The IPC socket has broken the connection,
-                     * and communication with the child process has been disrupted.
-                     * We interpret this as an abnormal termination of the worker.
-                     */
-                    $exitResult         = $exception;
-                    $worker->info("Worker {$id} forcefully terminated");
-                    
-                } catch (ChannelException $exception) {
-                    $worker->error(
-                        "Worker {$id} died unexpectedly: {$exception->getMessage()}" .
-                        ($this->running ? ", restarting..." : "")
-                    );
-                    
-                    $remoteException    = $exception->getPrevious();
-                    
-                    if (($remoteException instanceof TaskFailureThrowable
-                         || $remoteException
-                            instanceof
-                            ContextPanicError)
-                        && $remoteException->getOriginalClassName() === FatalWorkerException::class) {
-                        
-                        // The Worker died due to a fatal error, so we should stop the server.
-                        $this->logger?->error('Server shutdown due to fatal worker error');
-                        throw $remoteException;
-                    }
-                } catch (TerminateWorkerException $exception) {
-                    
-                    // The worker has terminated itself cleanly.
-                    $exitResult         = $exception;
-                    $worker->info("Worker {$id} terminated cleanly without restart");
-                    
-                } catch (\Throwable $exception) {
-                    
-                    $worker->error("Worker {$id} failed: " . $exception, ['exception' => $exception]);
-                    throw $exception;
-                    
-                } finally {
-                    
-                    if(false === $deferredCancellation->isCancelled()) {
-                        $deferredCancellation->cancel();
-                    }
-                    
-                    $workerDescriptor->reset();
-                    
-                    if (false === $context->isClosed()) {
-                        $context->close();
-                    }
+            // Restart the worker if the server is still running and the worker should be restarted.
+            // We always terminate the worker if the server is not running
+            // or $exitResult is an instance of TerminateWorkerException.
+            if ($this->running && false === $exitResult instanceof TerminateWorkerException && $restarting >= 0) {
+                
+                if($restarting > 0) {
+                    $workerProcess->info("Worker {$id} will be restarted in {$restarting} seconds");
+                    EventLoop::delay($restarting, fn () => $this->startWorker($workerDescriptor));
+                } else {
+                    $this->startWorker($workerDescriptor);
                 }
                 
-                $restarting         = $workerDescriptor->group->getRestartStrategy()?->shouldRestart($exitResult) ?? -1;
+            } else if($restarting < 0) {
                 
-                // Restart the worker if the server is still running and the worker should be restarted.
-                // We always terminate the worker if the server is not running
-                // or $exitResult is an instance of TerminateWorkerException.
-                if ($this->running && false === $exitResult instanceof TerminateWorkerException && $restarting >= 0) {
-                    
-                    if($restarting > 0) {
-                        $worker->info("Worker {$id} will be restarted in {$restarting} seconds");
-                        EventLoop::delay($restarting, fn () => $this->startWorker($workerDescriptor));
-                    } else {
-                        $this->startWorker($workerDescriptor);
-                    }
-                    
-                } else if($restarting < 0) {
-                    
-                    $workerDescriptor->markAsStopped();
-                    
-                    $worker->info(
-                        "Worker {$id} will not be restarted: " .
-                                  $workerDescriptor->group->getRestartStrategy()?->getFailReason() ?? ''
-                    );
-                }
+                $workerDescriptor->markAsStopped();
                 
-            } catch (\Throwable $exception) {
-                $this->stop();
-                throw $exception;
+                $workerProcess->info(
+                    "Worker {$id} will not be restarted: " .
+                    $workerDescriptor->group->getRestartStrategy()?->getFailReason() ?? ''
+                );
             }
-        })->ignore());
+            
+        } catch (\Throwable $exception) {
+            $this->stop();
+            throw $exception;
+        }
+    }
+    
+    /**
+     * Run the worker event loop and return the exit result.
+     *
+     * @param WorkerDescriptor     $workerDescriptor
+     * @param DeferredCancellation $deferredCancellation
+     *
+     * @return mixed
+     * @throws TaskFailureThrowable
+     * @throws \Throwable
+     */
+    protected function workerEventLoop(WorkerDescriptor $workerDescriptor, DeferredCancellation $deferredCancellation): mixed
+    {
+        $id                         = $workerDescriptor->id;
+        $workerProcess              = $workerDescriptor->getWorkerProcess();
+        $exitResult                 = null;
+        
+        try {
+            
+            $workerProcess->runWorkerLoop();
+            $workerProcess->info("Worker {$id} terminated cleanly");
+            
+        } catch (CancelledException $exception) {
+            
+            /**
+             * The IPC socket has broken the connection,
+             * and communication with the child process has been disrupted.
+             * We interpret this as an abnormal termination of the worker.
+             */
+            $exitResult         = $exception;
+            $workerProcess->info("Worker {$id} forcefully terminated");
+            
+        } catch (ChannelException $exception) {
+            $workerProcess->error(
+                "Worker {$id} died unexpectedly: {$exception->getMessage()}" .
+                ($this->running ? ", restarting..." : "")
+            );
+            
+            $remoteException    = $exception->getPrevious();
+            
+            if (($remoteException instanceof TaskFailureThrowable
+                 || $remoteException
+                    instanceof
+                    ContextPanicError)
+                && $remoteException->getOriginalClassName() === FatalWorkerException::class) {
+                
+                // The Worker died due to a fatal error, so we should stop the server.
+                $this->logger?->error('Server shutdown due to fatal worker error');
+                throw $remoteException;
+            }
+        } catch (TerminateWorkerException $exception) {
+            
+            // The worker has terminated itself cleanly.
+            $exitResult         = $exception;
+            $workerProcess->info("Worker {$id} terminated cleanly without restart");
+            
+        } catch (\Throwable $exception) {
+            
+            $workerProcess->error("Worker {$id} failed: " . $exception, ['exception' => $exception]);
+            throw $exception;
+            
+        } finally {
+            
+            if(false === $deferredCancellation->isCancelled()) {
+                $deferredCancellation->cancel();
+            }
+            
+            $workerDescriptor->reset();
+            
+            if (false === $workerProcess->getContext()->isClosed()) {
+                $workerProcess->getContext()->close();
+            }
+        }
+        
+        return $exitResult;
     }
     
     protected function fillWorkersGroup(WorkerGroup $group): void

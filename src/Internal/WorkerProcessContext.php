@@ -83,6 +83,11 @@ final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Ps
         return $this->context;
     }
     
+    public function getSocketTransport(): SocketPipeTransport|SocketListenerProvider|null
+    {
+        return $this->socketTransport;
+    }
+    
     public function getWorkerId(): int
     {
         return $this->id;
