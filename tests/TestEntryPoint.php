@@ -10,13 +10,12 @@ final class TestEntryPoint implements WorkerEntryPointInterface
 {
     private WorkerInterface $workerStrategy;
     
-    public function initialize(WorkerInterface $workerStrategy): void
+    public function initialize(WorkerInterface $worker): void
     {
-        $this->workerStrategy        = $workerStrategy;
+        $this->workerStrategy        = $worker;
     }
     
     public function run(): void
     {
-    
     }
 }

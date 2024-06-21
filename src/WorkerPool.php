@@ -89,12 +89,6 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
         protected string|array $script      = '',
         protected ?PsrLogger $logger        = null
     ) {
-        
-        $this->script               = \array_merge(
-            [__DIR__ . '/runner.php'],
-            \is_array($script) ? \array_values(\array_map(\strval(...), $script)) : [$script],
-        );
-        
         $this->provider             = new SocketPipeProvider($this->hub);
         $this->contextFactory       ??= new DefaultContextFactory(ipcHub: $this->hub);
         $this->workersInfo          = new WorkersInfo;
@@ -431,7 +425,7 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
             return;
         }
         
-        $workerDescriptor->group->getRestartStrategy()->onWorkerStart($workerDescriptor->id, $workerDescriptor->group);
+        $workerDescriptor->group->getRestartStrategy()?->onWorkerStart($workerDescriptor->id, $workerDescriptor->group);
         
         $workerDescriptor->setFuture(async(function () use (
             $worker,
@@ -449,7 +443,7 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
                 try {
                     $worker->runWorkerLoop();
                     
-                    $restarting         = $workerDescriptor->group->getRestartStrategy()->shouldRestart($exitResult);
+                    $restarting         = $workerDescriptor->group->getRestartStrategy()?->shouldRestart($exitResult) ?? -1;
                     
                     $worker->info("Worker {$id} terminated cleanly" . ($restarting >= 0 ? ", restarting..." : ""));
                     
@@ -494,18 +488,18 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
                     
                 } finally {
                     
-                    if(!$deferredCancellation->isCancelled()) {
+                    if(false === $deferredCancellation->isCancelled()) {
                         $deferredCancellation->cancel();
                     }
                     
                     $workerDescriptor->reset();
                     
-                    if (!$context->isClosed()) {
+                    if (false === $context->isClosed()) {
                         $context->close();
                     }
                 }
                 
-                $restarting         = $workerDescriptor->group->getRestartStrategy()->shouldRestart($exitResult);
+                $restarting         = $workerDescriptor->group->getRestartStrategy()?->shouldRestart($exitResult) ?? -1;
                 
                 // Restart the worker if the server is still running and the worker should be restarted.
                 // We always terminate the worker if the server is not running
@@ -522,7 +516,7 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
                 } else if($restarting < 0) {
                     $worker->info(
                         "Worker {$id} will not be restarted: " .
-                                  $workerDescriptor->group->getRestartStrategy()->getFailReason()
+                                  $workerDescriptor->group->getRestartStrategy()?->getFailReason() ?? ''
                     );
                 }
                 

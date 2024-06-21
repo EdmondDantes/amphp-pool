@@ -20,13 +20,13 @@ use CT\AmpPool\Worker\WorkerInterface;
  */
 final class HttpReactor             implements WorkerEntryPointInterface
 {
-    private WorkerInterface $workerStrategy;
+    private ?\WeakReference $worker = null;
     
-    public function initialize(WorkerInterface $workerStrategy): void
+    public function initialize(WorkerInterface $worker): void
     {
         // 1. This method receives a class that handles the abstraction of the Worker process.
         // The method is called before the run() method.
-        $this->workerStrategy       = $workerStrategy;
+        $this->worker               = \WeakReference::create($worker);
     }
     
     public function run(): void
@@ -38,28 +38,35 @@ final class HttpReactor             implements WorkerEntryPointInterface
         // The workerStrategy provides the socket factory, which is used to create the server.
         // This is necessary because the socket is initially created in the parent process
         // and only then passed to the child process.
-        $socketFactory              = $this->workerStrategy->getSocketPipeFactory();
-        $clientFactory              = new SocketClientFactory($this->workerStrategy->getLogger());
-        $httpServer                 = new SocketHttpServer($this->workerStrategy->getLogger(), $socketFactory, $clientFactory);
+        
+        $worker                     = $this->worker->get();
+        
+        if ($worker === null) {
+            return;
+        }
+        
+        $socketFactory              = $worker->getSocketPipeFactory();
+        $clientFactory              = new SocketClientFactory($worker->getLogger());
+        $httpServer                 = new SocketHttpServer($worker->getLogger(), $socketFactory, $clientFactory);
         
         // 2. Expose the server to the network
         $httpServer->expose('127.0.0.1:9095');
 
         // 3. Handle incoming connections and start the server
         $httpServer->start(
-            new ClosureRequestHandler(function (): Response {
+            new ClosureRequestHandler(static function () use($worker): Response {
                 
                 return new Response(HttpStatus::OK, [
                     'content-type' => 'text/plain; charset=utf-8',
-                ], 'Hello, World! From worker id: '.$this->workerStrategy->getWorkerId()
-                   .' and group id: '.$this->workerStrategy->getWorkerGroupId()
+                ], 'Hello, World! From worker id: '.$worker->getWorkerId()
+                   .' and group id: '.$worker->getWorkerGroupId()
                 );
             }),
             new DefaultErrorHandler(),
         );
         
         // 4. Await termination of the worker
-        $this->workerStrategy->awaitTermination();
+        $worker->awaitTermination();
         
         // 5. Stop the HTTP server
         $httpServer->stop();

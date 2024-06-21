@@ -16,7 +16,6 @@ use CT\AmpPool\Worker\WorkerEntryPointInterface;
 use CT\AmpPool\WorkerGroupInterface;
 use CT\AmpPool\WorkerTypeEnum;
 use function Amp\async;
-use function Amp\Future;
 
 class DefaultRunner extends WorkerStrategyAbstract implements RunnerStrategyInterface
 {
@@ -46,14 +45,14 @@ class DefaultRunner extends WorkerStrategyAbstract implements RunnerStrategyInte
 
         self::setProcessTitle($group->getGroupName().' worker #'.$id. ' group #'.$group->getWorkerGroupId());
         
-        $workerStrategy                 = null;
+        $worker                     = null;
         
         try {
             
-            $entryPointClassName        = $group->getEntryPointClass();
+            $entryPointClassName    = $group->getEntryPointClass();
             
             if (class_exists($entryPointClassName)) {
-                $entryPoint             = new $entryPointClassName();
+                $entryPoint         = new $entryPointClassName();
             } else {
                 throw new FatalWorkerException('Entry point class not found: ' . $entryPointClassName);
             }
@@ -62,21 +61,21 @@ class DefaultRunner extends WorkerStrategyAbstract implements RunnerStrategyInte
                 throw new FatalWorkerException('Entry point class must implement WorkerEntryPointI');
             }
             
-            $workerStrategy             = new Worker((int)$id, $channel, $key, $uri, $group, $groupsScheme);
+            $worker                 = new Worker((int)$id, $channel, $key, $uri, $group, $groupsScheme);
             
-            $entryPoint->initialize($workerStrategy);
-            $workerStrategy->initWorker();
+            $entryPoint->initialize($worker);
+            $worker->initWorker();
             
-            $referenceStrategy          = \WeakReference::create($workerStrategy);
-            $referenceEntryPoint        = \WeakReference::create($entryPoint);
+            $referenceStrategy      = \WeakReference::create($worker);
+            $referenceEntryPoint    = \WeakReference::create($entryPoint);
             
             /** @psalm-suppress InvalidArgument */
             Future\await([
                 async(static function () use ($referenceStrategy): void {
-                 $referenceStrategy->get()?->mainLoop();
+                    $referenceStrategy->get()?->mainLoop();
                 }),
                 async(static function () use ($referenceEntryPoint): void {
-                 $referenceEntryPoint->get()?->run();
+                    $referenceEntryPoint->get()?->run();
                 }),
             ]);
             
@@ -94,7 +93,7 @@ class DefaultRunner extends WorkerStrategyAbstract implements RunnerStrategyInte
             
             throw $exception;
         } finally {
-            $workerStrategy?->stop();
+            $worker?->stop();
         }
     }
     
@@ -142,7 +141,7 @@ class DefaultRunner extends WorkerStrategyAbstract implements RunnerStrategyInte
             throw new FatalWorkerException('Could not read IPC data from channel');
         }
         
-        foreach (['id', 'uri', 'key', 'group', 'groupsScheme' ] as $key) {
+        foreach (['id', 'uri', 'key', 'group', 'groupsScheme'] as $key) {
             if (false === array_key_exists($key, $data)) {
                 throw new FatalWorkerException('Invalid IPC data received. Expected key: '.$key);
             }

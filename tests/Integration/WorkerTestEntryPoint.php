@@ -19,9 +19,9 @@ final class WorkerTestEntryPoint    implements WorkerEntryPointInterface
     
     private WorkerInterface $workerStrategy;
     
-    #[\Override] public function initialize(WorkerInterface $workerStrategy): void
+    #[\Override] public function initialize(WorkerInterface $worker): void
     {
-        $this->workerStrategy       = $workerStrategy;
+        $this->workerStrategy       = $worker;
     }
     
     #[\Override] public function run(): void

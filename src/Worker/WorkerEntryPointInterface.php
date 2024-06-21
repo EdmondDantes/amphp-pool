@@ -5,6 +5,6 @@ namespace CT\AmpPool\Worker;
 
 interface WorkerEntryPointInterface
 {
-    public function initialize(WorkerInterface $workerStrategy): void;
+    public function initialize(WorkerInterface $worker): void;
     public function run(): void;
 }
