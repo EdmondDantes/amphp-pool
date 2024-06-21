@@ -400,6 +400,8 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
         
         try {
             $suspension->suspend();
+        } catch (CancelledException) {
+            // Ignore
         } finally {
             /** @psalm-suppress PossiblyNullArgument $id will not be null if $cancellation is not null. */
             $cancellation?->unsubscribe($id);

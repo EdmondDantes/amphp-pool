@@ -10,6 +10,8 @@ class WorkerPoolTest                extends TestCase
 {
     public function testStart(): void
     {
+        TestEntryPoint::removeFile();
+        
         $workerPool                 = new WorkerPool;
         $workerPool->describeGroup(new WorkerGroup(
             TestEntryPoint::class,
@@ -20,5 +22,9 @@ class WorkerPoolTest                extends TestCase
         
         $workerPool->run();
         $workerPool->awaitTermination();
+        
+        $this->assertFileExists(TestEntryPoint::getFile());
+        
+        TestEntryPoint::removeFile();
     }
 }

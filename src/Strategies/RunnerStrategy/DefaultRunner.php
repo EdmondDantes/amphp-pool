@@ -66,16 +66,21 @@ class DefaultRunner extends WorkerStrategyAbstract implements RunnerStrategyInte
             $entryPoint->initialize($worker);
             $worker->initWorker();
             
-            $referenceStrategy      = \WeakReference::create($worker);
+            $referenceWorker        = \WeakReference::create($worker);
             $referenceEntryPoint    = \WeakReference::create($entryPoint);
             
             /** @psalm-suppress InvalidArgument */
             Future\await([
-                async(static function () use ($referenceStrategy): void {
-                    $referenceStrategy->get()?->mainLoop();
+                async(static function () use ($referenceWorker): void {
+                    $referenceWorker->get()?->mainLoop();
                 }),
-                async(static function () use ($referenceEntryPoint): void {
-                    $referenceEntryPoint->get()?->run();
+                async(static function () use ($referenceEntryPoint, $referenceWorker): void {
+                    
+                    try {
+                        $referenceEntryPoint->get()?->run();
+                    } finally {
+                        $referenceWorker->get()?->stop();
+                    }
                 }),
             ]);
             

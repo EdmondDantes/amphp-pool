@@ -239,7 +239,11 @@ class Worker                        implements WorkerInterface
         } finally {
             $this->jobHandler       = null;
             $this->eventEmitter->free();
-            $this->loopCancellation->cancel();
+            
+            if(false === $this->loopCancellation->isCancelled()) {
+                $this->loopCancellation->cancel();
+            }
+            
             $this->queue->complete();
             $this->ipcForTransferSocket?->close();
         }
@@ -330,11 +334,15 @@ class Worker                        implements WorkerInterface
     
     public function __destruct()
     {
-        $this->stop();
+        EventLoop::queue($this->stop(...));
     }
     
     public function stop(): void
     {
+        if($this->loopCancellation->isCancelled()) {
+            return;
+        }
+        
         $this->loopCancellation->cancel();
     }
     
