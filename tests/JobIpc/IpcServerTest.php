@@ -8,6 +8,7 @@ use Amp\DeferredCancellation;
 use Amp\Serialization\PassthroughSerializer;
 use Amp\Socket\Socket;
 use Amp\TimeoutCancellation;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use Revolt\EventLoop;
 use function Amp\Socket\socketConnector;
@@ -33,6 +34,7 @@ class IpcServerTest                 extends TestCase
         $this->jobHandler           = null;
     }
     
+    #[RunInSeparateProcess]
     public function testDefault(): void
     {
         $receivedData               = null;

@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace CT\AmpPool;
 
 use CT\AmpPool\Strategies\RestartStrategy\RestartNever;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 
 class WorkerPoolTest                extends TestCase

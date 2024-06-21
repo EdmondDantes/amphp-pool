@@ -11,6 +11,7 @@ use CT\AmpPool\Worker\WorkerState\WorkersInfo;
 use CT\AmpPool\Worker\WorkerState\WorkerStateStorage;
 use CT\AmpPool\WorkerGroup;
 use CT\AmpPool\WorkerTypeEnum;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use Revolt\EventLoop;
 
@@ -71,7 +72,8 @@ class IpcClientTest                 extends TestCase
         $this->poolState->close();
         $this->jobHandler           = null;
     }
-
+    
+    #[RunInSeparateProcess]
     public function testDefault(): void
     {
         $receivedData               = null;
