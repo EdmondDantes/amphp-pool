@@ -4,12 +4,12 @@ declare(strict_types=1);
 namespace CT\AmpPool;
 
 use Amp\Parallel\Context\ContextException;
-use CT\AmpPool\EntryPoints\FatalWorkerEntryPoint;
-use CT\AmpPool\EntryPoints\RestartStrategies\RestartNeverWithLastError;
-use CT\AmpPool\EntryPoints\RestartStrategies\RestartTwice;
-use CT\AmpPool\EntryPoints\Runners\RunnerLostChannel;
-use CT\AmpPool\EntryPoints\TestEntryPoint;
-use CT\AmpPool\EntryPoints\TestEntryPointWaitTermination;
+use CT\AmpPool\WorkerPoolMocks\FatalWorkerEntryPoint;
+use CT\AmpPool\WorkerPoolMocks\RestartStrategies\RestartNeverWithLastError;
+use CT\AmpPool\WorkerPoolMocks\RestartStrategies\RestartTwice;
+use CT\AmpPool\WorkerPoolMocks\Runners\RunnerLostChannel;
+use CT\AmpPool\WorkerPoolMocks\TestEntryPoint;
+use CT\AmpPool\WorkerPoolMocks\TestEntryPointWaitTermination;
 use CT\AmpPool\Strategies\RestartStrategy\RestartNever;
 use PHPUnit\Framework\TestCase;
 

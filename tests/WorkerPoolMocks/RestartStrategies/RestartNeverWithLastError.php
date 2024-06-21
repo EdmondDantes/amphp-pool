@@ -1,28 +1,24 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\EntryPoints\RestartStrategies;
+namespace CT\AmpPool\WorkerPoolMocks\RestartStrategies;
 
 use CT\AmpPool\Strategies\RestartStrategy\RestartStrategyInterface;
 use CT\AmpPool\WorkerGroupInterface;
 
-final class RestartTwice implements RestartStrategyInterface
+final class RestartNeverWithLastError implements RestartStrategyInterface
 {
-    public int $restarts = 0;
+    public mixed $lastError = null;
     
     public function shouldRestart(mixed $exitResult): int
     {
-        if($this->restarts >= 2) {
-            return -1;
-        }
-        
-        $this->restarts++;
-        return 0;
+        $this->lastError            = $exitResult;
+        return -1;
     }
     
     public function getFailReason(): string
     {
-        return 'Restarted twice';
+        return 'Never restart';
     }
     
     public function onWorkerStart(int $workerId, WorkerGroupInterface $group): void

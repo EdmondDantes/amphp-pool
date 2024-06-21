@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\EntryPoints\Runners;
+namespace CT\AmpPool\WorkerPoolMocks\Runners;
 
 use Amp\Sync\Channel;
 use CT\AmpPool\Strategies\RunnerStrategy\DefaultRunner;
