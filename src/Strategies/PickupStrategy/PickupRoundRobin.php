@@ -10,7 +10,7 @@ final class PickupRoundRobin        extends PickupStrategyAbstract
 {
     private array                   $usedWorkers    = [];
     
-    public function pickupWorker(array $possibleGroups = [], array $possibleWorkers = [], array $ignoredWorkers = [], int $tryCount = 0): ?int
+    public function pickupWorker(array $possibleGroups = [], array $possibleWorkers = [], array $ignoredWorkers = [], int $priority = 0, int $tryCount = 0): ?int
     {
         $anyFound                   = false;
         

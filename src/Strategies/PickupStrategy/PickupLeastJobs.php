@@ -12,7 +12,7 @@ namespace CT\AmpPool\Strategies\PickupStrategy;
  */
 final class PickupLeastJobs         extends PickupStrategyAbstract
 {
-    public function pickupWorker(array $possibleGroups = [], array $possibleWorkers = [], array $ignoredWorkers = [], int $tryCount = 0): ?int
+    public function pickupWorker(array $possibleGroups = [], array $possibleWorkers = [], array $ignoredWorkers = [], int $priority = 0, int $tryCount = 0): ?int
     {
         $workersInfo                = $this->getWorkersInfo();
         

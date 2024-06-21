@@ -16,6 +16,7 @@ final readonly class PickupStrategyDummy implements PickupStrategyInterface
         array $possibleGroups = [],
         array $possibleWorkers = [],
         array $ignoredWorkers = [],
+        int   $priority = 0,
         int   $tryCount = 0
     ): ?int
     {

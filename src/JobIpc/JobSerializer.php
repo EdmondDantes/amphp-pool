@@ -7,9 +7,9 @@ final class JobSerializer            implements JobSerializerInterface
 {
     final const int HEADER_LENGTH   = 16;
     
-    public function createRequest(int $jobId, int $fromWorkerId, int $workerGroupId, string $data): string
+    public function createRequest(int $jobId, int $fromWorkerId, int $workerGroupId, string $data, int $priority = 0): string
     {
-        return pack('V*', $jobId, $fromWorkerId, $workerGroupId, strlen($data)).$data;
+        return pack('V*', $jobId, $fromWorkerId, $workerGroupId, $priority).$data;
     }
     
     public function parseRequest(string $request): JobRequest
@@ -25,10 +25,10 @@ final class JobSerializer            implements JobSerializerInterface
             throw new \RuntimeException('Failed to unpack data for request');
         }
         
-        [, $jobId, $fromWorkerId, $workerGroupId, $dataLength] = $buffer;
+        [, $jobId, $fromWorkerId, $workerGroupId, $priority] = $buffer;
         $data                       = \substr($request, self::HEADER_LENGTH);
         
-        return new JobRequest($jobId, $fromWorkerId, $workerGroupId, $dataLength, $data);
+        return new JobRequest($jobId, $fromWorkerId, $workerGroupId, $priority, $data);
     }
     
     public function createResponse(int $jobId, int $fromWorkerId, int $workerGroupId, string $data): string

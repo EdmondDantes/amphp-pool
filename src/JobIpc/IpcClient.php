@@ -78,7 +78,7 @@ final class IpcClient                   implements IpcClientInterface
     /**
      * @inheritDoc
      */
-    public function sendJob(string $data, array $allowedGroups = [], array $allowedWorkers = [], bool $awaitResult = false): Future|null
+    public function sendJob(string $data, array $allowedGroups = [], array $allowedWorkers = [], bool $awaitResult = false, int $priority = 0): Future|null
     {
         $deferred                   = null;
         
@@ -86,7 +86,7 @@ final class IpcClient                   implements IpcClientInterface
             $deferred               = new DeferredFuture();
         }
         
-        EventLoop::queue($this->sendJobImmediately(...), $data, $allowedGroups, $allowedWorkers, $deferred);
+        EventLoop::queue($this->sendJobImmediately(...), $data, $allowedGroups, $allowedWorkers, $deferred, $priority);
         
         return $deferred?->getFuture();
     }
@@ -98,11 +98,17 @@ final class IpcClient                   implements IpcClientInterface
      * @param array               $allowedGroups
      * @param array               $allowedWorkers
      * @param bool|DeferredFuture $awaitResult
+     * @param int                 $priority
      *
      * @return Future|null
      * @throws \Throwable
      */
-    public function sendJobImmediately(string $data, array $allowedGroups = [], array $allowedWorkers = [], bool|DeferredFuture $awaitResult = false): Future|null
+    public function sendJobImmediately(string              $data,
+                                       array               $allowedGroups = [],
+                                       array               $allowedWorkers = [],
+                                       bool|DeferredFuture $awaitResult = false,
+                                       int                 $priority = 0
+    ): Future|null
     {
         $tryCount                   = 0;
         $ignoreWorkers              = [];
@@ -134,7 +140,7 @@ final class IpcClient                   implements IpcClientInterface
                     throw new NoWorkersAvailable($allowedGroups);
                 }
                 
-                $socketId           = $this->tryToSendJob($foundedWorkerId, $data, $deferred);
+                $socketId           = $this->tryToSendJob($foundedWorkerId, $data, $priority, $deferred);
                 
                 if($deferred !== null) {
                     $this->resultsFutures[spl_object_id($deferred)] = [$deferred, $socketId, time()];
@@ -175,6 +181,7 @@ final class IpcClient                   implements IpcClientInterface
     private function tryToSendJob(
         $foundedWorkerId,
         string $data,
+        int $priority               = 0,
         DeferredFuture $deferred    = null
     ): int
     {
@@ -183,7 +190,7 @@ final class IpcClient                   implements IpcClientInterface
         
         try {
             $channel->send(
-                $this->jobTransport->createRequest($jobId, $this->workerId, $this->workerGroup->getWorkerGroupId(), $data)
+                $this->jobTransport->createRequest($jobId, $this->workerId, $this->workerGroup->getWorkerGroupId(), $data, $priority)
             );
         } catch (\Throwable $exception) {
             $deferred->complete($exception);
@@ -215,7 +222,7 @@ final class IpcClient                   implements IpcClientInterface
         }
     }
     
-    private function pickupWorker(array $allowedGroups = [], array $allowedWorkers = [], array $ignoreWorkers = [], int $tryCount = 0): int|null
+    private function pickupWorker(array $allowedGroups = [], array $allowedWorkers = [], array $ignoreWorkers = [], int $priority = 0, int $tryCount = 0): int|null
     {
         if($allowedGroups === []) {
             $allowedGroups          = $this->workerGroup->getJobGroups();
@@ -226,7 +233,7 @@ final class IpcClient                   implements IpcClientInterface
             $ignoreWorkers[]        = $this->workerId;
         }
 
-        return $this->workerGroup->getPickupStrategy()?->pickupWorker($allowedGroups, $allowedWorkers, $ignoreWorkers, $tryCount);
+        return $this->workerGroup->getPickupStrategy()?->pickupWorker($allowedGroups, $allowedWorkers, $ignoreWorkers, $priority, $tryCount);
     }
     
     private function requestScaling(array $allowedGroups): bool
