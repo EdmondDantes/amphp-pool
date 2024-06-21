@@ -20,7 +20,7 @@ use Amp\Socket\TlsException;
 use Amp\Socket\TlsInfo;
 use Amp\Socket\TlsState;
 use Amp\Sync\Channel;
-use CT\AmpPool\Messages\MessageSocketFree;
+use CT\AmpPool\Internal\Messages\MessageSocketFree;
 
 /**
  * Copy of the ResourceSocket class from the amphp/socket package.

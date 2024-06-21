@@ -8,7 +8,7 @@ use Amp\Socket\BindContext;
 use Amp\Socket\ResourceServerSocket;
 use Amp\Socket\ServerSocket;
 use Amp\Socket\SocketAddress;
-use CT\AmpPool\Messages\MessageSocketTransfer;
+use CT\AmpPool\Internal\Messages\MessageSocketTransfer;
 use CT\AmpPool\Strategies\PickupStrategy\PickupRoundRobin;
 use CT\AmpPool\Strategies\PickupStrategy\PickupStrategyInterface;
 use CT\AmpPool\WorkerPool;

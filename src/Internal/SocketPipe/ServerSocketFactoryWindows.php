@@ -15,7 +15,7 @@ use Amp\Socket\Socket;
 use Amp\Socket\SocketAddress;
 use Amp\Socket\SocketException;
 use Amp\Sync\Channel;
-use CT\AmpPool\Messages\MessageSocketTransfer;
+use CT\AmpPool\Internal\Messages\MessageSocketTransfer;
 
 final class ServerSocketFactoryWindows implements ServerSocket
 {

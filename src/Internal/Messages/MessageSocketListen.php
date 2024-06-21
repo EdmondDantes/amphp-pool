@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Messages;
+namespace CT\AmpPool\Internal\Messages;
 
 use Amp\Socket\SocketAddress;
 

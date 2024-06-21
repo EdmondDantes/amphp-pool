@@ -6,7 +6,7 @@ namespace CT\AmpPool\Worker\Internal;
 use Amp\ForbidCloning;
 use Amp\ForbidSerialization;
 use Amp\Sync\Channel;
-use CT\AmpPool\Messages\MessageLog;
+use CT\AmpPool\Internal\Messages\MessageLog;
 use Monolog\Handler\AbstractProcessingHandler;
 use Monolog\Level;
 use Monolog\LogRecord;

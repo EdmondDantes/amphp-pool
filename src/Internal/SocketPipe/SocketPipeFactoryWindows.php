@@ -11,7 +11,7 @@ use Amp\Socket\SocketAddress;
 use Amp\Socket\SocketException;
 use Amp\Sync\Channel;
 use Amp\Sync\ChannelException;
-use CT\AmpPool\Messages\MessageSocketListen;
+use CT\AmpPool\Internal\Messages\MessageSocketListen;
 use CT\AmpPool\Worker\Worker;
 
 final class SocketPipeFactoryWindows implements ServerSocketFactory

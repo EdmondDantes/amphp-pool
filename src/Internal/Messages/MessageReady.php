@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Messages;
+namespace CT\AmpPool\Internal\Messages;
 
 final class MessageReady {}
