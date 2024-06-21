@@ -14,8 +14,9 @@ interface PickupStrategyInterface
      * @param array $possibleGroups
      * @param array $possibleWorkers
      * @param array $ignoredWorkers
+     * @param int   $tryCount
      *
      * @return int|null
      */
-    public function pickupWorker(array $possibleGroups = [], array $possibleWorkers = [], array $ignoredWorkers = []): ?int;
+    public function pickupWorker(array $possibleGroups = [], array $possibleWorkers = [], array $ignoredWorkers = [], int $tryCount = 0): ?int;
 }

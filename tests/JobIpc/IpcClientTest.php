@@ -7,7 +7,10 @@ use Amp\CancelledException;
 use Amp\DeferredCancellation;
 use Amp\TimeoutCancellation;
 use CT\AmpPool\PoolState\PoolStateStorage;
+use CT\AmpPool\Worker\WorkerState\WorkersInfo;
 use CT\AmpPool\Worker\WorkerState\WorkerStateStorage;
+use CT\AmpPool\WorkerGroup;
+use CT\AmpPool\WorkerTypeEnum;
 use PHPUnit\Framework\TestCase;
 use Revolt\EventLoop;
 
@@ -23,18 +26,36 @@ class IpcClientTest                 extends TestCase
 
     protected function setUp(): void
     {
-        $this->poolState            = new PoolStateStorage(1);
-        $this->poolState->setWorkerGroupState(1, 1, 1);
+        $workerId                   = 1;
+        $groupId                    = 1;
         
-        $this->workerState          = new WorkerStateStorage(1, 1, true);
+        $this->poolState            = new PoolStateStorage($groupId);
+        $this->poolState->setWorkerGroupState($groupId, $workerId, $workerId);
+        
+        $this->workerState          = new WorkerStateStorage($workerId, $groupId, true);
         $this->workerState->workerReady();
         
         $this->jobSerializer        = new JobSerializer;
         
-        $this->jobsLoopCancellation = new DeferredCancellation();
+        $this->jobsLoopCancellation = new DeferredCancellation;
         
-        $this->ipcServer            = new IpcServer(1);
-        $this->ipcClient            = new IpcClient(2, cancellation: $this->jobsLoopCancellation->getCancellation());
+        $workerGroup                = new WorkerGroup(
+            '', WorkerTypeEnum::REACTOR, pickupStrategy: new PickupStrategyDummy($workerId)
+        );
+        
+        $workersInfo                = new WorkersInfo;
+        
+        $this->ipcServer            = new IpcServer($workerId);
+        
+        $this->ipcClient            = new IpcClient(
+            $workerId,
+            $workerGroup,
+            [$workerGroup],
+            $workersInfo,
+            $this->poolState,
+            $this->jobSerializer,
+            $this->jobsLoopCancellation->getCancellation()
+        );
         
         EventLoop::queue($this->ipcServer->receiveLoop(...), $this->jobsLoopCancellation->getCancellation());
         EventLoop::queue($this->jobsLoop(...));
@@ -48,19 +69,19 @@ class IpcClientTest                 extends TestCase
         $this->ipcClient->close();
         $this->ipcServer->close();
         $this->poolState->close();
-        $this->jobHandler = null;
+        $this->jobHandler           = null;
     }
 
     public function testDefault(): void
     {
         $receivedData               = null;
 
-        $this->jobHandler = function (JobRequest $request) use (&$receivedData) {
+        $this->jobHandler           = function (JobRequest $request) use (&$receivedData) {
             $receivedData           = $request->data;
             return 'OK: ' . $request->data;
         };
 
-        $future                     = $this->ipcClient->sendJobImmediately('Test', 1, true);
+        $future                     = $this->ipcClient->sendJobImmediately('Test', allowedGroups: [1], awaitResult: true);
 
         $future->await(new TimeoutCancellation(5));
 

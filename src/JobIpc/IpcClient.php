@@ -16,9 +16,8 @@ use Amp\TimeoutException;
 use CT\AmpPool\Exceptions\NoWorkersAvailable;
 use CT\AmpPool\Exceptions\SendJobException;
 use CT\AmpPool\PoolState\PoolStateStorage;
-use CT\AmpPool\Strategies\PickupStrategy\PickupStrategyInterface;
-use CT\AmpPool\Worker\WorkerInterface;
-use CT\AmpPool\Worker\WorkerState\WorkersInfo;
+use CT\AmpPool\Worker\WorkerState\WorkersInfoInterface;
+use CT\AmpPool\WorkerGroupInterface;
 use Revolt\EventLoop;
 use function Amp\delay;
 use function Amp\Socket\socketConnector;
@@ -36,8 +35,6 @@ final class IpcClient                   implements IpcClientInterface
      */
     private array                       $workerChannels = [];
     private JobSerializerInterface|null $jobTransport   = null;
-    private WorkersInfo|null            $workersInfo    = null;
-    private PoolStateStorage|null $poolState    = null;
     /**
      * List of futures that are waiting for the result of the job with SocketId, and time when the job was sent
      * @var array [Future, int, int]
@@ -46,27 +43,30 @@ final class IpcClient                   implements IpcClientInterface
     private int $maxTryCount        = 3;
     private int $futureTimeout      = 60 * 10;
     private string $futureTimeoutCallbackId;
-    private PickupStrategyInterface $pickupStrategy;
     
     /**
      * IpcClient constructor.
      *
-     * @param WorkerInterface             $worker        Worker
      * @param JobSerializerInterface|null $jobSerializer Job serializer
      * @param Cancellation|null           $cancellation  Cancellation
      * @param int                         $retryInterval Retry interval for sending a job
      */
     public function __construct(
-        private readonly WorkerInterface   $worker,
-        JobSerializerInterface             $jobSerializer = null,
-        private readonly Cancellation|null $cancellation = null,
-        private readonly int               $retryInterval = 1,
-        private readonly int               $scalingTimeout = 2
+        private readonly int $workerId,
+        private readonly WorkerGroupInterface $workerGroup,
+        private readonly array $groupsScheme,
+        private readonly WorkersInfoInterface $workersInfo,
+        private readonly PoolStateStorage $poolState,
+        JobSerializerInterface                $jobSerializer = null,
+        private readonly Cancellation|null    $cancellation = null,
+        private readonly int                  $retryInterval = 1,
+        private readonly int                  $scalingTimeout = 2
     )
     {
-        $this->workersInfo          = $this->worker->getWorkersInfo();
-        $this->poolState            = $this->worker->getPoolStateStorage();
-        $this->pickupStrategy       = $this->worker->getWorkerGroup()->getPickupStrategy();
+        if($this->workerGroup->getPickupStrategy() === null) {
+            throw new \InvalidArgumentException('WorkerGroup must have a PickupStrategy');
+        }
+        
         $this->jobTransport         = $jobSerializer ?? new JobSerializer();
     }
     
@@ -114,18 +114,18 @@ final class IpcClient                   implements IpcClientInterface
         }
         
         if($allowedGroups === []) {
-            $allowedGroups          = $this->worker->getWorkerGroup()->getJobGroups();
+            $allowedGroups          = $this->workerGroup->getJobGroups();
         }
         
         // Add self-worker to ignore-list
-        if(false === in_array($this->worker->getWorkerId(), $ignoreWorkers, true)) {
-            $ignoreWorkers[]        = $this->worker->getWorkerId();
+        if(false === in_array($this->workerId, $ignoreWorkers, true)) {
+            $ignoreWorkers[]        = $this->workerId;
         }
         
         while($tryCount < $this->maxTryCount) {
             
-            $isScalingPossible          = false;
-            $foundedWorkerId            = $this->pickupWorker($allowedGroups, $allowedWorkers, $ignoreWorkers);
+            $isScalingPossible      = false;
+            $foundedWorkerId        = $this->pickupWorker($allowedGroups, $allowedWorkers, $ignoreWorkers, $tryCount);
             
             try {
                 
@@ -134,7 +134,7 @@ final class IpcClient                   implements IpcClientInterface
                     throw new NoWorkersAvailable($allowedGroups);
                 }
                 
-                $socketId           = $this->tryToSendJob($foundedWorkerId, $data, $allowedGroups, $allowedWorkers, $ignoreWorkers, $deferred);
+                $socketId           = $this->tryToSendJob($foundedWorkerId, $data, $deferred);
                 
                 if($deferred !== null) {
                     $this->resultsFutures[spl_object_id($deferred)] = [$deferred, $socketId, time()];
@@ -172,14 +172,18 @@ final class IpcClient                   implements IpcClientInterface
         throw new SendJobException($allowedGroups, $this->maxTryCount);
     }
     
-    private function tryToSendJob($foundedWorkerId, string $data, array $allowedGroups = [], array $allowedWorkers = [], array $ignoreWorkers = [], DeferredFuture $deferred = null): int
+    private function tryToSendJob(
+        $foundedWorkerId,
+        string $data,
+        DeferredFuture $deferred    = null
+    ): int
     {
         $channel                    = $this->getWorkerChannel($foundedWorkerId);
         $jobId                      = $deferred !== null ? spl_object_id($deferred) : 0;
         
         try {
             $channel->send(
-                $this->jobTransport->createRequest($jobId, $this->worker->getWorkerId(), $this->worker->getWorkerGroup()->getWorkerGroupId(), $data)
+                $this->jobTransport->createRequest($jobId, $this->workerId, $this->workerGroup->getWorkerGroupId(), $data)
             );
         } catch (\Throwable $exception) {
             $deferred->complete($exception);
@@ -211,24 +215,24 @@ final class IpcClient                   implements IpcClientInterface
         }
     }
     
-    private function pickupWorker(array $allowedGroups = [], array $allowedWorkers = [], array $ignoreWorkers = []): int|null
+    private function pickupWorker(array $allowedGroups = [], array $allowedWorkers = [], array $ignoreWorkers = [], int $tryCount = 0): int|null
     {
         if($allowedGroups === []) {
-            $allowedGroups          = $this->worker->getWorkerGroup()->getJobGroups();
+            $allowedGroups          = $this->workerGroup->getJobGroups();
         }
 
-        // Add self-worker to ignore list
-        if(false === in_array($this->worker->getWorkerId(), $ignoreWorkers, true)) {
-            $ignoreWorkers[]        = $this->worker->getWorkerId();
+        // Add self-worker to ignore a list
+        if(false === in_array($this->workerId, $ignoreWorkers, true)) {
+            $ignoreWorkers[]        = $this->workerId;
         }
 
-        return $this->pickupStrategy->pickupWorker($allowedGroups, $allowedWorkers, $ignoreWorkers);
+        return $this->workerGroup->getPickupStrategy()?->pickupWorker($allowedGroups, $allowedWorkers, $ignoreWorkers, $tryCount);
     }
     
     private function requestScaling(array $allowedGroups): bool
     {
-        $workerId                   = $this->worker->getWorkerId();
-        $groupsScheme               = $this->worker->getGroupsScheme();
+        $workerId                   = $this->workerId;
+        $groupsScheme               = $this->groupsScheme;
         $isPossible                 = false;
         
         foreach ($allowedGroups as $groupId) {
