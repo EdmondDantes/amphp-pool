@@ -712,7 +712,7 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
     
     public function __destruct()
     {
-        $this->stop();
+        EventLoop::queue($this->stop(...));
     }
     
     protected function defaultWorkerStrategies(WorkerGroup $group): void
