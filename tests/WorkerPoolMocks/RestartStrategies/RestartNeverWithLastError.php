@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace CT\AmpPool\WorkerPoolMocks\RestartStrategies;
 
 use CT\AmpPool\Strategies\RestartStrategy\RestartStrategyInterface;
-use CT\AmpPool\WorkerGroupInterface;
 
 final class RestartNeverWithLastError implements RestartStrategyInterface
 {
@@ -19,9 +18,5 @@ final class RestartNeverWithLastError implements RestartStrategyInterface
     public function getFailReason(): string
     {
         return 'Never restart';
-    }
-    
-    public function onWorkerStart(int $workerId, WorkerGroupInterface $group): void
-    {
     }
 }

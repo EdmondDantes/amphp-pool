@@ -20,10 +20,11 @@ use Amp\Socket\TlsException;
 use Amp\Socket\TlsInfo;
 use Amp\Socket\TlsState;
 use Amp\Sync\Channel;
-use CT\AmpPool\Internal\Messages\MessageSocketFree;
+use CT\AmpPool\Strategies\SocketStrategy\Windows\Messages\MessageSocketFree;
 
 /**
  * Copy of the ResourceSocket class from the amphp/socket package.
+ * It needs for $this->channel->send(new MessageSocketFree($this->socketId));
  */
 final class ResourceSocket implements Socket, ResourceStream, \IteratorAggregate
 {

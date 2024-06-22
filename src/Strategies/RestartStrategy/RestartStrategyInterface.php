@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 namespace CT\AmpPool\Strategies\RestartStrategy;
 
-use CT\AmpPool\WorkerGroupInterface;
-
 /**
  * Worker Restart Strategy, which defines the rules by which a worker can be restarted.
  */
@@ -29,6 +27,4 @@ interface RestartStrategyInterface
      * @return  string
      */
     public function getFailReason(): string;
-    
-    public function onWorkerStart(int $workerId, WorkerGroupInterface $group): void;
 }

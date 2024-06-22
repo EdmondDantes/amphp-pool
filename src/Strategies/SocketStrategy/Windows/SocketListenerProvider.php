@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace CT\AmpPool\Strategies\SocketStrategy\Windows;
 
 use Amp\Socket\SocketAddress;
-use CT\AmpPool\Internal\Messages\MessageSocketListen;
+use CT\AmpPool\Strategies\SocketStrategy\Windows\Messages\MessageSocketListen;
 use CT\AmpPool\WorkerEventEmitterAwareInterface;
 use CT\AmpPool\WorkerPool;
 

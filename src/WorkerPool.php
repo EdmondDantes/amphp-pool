@@ -32,9 +32,9 @@ use CT\AmpPool\Strategies\PickupStrategy\PickupLeastJobs;
 use CT\AmpPool\Strategies\RestartStrategy\RestartAlways;
 use CT\AmpPool\Strategies\RunnerStrategy\DefaultRunner;
 use CT\AmpPool\Strategies\ScalingStrategy\ScalingByRequest;
-use CT\AmpPool\Strategies\SocketStrategy\Unix\SocketPipeProvider;
-use CT\AmpPool\Strategies\SocketStrategy\Windows\SocketListenerProvider;
-use CT\AmpPool\Strategies\WorkerStrategyInterface;
+use CT\AmpPool\Strategies\SocketStrategy\Unix\SocketUnixStrategy;
+use CT\AmpPool\Strategies\SocketStrategy\Windows\SocketWindowsStrategy;
+use CT\AmpPool\WatcherEvents\WorkerProcessStarted;
 use CT\AmpPool\Worker\Internal\WorkerDescriptor;
 use CT\AmpPool\Worker\WorkerState\WorkersInfo;
 use CT\AmpPool\Worker\WorkerState\WorkersInfoInterface;
@@ -223,12 +223,14 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
         
         $this->running              = true;
         $this->mainCancellation     = new DeferredCancellation;
-
+        
         try {
             
             if($this->poolState === null) {
                 $this->poolState    = new PoolStateStorage(count($this->groupsScheme));
             }
+            
+            WorkerGroup::startStrategies($this->groupsScheme);
             
             foreach ($this->workers as $worker) {
                 if($worker->shouldBeStarted) {
@@ -434,7 +436,7 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
         
         } catch (\Throwable $exception) {
             
-            if (!$context->isClosed()) {
+            if (false === $context->isClosed()) {
                 $context->close();
             }
             
@@ -444,11 +446,9 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
         }
         
         $deferredCancellation       = new DeferredCancellation();
-        
         $workerProcess              = new WorkerProcessContext(
             $workerDescriptor->id,
             $context,
-            $socketTransport ?? $this->listenerProvider,
             $deferredCancellation,
             $this->eventEmitter,
         );
@@ -459,15 +459,9 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
         
         $workerDescriptor->setWorkerProcess($workerProcess);
         
+        $this->eventEmitter->emitWorkerEvent(new WorkerProcessStarted($workerDescriptor->id, $context), $workerDescriptor->id);
+        
         $workerProcess->info(\sprintf('Started %s worker #%d', $workerDescriptor->group->getWorkerType()->value, $workerDescriptor->id));
-        
-        // Server stopped while worker was starting, so immediately throw everything away.
-        if (false === $this->running) {
-            $workerProcess->shutdown();
-            return;
-        }
-        
-        $workerDescriptor->group->getRestartStrategy()?->onWorkerStart($workerDescriptor->id, $workerDescriptor->group);
         
         $workerDescriptor->setFuture(async($this->workerWatcher(...), $workerDescriptor, $deferredCancellation)->ignore());
     }
@@ -705,6 +699,8 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
         $this->mainCancellation?->cancel();
         $this->mainCancellation     = null;
         
+        WorkerGroup::stopStrategies($this->groupsScheme, $this->logger);
+        
         if (!$exceptions) {
             return;
         }
@@ -777,33 +773,13 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
         }
         
         if($group->getSocketStrategy() === null && $group->getWorkerType() === WorkerTypeEnum::REACTOR) {
-            $group->defineSocketStrategy(new SocketPipeProvider);
+            $group->defineSocketStrategy(IS_WINDOWS ? new SocketWindowsStrategy : new SocketUnixStrategy);
         }
     }
     
     protected function initWorkerStrategies(WorkerGroup $group): void
     {
-        $strategy                   = $group->getRunnerStrategy();
-        
-        if($strategy instanceof WorkerStrategyInterface) {
-            $strategy->setWorkerPool($this)->setWorkerGroup($group);
-        }
-        
-        $strategy                   = $group->getPickupStrategy();
-        
-        if($strategy instanceof WorkerStrategyInterface) {
-            $strategy->setWorkerPool($this)->setWorkerGroup($group);
-        }
-        
-        $strategy                   = $group->getScalingStrategy();
-        
-        if($strategy instanceof WorkerStrategyInterface) {
-            $strategy->setWorkerPool($this)->setWorkerGroup($group);
-        }
-        
-        $strategy                   = $group->getRestartStrategy();
-        
-        if($strategy instanceof WorkerStrategyInterface) {
+        foreach ($group->getWorkerStrategies() as $strategy) {
             $strategy->setWorkerPool($this)->setWorkerGroup($group);
         }
     }

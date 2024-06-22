@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace CT\AmpPool\Strategies\RestartStrategy;
 
 use CT\AmpPool\Strategies\WorkerStrategyAbstract;
-use CT\AmpPool\WorkerGroupInterface;
 
 /**
  * The worker will not be restarted if the following conditions are met:
@@ -68,9 +67,5 @@ final class RestartWithWindowLimiter extends WorkerStrategyAbstract
     public function getFailReason(): string
     {
         return 'Interval: ' . $this->currentInterval . 's, restarts: ' . $this->restartsCount . ' of ' . $this->maxRestarts . ' allowed';
-    }
-    
-    public function onWorkerStart(int $workerId, WorkerGroupInterface $group): void
-    {
     }
 }

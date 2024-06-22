@@ -15,7 +15,8 @@ use Amp\Socket\Socket;
 use Amp\Socket\SocketAddress;
 use Amp\Socket\SocketException;
 use Amp\Sync\Channel;
-use CT\AmpPool\Internal\Messages\MessageSocketTransfer;
+use CT\AmpPool\Strategies\SocketStrategy\Windows\Messages\MessageSocketTransfer;
+use CT\AmpPool\WorkerEventEmitterInterface;
 
 final class ServerSocketFactoryWindows implements ServerSocket
 {
@@ -26,20 +27,35 @@ final class ServerSocketFactoryWindows implements ServerSocket
     /** @var Queue<MessageSocketTransfer> */
     private readonly Queue $queue;
     private readonly ConcurrentIterator $iterator;
+    private mixed $workerEventHandler;
     
-    public function __construct(private readonly Channel $writeOnlyChannel, private readonly SocketAddress $socketAddress, private readonly BindContext $bindContext)
+    public function __construct(private readonly Channel       $writeOnlyChannel,
+                                private readonly SocketAddress $socketAddress,
+                                private readonly BindContext   $bindContext,
+                                private readonly WorkerEventEmitterInterface $workerEventEmitter
+    )
     {
         $this->onClose              = new DeferredFuture();
         $this->queue                = new Queue();
         $this->iterator             = $this->queue->iterate();
+        
+        $this->workerEventHandler    = $this->workerEventHandler(...);
+        $this->workerEventEmitter->addWorkerEventListener($this->workerEventHandler);
     }
     
     public function close(): void
     {
-        $this->queue->complete();
+        if(false === $this->queue->isComplete()) {
+            $this->queue->complete();
+        }
         
-        if (!$this->onClose->isComplete()) {
+        if (false === $this->onClose->isComplete()) {
             $this->onClose->complete();
+        }
+        
+        if($this->workerEventHandler !== null) {
+            $this->workerEventEmitter->removeWorkerEventListener($this->workerEventHandler);
+            $this->workerEventHandler = null;
         }
     }
     
@@ -51,23 +67,6 @@ final class ServerSocketFactoryWindows implements ServerSocket
     public function onClose(\Closure $onClose): void
     {
         $this->onClose->getFuture()->finally($onClose);
-    }
-    
-    /**
-     * Handle message MessageSocketTransfer to worker.
-     *
-     * @param mixed $message
-     *
-     * @return bool
-     */
-    public function workerEventHandler(mixed $message): bool
-    {
-        if($message instanceof MessageSocketTransfer) {
-            $this->queue->pushAsync($message)->ignore();
-            return true;
-        }
-        
-        return false;
     }
     
     /**
@@ -104,5 +103,19 @@ final class ServerSocketFactoryWindows implements ServerSocket
     public function getBindContext(): BindContext
     {
         return $this->bindContext;
+    }
+    
+    /**
+     * Handle message MessageSocketTransfer to worker.
+     *
+     * @param mixed $message
+     * @param int   $workerId
+     *
+     */
+    private function workerEventHandler(mixed $message, int $workerId = 0): void
+    {
+        if($message instanceof MessageSocketTransfer) {
+            $this->queue->pushAsync($message)->ignore();
+        }
     }
 }

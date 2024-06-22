@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace CT\AmpPool\Strategies\RestartStrategy;
 
 use CT\AmpPool\Strategies\WorkerStrategyAbstract;
-use CT\AmpPool\WorkerGroupInterface;
 
 /**
  * Restart worker with interval limiter.
@@ -50,9 +49,5 @@ final class RestartWithLimiter      extends WorkerStrategyAbstract
     public function getFailReason(): string
     {
         return 'Interval: ' . $this->currentInterval . 's, restarts: ' . $this->restartsCount . ' of ' . $this->maxRestarts . ' allowed';
-    }
-    
-    public function onWorkerStart(int $workerId, WorkerGroupInterface $group): void
-    {
     }
 }

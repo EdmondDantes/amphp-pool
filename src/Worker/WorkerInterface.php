@@ -3,8 +3,8 @@ declare(strict_types=1);
 
 namespace CT\AmpPool\Worker;
 
+use Amp\Sync\Channel;
 use CT\AmpPool\PoolState\PoolStateReadableInterface;
-use CT\AmpPool\Strategies\JobRunner\JobRunnerInterface;
 use CT\AmpPool\Worker\WorkerState\WorkersInfoInterface;
 use CT\AmpPool\Worker\WorkerState\WorkerStateStorageInterface;
 use CT\AmpPool\WorkerEventEmitterAwareInterface;
@@ -20,6 +20,8 @@ interface WorkerInterface   extends WorkerEventEmitterAwareInterface
     public function getGroupsScheme(): array;
     
     public function sendMessageToWatcher(mixed $message): void;
+    
+    public function getWatcherChannel(): Channel;
     
     public function getPoolStateStorage(): PoolStateReadableInterface;
     public function getWorkerStateStorage(): WorkerStateStorageInterface;

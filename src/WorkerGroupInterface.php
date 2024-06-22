@@ -9,6 +9,7 @@ use CT\AmpPool\Strategies\RestartStrategy\RestartStrategyInterface;
 use CT\AmpPool\Strategies\RunnerStrategy\RunnerStrategyInterface;
 use CT\AmpPool\Strategies\ScalingStrategy\ScalingStrategyInterface;
 use CT\AmpPool\Strategies\SocketStrategy\SocketStrategyInterface;
+use CT\AmpPool\Strategies\WorkerStrategyInterface;
 
 /**
  * Worker Group Interface, which defines the configuration of a worker group.
@@ -56,4 +57,9 @@ interface WorkerGroupInterface
     public function defineJobRunner(JobRunnerInterface $jobRunner): self;
     
     public function defineSocketStrategy(SocketStrategyInterface $socketStrategy): self;
+    
+    /**
+     * @return WorkerStrategyInterface[]
+     */
+    public function getWorkerStrategies(): array;
 }

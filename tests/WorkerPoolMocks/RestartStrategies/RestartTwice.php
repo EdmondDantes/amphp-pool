@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace CT\AmpPool\WorkerPoolMocks\RestartStrategies;
 
 use CT\AmpPool\Strategies\RestartStrategy\RestartStrategyInterface;
-use CT\AmpPool\WorkerGroupInterface;
 
 final class RestartTwice implements RestartStrategyInterface
 {
@@ -23,9 +22,5 @@ final class RestartTwice implements RestartStrategyInterface
     public function getFailReason(): string
     {
         return 'Restarted twice';
-    }
-    
-    public function onWorkerStart(int $workerId, WorkerGroupInterface $group): void
-    {
     }
 }

@@ -64,7 +64,6 @@ final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Ps
     public function __construct(
         private readonly int                  $id,
         private readonly Context              $context,
-        private readonly SocketPipeTransport|SocketListenerProvider|null $socketTransport,
         private readonly DeferredCancellation $deferredCancellation,
         private readonly WorkerEventEmitterInterface $eventEmitter
     ) {
@@ -77,34 +76,9 @@ final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Ps
         return $this->context;
     }
     
-    public function getSocketTransport(): SocketPipeTransport|SocketListenerProvider|null
-    {
-        return $this->socketTransport;
-    }
-    
     public function getWorkerId(): int
     {
         return $this->id;
-    }
-    
-    public function isReady(): bool
-    {
-        return $this->isReady;
-    }
-    
-    public function isUsed(): bool
-    {
-        return $this->isUsed;
-    }
-    
-    public function isExclusive(): bool
-    {
-        return $this->isExclusive;
-    }
-    
-    public function getJobsCount(): int
-    {
-        return $this->jobsCount;
     }
     
     public function runWorkerLoop(): void

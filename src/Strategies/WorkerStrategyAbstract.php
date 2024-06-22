@@ -104,6 +104,11 @@ abstract class WorkerStrategyAbstract implements WorkerStrategyInterface
         return $this->worker !== null && $this->workerPool === null;
     }
     
+    protected function isWatcher(): bool
+    {
+        return $this->worker === null && $this->workerPool !== null;
+    }
+    
     public function onStarted(): void
     {
     }

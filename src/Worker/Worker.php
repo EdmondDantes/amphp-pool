@@ -8,13 +8,11 @@ use Amp\CancelledException;
 use Amp\Cluster\ServerSocketPipeFactory;
 use Amp\DeferredCancellation;
 use Amp\DeferredFuture;
-use Amp\Parallel\Ipc;
 use Amp\Pipeline\ConcurrentIterator;
 use Amp\Pipeline\Queue;
 use Amp\Socket\ResourceSocket;
 use Amp\Socket\ServerSocketFactory;
 use Amp\Sync\Channel;
-use Amp\TimeoutCancellation;
 use CT\AmpPool\Internal\Messages\MessagePingPong;
 use CT\AmpPool\Internal\Messages\MessageShutdown;
 use CT\AmpPool\JobIpc\IpcServer;
@@ -67,15 +65,12 @@ class Worker                        implements WorkerInterface
     public function __construct(
         private readonly int     $id,
         private readonly Channel $ipcChannel,
-        private readonly string  $key,
-        private readonly string  $uri,
         private readonly WorkerGroup $group,
         /**
          * @var array<int, WorkerGroup>
          */
         private readonly array $groupsScheme,
-        LoggerInterface        $logger = null,
-        protected int $ipcTimeout   = 5
+        LoggerInterface        $logger = null
     ) {
         $this->queue                = new Queue();
         $this->iterator             = $this->queue->iterate();
@@ -106,6 +101,11 @@ class Worker                        implements WorkerInterface
     public function sendMessageToWatcher(mixed $message): void
     {
         $this->ipcChannel->send($message);
+    }
+    
+    public function getWatcherChannel(): Channel
+    {
+        return $this->ipcChannel;
     }
     
     /**
@@ -154,28 +154,6 @@ class Worker                        implements WorkerInterface
     public function getWorkerType(): WorkerTypeEnum
     {
         return $this->group->getWorkerType();
-    }
-    
-    public function getIpcForTransferSocket(): ResourceSocket
-    {
-        if($this->ipcForTransferSocket !== null) {
-            return $this->ipcForTransferSocket;
-        }
-        
-        try {
-            $socket                 = Ipc\connect($this->uri, $this->key, new TimeoutCancellation($this->ipcTimeout));
-            
-            if($socket instanceof ResourceSocket) {
-                $this->ipcForTransferSocket = $socket;
-            } else {
-                throw new \RuntimeException('Type of socket is not ResourceSocket');
-            }
-            
-        } catch (\Throwable $exception) {
-            throw new \RuntimeException('Could not connect to IPC socket', 0, $exception);
-        }
-        
-        return $this->ipcForTransferSocket;
     }
     
     public function getWorkerEventEmitter(): WorkerEventEmitterInterface

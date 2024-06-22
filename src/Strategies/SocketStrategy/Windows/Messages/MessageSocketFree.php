@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Internal\Messages;
+namespace CT\AmpPool\Strategies\SocketStrategy\Windows\Messages;
 
 /**
  * @internal

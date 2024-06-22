@@ -9,12 +9,35 @@ use CT\AmpPool\Strategies\RestartStrategy\RestartStrategyInterface;
 use CT\AmpPool\Strategies\RunnerStrategy\RunnerStrategyInterface;
 use CT\AmpPool\Strategies\ScalingStrategy\ScalingStrategyInterface;
 use CT\AmpPool\Strategies\SocketStrategy\SocketStrategyInterface;
+use Psr\Log\LoggerInterface;
 
 /**
  * Data structure for describing a group of workers.
  */
 final class WorkerGroup             implements WorkerGroupInterface
 {
+    public static function startStrategies(array $groupsScheme): void
+    {
+        foreach ($groupsScheme as $group) {
+            foreach ($group->getWorkerStrategies() as $strategy) {
+                $strategy->onStarted();
+            }
+        }
+    }
+    
+    public static function stopStrategies(array $groupsScheme, LoggerInterface $logger = null): void
+    {
+        foreach ($groupsScheme as $group) {
+            foreach ($group->getWorkerStrategies() as $strategy) {
+                try {
+                    $strategy->onStopped();
+                } catch (\Throwable $exception) {
+                    $logger?->error('Worker strategy "'.get_class($strategy).'" failed to stop', ['exception' => $exception]);
+                }
+            }
+        }
+    }
+    
     public function __construct(
         private readonly string         $entryPointClass,
         private readonly WorkerTypeEnum $workerType,
@@ -204,5 +227,32 @@ final class WorkerGroup             implements WorkerGroupInterface
         $this->socketStrategy       = $socketStrategy;
         
         return $this;
+    }
+    
+    public function getWorkerStrategies(): array
+    {
+        $strategyList               = [];
+        
+        if($this->runnerStrategy !== null) {
+            $strategyList[]         = $this->runnerStrategy;
+        }
+        
+        if($this->pickupStrategy !== null) {
+            $strategyList[]         = $this->pickupStrategy;
+        }
+        
+        if($this->restartStrategy !== null) {
+            $strategyList[]         = $this->restartStrategy;
+        }
+        
+        if($this->scalingStrategy !== null) {
+            $strategyList[]         = $this->scalingStrategy;
+        }
+        
+        if($this->socketStrategy !== null) {
+            $strategyList[]         = $this->socketStrategy;
+        }
+        
+        return $strategyList;
     }
 }
