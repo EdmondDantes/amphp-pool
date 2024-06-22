@@ -14,4 +14,6 @@ interface WorkerStateStorageReadableInterface
     public function getJobCount(): int;
 
     public function getWorkerGroupId(): int;
+    
+    public function getJobWeight(): int;
 }

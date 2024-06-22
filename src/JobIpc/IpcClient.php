@@ -133,7 +133,7 @@ final class IpcClient                   implements IpcClientInterface
         while($tryCount < $this->maxTryCount) {
             
             $isScalingPossible      = false;
-            $foundedWorkerId        = $this->pickupWorker($allowedGroups, $allowedWorkers, $ignoreWorkers, $tryCount);
+            $foundedWorkerId        = $this->pickupWorker($allowedGroups, $allowedWorkers, $ignoreWorkers, $priority, $weight, $tryCount);
             
             try {
                 
@@ -225,7 +225,14 @@ final class IpcClient                   implements IpcClientInterface
         }
     }
     
-    private function pickupWorker(array $allowedGroups = [], array $allowedWorkers = [], array $ignoreWorkers = [], int $priority = 0, int $tryCount = 0): int|null
+    private function pickupWorker(
+        array $allowedGroups        = [],
+        array $allowedWorkers       = [],
+        array $ignoreWorkers        = [],
+        int   $priority             = 0,
+        int   $weight               = 0,
+        int   $tryCount             = 0
+    ): int|null
     {
         if($allowedGroups === []) {
             $allowedGroups          = $this->workerGroup->getJobGroups();
@@ -236,7 +243,14 @@ final class IpcClient                   implements IpcClientInterface
             $ignoreWorkers[]        = $this->workerId;
         }
 
-        return $this->workerGroup->getPickupStrategy()?->pickupWorker($allowedGroups, $allowedWorkers, $ignoreWorkers, $priority, $tryCount);
+        return $this->workerGroup->getPickupStrategy()?->pickupWorker(
+            $allowedGroups,
+            $allowedWorkers,
+            $ignoreWorkers,
+            $priority,
+            $weight,
+            $tryCount
+        );
     }
     
     private function requestScaling(array $allowedGroups): bool

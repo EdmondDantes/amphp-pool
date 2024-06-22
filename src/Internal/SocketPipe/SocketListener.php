@@ -12,6 +12,7 @@ use CT\AmpPool\Internal\Messages\MessageSocketTransfer;
 use CT\AmpPool\Strategies\PickupStrategy\PickupRoundRobin;
 use CT\AmpPool\Strategies\PickupStrategy\PickupStrategyInterface;
 use CT\AmpPool\WorkerPool;
+use CT\AmpPool\WorkerPoolInterface;
 use Revolt\EventLoop;
 
 /**
@@ -25,11 +26,11 @@ final class SocketListener
     
     public function __construct(
         private readonly SocketAddress $address,
-        private readonly WorkerPool $workerPool,
+        private readonly WorkerPoolInterface $workerPool,
         PickupStrategyInterface $pickupWorkerStrategy = null
     )
     {
-        $this->pickupWorkerStrategy = $pickupWorkerStrategy ?? new PickupRoundRobin($this->workerPool);
+        $this->pickupWorkerStrategy = $pickupWorkerStrategy ?? new PickupRoundRobin;
     }
     
     public function getSocketAddress(): SocketAddress
@@ -59,18 +60,24 @@ final class SocketListener
         EventLoop::queue(function () use ($server) {
             while ($socket = $server->accept()) {
                 // Select free worker
-                $foundedWorker              = $this->pickupWorkerStrategy->pickupWorker(possibleWorkers: $this->workers)?->getWorker();
+                $foundedWorkerId    = $this->pickupWorkerStrategy->pickupWorker(
+                    possibleGroups : $this->workers,
+                    possibleWorkers: $this->workers
+                );
                 
-                if ($foundedWorker === null) {
+                if ($foundedWorkerId === null) {
                     $socket->close();
                     return;
                 }
                 
-                $pid                        = 0;
+                $foundedWorker              = $this->workerPool->findWorkerProcessContext($foundedWorkerId);
                 
-                if($foundedWorker->getContext() instanceof ProcessContext) {
-                    $pid                    = $foundedWorker->getContext()->getPid();
+                if($foundedWorker === null) {
+                    $socket->close();
+                    return;
                 }
+                
+                $pid                        = $foundedWorker->getContext()->getPid();
                 
                 $socketId                   = \socket_wsaprotocol_info_export(\socket_import_stream($socket->getResource()), $pid);
                 

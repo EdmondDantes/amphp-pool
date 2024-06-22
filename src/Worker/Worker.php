@@ -320,19 +320,17 @@ class Worker                        implements WorkerInterface
                     continue;
                 }
                 
-                $this->workerState->incrementJobCount();
-                
                 $jobRunner->runJob($jobRequest->getData(), $jobRequest->getPriority(), $jobRequest->getWeight(), $cancellation)
-                          ->finally(static function (mixed $result) use ($channel, $jobRequest, $selfRef, $cancellation) {
+                          ->finally(static function (mixed $result) use ($jobRunner, $channel, $jobRequest, $selfRef, $cancellation) {
                               
-                              $selfRef->get()?->workerState->decrementJobCount();
+                              $selfRef->get()?->workerState->jobDequeued($jobRequest->getWeight(), $jobRunner->canAcceptMoreJobs());
                               $selfRef->get()?->jobIpc?->sendJobResult($result, $channel, $jobRequest, $cancellation);
                           });
                 
                 if(false === $jobRunner->canAcceptMoreJobs()) {
                     
                     // If the Worker is busy, we will wait for the job to complete
-                    $this->workerState->workerNotReady();
+                    $this->workerState->jobEnqueued($jobRequest->getWeight(), false);
                     $jobRunner->awaitAll($cancellation);
                 } else {
                     /**
@@ -350,7 +348,7 @@ class Worker                        implements WorkerInterface
                     
                     try {
                         // Pass control to other workers
-                        $this->workerState->workerNotReady();
+                        $this->workerState->jobEnqueued($jobRequest->getWeight(), false);
                         delay(0.0, true, $cancellation);
                     } finally {
                         // If we return here, we are ready to accept new jobs

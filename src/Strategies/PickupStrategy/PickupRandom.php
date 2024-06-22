@@ -10,7 +10,14 @@ namespace CT\AmpPool\Strategies\PickupStrategy;
  */
 final class PickupRandom            extends PickupStrategyAbstract
 {
-    public function pickupWorker(array $possibleGroups = [], array $possibleWorkers = [], array $ignoredWorkers = [], int $priority = 0, int $tryCount = 0): ?int
+    public function pickupWorker(
+        array $possibleGroups = [],
+        array $possibleWorkers = [],
+        array $ignoredWorkers = [],
+        int   $priority = 0,
+        int   $weight = 0,
+        int   $tryCount = 0
+    ): ?int
     {
         $pool                       = iterator_to_array($this->iterate($possibleGroups, $possibleWorkers, $ignoredWorkers));
         

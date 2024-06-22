@@ -21,6 +21,7 @@ final class WorkerStateStorage      implements WorkerStateStorageInterface
     
     private bool $isReady           = true;
     private int $jobCount           = 0;
+    private int $jobWeight          = 0;
     
     public function __construct(private readonly int $workerId, private int $groupId = 0, private readonly bool $isWrite = false)
     {
@@ -39,6 +40,11 @@ final class WorkerStateStorage      implements WorkerStateStorageInterface
     public function getWorkerGroupId(): int
     {
         return $this->groupId;
+    }
+    
+    public function getJobWeight(): int
+    {
+        return $this->jobWeight;
     }
     
     public function workerReady(): void
@@ -75,6 +81,34 @@ final class WorkerStateStorage      implements WorkerStateStorageInterface
         $this->commit();
     }
     
+    public function jobEnqueued(int $weight, bool $canAcceptMoreJobs): void
+    {
+        $this->jobCount++;
+        $this->jobWeight            += $weight;
+        $this->isReady              = $canAcceptMoreJobs;
+        
+        $this->commit();
+    }
+    
+    public function jobDequeued(int $weight, bool $canAcceptMoreJobs): void
+    {
+        $this->jobCount--;
+        
+        if($this->jobCount < 0) {
+            $this->jobCount         = 0;
+        }
+        
+        $this->jobWeight            -= $weight;
+        
+        if($this->jobWeight < 0) {
+            $this->jobWeight        = 0;
+        }
+        
+        $this->isReady              = $canAcceptMoreJobs;
+        
+        $this->commit();
+    }
+    
     public function update(): void
     {
         $data                       = $this->read();
@@ -89,14 +123,14 @@ final class WorkerStateStorage      implements WorkerStateStorageInterface
             throw new \RuntimeException('Failed to unpack data');
         }
         
-        [, $isReady, $this->jobCount, $this->groupId] = $result;
+        [, $isReady, $this->jobCount, $this->groupId, $this->jobWeight] = $result;
         
         $this->isReady              = (bool)$isReady;
     }
     
     private function commit(): void
     {
-        $this->write(\pack('L*', (int)$this->isReady, $this->jobCount, $this->groupId));
+        $this->write(\pack('L*', (int)$this->isReady, $this->jobCount, $this->groupId, $this->jobWeight));
     }
     
     private function open(): void

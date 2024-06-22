@@ -11,6 +11,8 @@ interface WorkerStateInterface
     
     public function getGroupId(): int;
     
+    public function getWorkerWeight(): int;
+    
     public function pack(): string;
     
     public static function unpack(string $data): self;

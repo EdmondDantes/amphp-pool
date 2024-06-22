@@ -4,7 +4,9 @@ declare(strict_types=1);
 namespace CT\AmpPool;
 
 use Amp\Cancellation;
+use Amp\Parallel\Context\Context;
 use Amp\Parallel\Ipc\IpcHub;
+use CT\AmpPool\Internal\WorkerProcessContext;
 use CT\AmpPool\PoolState\PoolStateReadableInterface;
 use CT\AmpPool\Worker\WorkerState\WorkersInfoInterface;
 
@@ -49,6 +51,8 @@ interface WorkerPoolInterface
      * @return int[]
      */
     public function getWorkers(): array;
+    
+    public function findWorkerProcessContext(int $workerId): ?WorkerProcessContext;
     
     /**
      * Scale workers in the group.

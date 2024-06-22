@@ -9,4 +9,7 @@ interface WorkerStateStorageInterface extends WorkerStateStorageReadableInterfac
     public function workerNotReady(): void;
     public function incrementJobCount(): void;
     public function decrementJobCount(): void;
+    
+    public function jobEnqueued(int $weight, bool $canAcceptMoreJobs): void;
+    public function jobDequeued(int $weight, bool $canAcceptMoreJobs): void;
 }

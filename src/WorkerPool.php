@@ -10,6 +10,7 @@ use Amp\Cluster\ClusterWorkerMessage;
 use Amp\CompositeException;
 use Amp\DeferredCancellation;
 use Amp\Future;
+use Amp\Parallel\Context\Context;
 use Amp\Parallel\Context\ContextException;
 use Amp\Parallel\Context\ContextFactory;
 use Amp\Parallel\Context\ContextPanicError;
@@ -673,6 +674,17 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
         }
         
         return $workers;
+    }
+    
+    public function findWorkerProcessContext(int $workerId): ?WorkerProcessContext
+    {
+        foreach ($this->workers as $workerDescriptor) {
+            if($workerDescriptor->id === $workerId) {
+                return $workerDescriptor->getWorkerProcess();
+            }
+        }
+        
+        return null;
     }
     
     /**
