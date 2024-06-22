@@ -40,7 +40,7 @@ class IpcServerTest                 extends TestCase
         $receivedData               = null;
         
         $this->jobHandler           = function(StreamChannel $channel, JobRequest $jobRequest) use(&$receivedData) {
-            $receivedData           = $jobRequest->data;
+            $receivedData           = $jobRequest->getData();
             $channel->send('OK: ' . $receivedData);
         };
         

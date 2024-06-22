@@ -135,16 +135,16 @@ final class IpcServer               implements IpcServerInterface
         
         try {
             $response                   = $this->jobSerializer->createResponse(
-                $jobRequest->jobId,
+                $jobRequest->getJobId(),
                 $this->workerId,
-                $jobRequest->workerGroupId,
+                $jobRequest->getWorkerGroupId(),
                 $result
             );
         } catch (\Throwable $exception) {
             $response                   = $this->jobSerializer->createResponse(
-                $jobRequest->jobId,
+                $jobRequest->getJobId(),
                 $this->workerId,
-                $jobRequest->workerGroupId,
+                $jobRequest->getWorkerGroupId(),
                 $exception
             );
         }
@@ -156,7 +156,7 @@ final class IpcServer               implements IpcServerInterface
                 break;
             } catch (\Throwable $exception) {
                 $this->logger?->notice(
-                    'Error sending job #'.$jobRequest->jobId.' result (try number '.$i.')',
+                    'Error sending job #'.$jobRequest->getJobId().' result (try number '.$i.')',
                     ['exception' => $exception, 'request' => $jobRequest]
                 );
                 
@@ -197,9 +197,9 @@ final class IpcServer               implements IpcServerInterface
                     } catch (\Throwable $exception) {
                         
                         $channel->send($this->jobSerializer->createResponse(
-                            $request?->jobId ?? 0,
+                            $request?->getJobId() ?? 0,
                             $this->workerId,
-                            $request?->workerGroupId ?? 0,
+                            $request?->getWorkerGroupId() ?? 0,
                             $exception
                         ));
                     }

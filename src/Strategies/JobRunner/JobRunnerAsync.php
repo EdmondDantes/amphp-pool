@@ -4,7 +4,9 @@ declare(strict_types=1);
 namespace CT\AmpPool\Strategies\JobRunner;
 
 use Amp\Cancellation;
+use Amp\CompositeCancellation;
 use Amp\Future;
+use Amp\TimeoutCancellation;
 use function Amp\async;
 
 final class JobRunnerAsync         implements JobRunnerInterface
@@ -12,18 +14,22 @@ final class JobRunnerAsync         implements JobRunnerInterface
     private int $jobCount           = 0;
     private array $jobFutures       = [];
     
-    public function __construct(private readonly JobHandlerInterface $handler) {}
+    public function __construct(
+        private readonly JobHandlerInterface $handler,
+        private readonly int                 $maxJobCount = 100,
+        private readonly int                 $maxAwaitAllTimeout = 0
+    ) {}
     
-    public function runJob(string $data, int $priority = null, Cancellation $cancellation = null): Future
+    public function runJob(string $data, int $priority = null, int $weight = null, Cancellation $cancellation = null): Future
     {
         $handler                    = \WeakReference::create($this->handler);
         
-        $future                     = async(static function () use ($data, $handler) {
+        $future                     = async(static function () use ($data, $handler, $cancellation) {
             
             $handler                = $handler->get();
             
             if($handler instanceof JobHandlerInterface) {
-                return $handler->handleJob($data);
+                return $handler->handleJob($data, null, $cancellation);
             }
             
             return null;
@@ -55,14 +61,29 @@ final class JobRunnerAsync         implements JobRunnerInterface
         return $future;
     }
     
+    public function canAcceptMoreJobs(): bool
+    {
+        return $this->jobCount < $this->maxJobCount;
+    }
+    
     public function getJobCount(): int
     {
         return $this->jobCount;
     }
     
-    public function awaitAll(): void
+    public function awaitAll(Cancellation $cancellation = null): void
     {
-        Future\awaitAll($this->jobFutures);
+        if($cancellation === null && $this->maxAwaitAllTimeout > 0) {
+            $cancellation           = new TimeoutCancellation(
+                $this->maxAwaitAllTimeout, 'JobRunnerAsync::awaitAll() timed out: '.$this->maxAwaitAllTimeout.'s'
+            );
+        } elseif ($this->maxAwaitAllTimeout > 0) {
+            $cancellation           = new CompositeCancellation($cancellation, new TimeoutCancellation(
+                $this->maxAwaitAllTimeout, 'JobRunnerAsync::awaitAll() timed out: '.$this->maxAwaitAllTimeout.'s'
+            ));
+        }
+        
+        Future\awaitAll($this->jobFutures, $cancellation);
     }
     
     public function stopAll(\Throwable $throwable = null): bool

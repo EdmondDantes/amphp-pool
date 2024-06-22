@@ -79,8 +79,8 @@ class IpcClientTest                 extends TestCase
         $receivedData               = null;
 
         $this->jobHandler           = function (JobRequest $request) use (&$receivedData) {
-            $receivedData           = $request->data;
-            return 'OK: ' . $request->data;
+            $receivedData           = $request->getData();
+            return 'OK: ' . $request->getData();
         };
 
         $future                     = $this->ipcClient->sendJobImmediately('Test', allowedGroups: [1], awaitResult: true);
@@ -99,11 +99,23 @@ class IpcClientTest                 extends TestCase
             while ($iterator->continue($abortCancellation)) {
                 [$channel, $request]= $iterator->getValue();
                 
+                if($request === null) {
+                    break;
+                }
+                
+                if(false === $request instanceof JobRequestInterface) {
+                    throw new \RuntimeException('Invalid request');
+                }
+                
                 if(is_callable($this->jobHandler)) {
                     $response       = call_user_func($this->jobHandler, $request);
                     
-                    if($request->jobId !== 0) {
-                        $channel->send($this->jobSerializer->createResponse($request->jobId, $request->fromWorkerId, $request->workerGroupId, $response ?? ''));
+                    if($request->getJobId() !== 0) {
+                        $channel->send(
+                            $this->jobSerializer->createResponse(
+                                $request->getJobId(), $request->getFromWorkerId(), $request->getWorkerGroupId(), $response ?? ''
+                            )
+                        );
                     }
                 }
             }

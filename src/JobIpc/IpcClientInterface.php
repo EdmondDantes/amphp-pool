@@ -27,10 +27,18 @@ interface IpcClientInterface
      * @param array    $allowedWorkers
      * @param bool     $awaitResult
      * @param int      $priority
+     * @param int      $weight
      *
      * @return Future|null
      */
-    public function sendJob(string $data, array $allowedGroups = [], array $allowedWorkers = [], bool $awaitResult = false, int $priority = 0): Future|null;
+    public function sendJob(
+        string $data,
+        array  $allowedGroups = [],
+        array  $allowedWorkers = [],
+        bool   $awaitResult = false,
+        int    $priority = 0,
+        int    $weight = 0
+    ): Future|null;
     
     /**
      * Try to send a job to the worker immediately in the current fiber.
@@ -40,9 +48,16 @@ interface IpcClientInterface
      * @param array               $allowedWorkers
      * @param bool|DeferredFuture $awaitResult
      * @param int                 $priority
+     * @param int                 $weight
      *
      * @return Future|null
      * @throws \Throwable
      */
-    public function sendJobImmediately(string $data, array $allowedGroups = [], array $allowedWorkers = [], bool|DeferredFuture $awaitResult = false, int $priority = 0): Future|null;
+    public function sendJobImmediately(string              $data,
+                                       array               $allowedGroups = [],
+                                       array               $allowedWorkers = [],
+                                       bool|DeferredFuture $awaitResult = false,
+                                       int                 $priority = 0,
+                                       int                 $weight = 0
+    ): Future|null;
 }

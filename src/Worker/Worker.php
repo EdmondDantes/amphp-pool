@@ -21,6 +21,7 @@ use CT\AmpPool\Internal\Messages\MessageShutdown;
 use CT\AmpPool\Internal\SocketPipe\SocketPipeFactoryWindows;
 use CT\AmpPool\JobIpc\IpcServer;
 use CT\AmpPool\JobIpc\JobRequest;
+use CT\AmpPool\JobIpc\JobRequestInterface;
 use CT\AmpPool\PoolState\PoolStateReadableInterface;
 use CT\AmpPool\PoolState\PoolStateStorage;
 use CT\AmpPool\Strategies\JobRunner\JobRunnerInterface;
@@ -314,35 +315,47 @@ class Worker                        implements WorkerInterface
                     continue;
                 }
                 
+                if(false === $jobRequest instanceof JobRequestInterface) {
+                    $this->logger?->error('Invalid job request object', ['jobRequestType' => get_debug_type($jobRequest)]);
+                    continue;
+                }
+                
                 $this->workerState->incrementJobCount();
                 
-                $jobRunner->runJob($jobRequest->data, $jobRequest->priority, $cancellation)
+                $jobRunner->runJob($jobRequest->getData(), $jobRequest->getPriority(), $jobRequest->getWeight(), $cancellation)
                           ->finally(static function (mixed $result) use ($channel, $jobRequest, $selfRef, $cancellation) {
                               
                               $selfRef->get()?->workerState->decrementJobCount();
                               $selfRef->get()?->jobIpc?->sendJobResult($result, $channel, $jobRequest, $cancellation);
                           });
                 
-                /**
-                 * Currently, there is already at least one job in the execution queue.
-                 * However, since the queue is asynchronous, we are still in the current Fiber.
-                 * There may be a situation where the job is written incorrectly
-                 * and does not yield control back to our Fiber for a long time.
-                 * This will cause the server to think that everything is fine with the Worker
-                 * and continue sending other jobs to the queue.
-                 *
-                 * Therefore, before waiting for the next job,
-                 * we deliberately yield control to the EventLoop to allow the already accepted job to start executing.
-                 * If the job works correctly and yields control back to the current Fiber, then everything is fine.
-                 */
-                
-                try {
-                    // Pass control to other workers
+                if(false === $jobRunner->canAcceptMoreJobs()) {
+                    
+                    // If the Worker is busy, we will wait for the job to complete
                     $this->workerState->workerNotReady();
-                    delay(0.0, true, $cancellation);
-                } finally {
-                    // If we return here, we are ready to accept new jobs
-                    $this->workerState->workerReady();
+                    $jobRunner->awaitAll($cancellation);
+                } else {
+                    /**
+                     * Currently, there is already at least one job in the execution queue.
+                     * However, since the queue is asynchronous, we are still in the current Fiber.
+                     * There may be a situation where the job is written incorrectly
+                     * and does not yield control back to our Fiber for a long time.
+                     * This will cause the server to think that everything is fine with the Worker
+                     * and continue sending other jobs to the queue.
+                     *
+                     * Therefore, before waiting for the next job,
+                     * we deliberately yield control to the EventLoop to allow the already accepted job to start executing.
+                     * If the job works correctly and yields control back to the current Fiber, then everything is fine.
+                     */
+                    
+                    try {
+                        // Pass control to other workers
+                        $this->workerState->workerNotReady();
+                        delay(0.0, true, $cancellation);
+                    } finally {
+                        // If we return here, we are ready to accept new jobs
+                        $this->workerState->workerReady();
+                    }
                 }
             }
         } catch (CancelledException) {

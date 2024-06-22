@@ -78,7 +78,7 @@ final class IpcClient                   implements IpcClientInterface
     /**
      * @inheritDoc
      */
-    public function sendJob(string $data, array $allowedGroups = [], array $allowedWorkers = [], bool $awaitResult = false, int $priority = 0): Future|null
+    public function sendJob(string $data, array $allowedGroups = [], array $allowedWorkers = [], bool $awaitResult = false, int $priority = 0, int $weight = 0): Future|null
     {
         $deferred                   = null;
         
@@ -86,7 +86,7 @@ final class IpcClient                   implements IpcClientInterface
             $deferred               = new DeferredFuture();
         }
         
-        EventLoop::queue($this->sendJobImmediately(...), $data, $allowedGroups, $allowedWorkers, $deferred, $priority);
+        EventLoop::queue($this->sendJobImmediately(...), $data, $allowedGroups, $allowedWorkers, $deferred, $priority, $weight);
         
         return $deferred?->getFuture();
     }
@@ -103,11 +103,13 @@ final class IpcClient                   implements IpcClientInterface
      * @return Future|null
      * @throws \Throwable
      */
-    public function sendJobImmediately(string              $data,
-                                       array               $allowedGroups = [],
-                                       array               $allowedWorkers = [],
-                                       bool|DeferredFuture $awaitResult = false,
-                                       int                 $priority = 0
+    public function sendJobImmediately(
+        string              $data,
+        array               $allowedGroups       = [],
+        array               $allowedWorkers      = [],
+        bool|DeferredFuture $awaitResult         = false,
+        int                 $priority            = 0,
+        int                 $weight              = 0
     ): Future|null
     {
         $tryCount                   = 0;
@@ -140,7 +142,7 @@ final class IpcClient                   implements IpcClientInterface
                     throw new NoWorkersAvailable($allowedGroups);
                 }
                 
-                $socketId           = $this->tryToSendJob($foundedWorkerId, $data, $priority, $deferred);
+                $socketId           = $this->tryToSendJob($foundedWorkerId, $data, $priority, $weight, $deferred);
                 
                 if($deferred !== null) {
                     $this->resultsFutures[spl_object_id($deferred)] = [$deferred, $socketId, time()];
@@ -182,6 +184,7 @@ final class IpcClient                   implements IpcClientInterface
         $foundedWorkerId,
         string $data,
         int $priority               = 0,
+        int $weight                 = 0,
         DeferredFuture $deferred    = null
     ): int
     {
@@ -190,7 +193,7 @@ final class IpcClient                   implements IpcClientInterface
         
         try {
             $channel->send(
-                $this->jobSerializer->createRequest($jobId, $this->workerId, $this->workerGroup->getWorkerGroupId(), $data, $priority)
+                $this->jobSerializer->createRequest($jobId, $this->workerId, $this->workerGroup->getWorkerGroupId(), $data, $priority, $weight)
             );
         } catch (\Throwable $exception) {
             $deferred->complete($exception);
@@ -295,10 +298,10 @@ final class IpcClient                   implements IpcClientInterface
                 
                 $response           = $this->jobSerializer->parseResponse($data);
                 
-                if(array_key_exists($response->jobId, $this->resultsFutures)) {
-                    [$deferred, ] = $this->resultsFutures[$response->jobId];
-                    unset($this->resultsFutures[$response->jobId]);
-                    $deferred->complete($response->data);
+                if(array_key_exists($response->getJobId(), $this->resultsFutures)) {
+                    [$deferred, ] = $this->resultsFutures[$response->getJobId()];
+                    unset($this->resultsFutures[$response->getJobId()]);
+                    $deferred->complete($response->getData());
                 }
             }
         } catch (\Throwable $exception) {
@@ -310,6 +313,8 @@ final class IpcClient                   implements IpcClientInterface
                 $channel->close();
             } catch (\Throwable) {
             }
+            
+            throw $exception;
         }
     }
     

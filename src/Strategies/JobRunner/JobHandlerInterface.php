@@ -3,9 +3,10 @@ declare(strict_types=1);
 
 namespace CT\AmpPool\Strategies\JobRunner;
 
+use Amp\Cancellation;
 use CT\AmpPool\Coroutine\CoroutineInterface;
 
 interface JobHandlerInterface
 {
-    public function handleJob(string $data, CoroutineInterface $coroutine = null): mixed;
+    public function handleJob(string $data, CoroutineInterface $coroutine = null, Cancellation $cancellation = null): mixed;
 }

@@ -101,22 +101,31 @@ final class Scheduler               implements SchedulerInterface
         }
     }
     
-    public function run(CoroutineInterface $coroutine): Future
+    public function run(CoroutineInterface $coroutine, Cancellation $cancellation = null): Future
     {
         $this->init();
         
-        $callbackId                 = EventLoop::defer(function (string $callbackId)
-        use ($coroutine): void {
+        $selfRef                    = \WeakReference::create($this);
+        
+        $callbackId                 = EventLoop::defer(static function (string $callbackId)
+        use ($coroutine, $selfRef): void {
             
-            $suspension             = EventLoop::getSuspension();
+            $self                   = $selfRef->get();
             
-            if(false === array_key_exists($callbackId, $this->coroutines)) {
+            if($self === null) {
+                return;
+            }
+            
+            if(false === array_key_exists($callbackId, $self->coroutines)) {
                 $coroutine->fail(new CoroutineNotStarted);
                 return;
             }
             
+            $suspension             = EventLoop::getSuspension();
+            
             $coroutine->defineSuspension($suspension);
-            $coroutine->defineSchedulerSuspension($this->suspension);
+            $coroutine->defineSchedulerSuspension($self->suspension);
+            unset($self);
             
             try {
                 $coroutine->resolve($coroutine->execute());
@@ -129,9 +138,16 @@ final class Scheduler               implements SchedulerInterface
                 }
                 
             } finally {
+                
+                $self               = $selfRef->get();
+                
                 $coroutine->resolve();
-                unset($this->coroutines[$callbackId]);
-                $this->resume();
+                
+                if($self !== null) {
+                    unset($self->coroutines[$callbackId]);
+                }
+                
+                $self?->resume();
             }
         });
         
