@@ -16,6 +16,7 @@ use Amp\Socket\SocketAddress;
 use Amp\Socket\SocketException;
 use Amp\Sync\Channel;
 use Amp\TimeoutCancellation;
+use Psr\Log\LoggerInterface;
 use Revolt\EventLoop;
 use function Amp\delay;
 use const Amp\Process\IS_WINDOWS;
@@ -53,10 +54,19 @@ final class IpcServer               implements IpcServerInterface
     /**
      * @param int                         $workerId
      * @param JobSerializerInterface|null $jobSerializer
+     * @param LoggerInterface|null        $logger
+     * @param int                         $sendResultAttempts
+     * @param float                       $attemptDelay
      *
      * @throws SocketException
      */
-    public function __construct(int $workerId, JobSerializerInterface $jobSerializer = null)
+    public function __construct(
+        int $workerId,
+        JobSerializerInterface $jobSerializer       = null,
+        private readonly ?LoggerInterface $logger   = null,
+        private readonly int $sendResultAttempts    = 2,
+        private readonly float $attemptDelay        = 0.5
+    )
     {
         $address                    = self::getSocketAddress($workerId);
         
@@ -115,7 +125,7 @@ final class IpcServer               implements IpcServerInterface
         return $this->jobQueue;
     }
     
-    public function sendJobResult(mixed $result, Channel $channel, JobRequest $jobRequest, $cancellation): void
+    public function sendJobResult(mixed $result, Channel $channel, JobRequest $jobRequest, Cancellation $cancellation = null): void
     {
         if($result === null) {
             return;
@@ -125,16 +135,35 @@ final class IpcServer               implements IpcServerInterface
             return;
         }
         
-        // Try to send the result twice
-        for($i = 1; $i <= 2; $i++) {
+        try {
+            $response                   = $this->jobSerializer->createResponse(
+                $jobRequest->jobId,
+                $this->workerId,
+                $jobRequest->workerGroupId,
+                $result
+            );
+        } catch (\Throwable $exception) {
+            $response                   = $this->jobSerializer->createResponse(
+                $jobRequest->jobId,
+                $this->workerId,
+                $jobRequest->workerGroupId,
+                $exception
+            );
+        }
+        
+        // Try to send the result sendResultAttempts times.
+        for($i = 1; $i <= $this->sendResultAttempts; $i++) {
             try {
-                $channel->send($result);
+                $channel->send($response);
                 break;
             } catch (\Throwable $exception) {
-                $this->logger->notice('Error sending job result (try number '.$i.')', ['exception' => $exception]);
+                $this->logger?->notice(
+                    'Error sending job #'.$jobRequest->jobId.' result (try number '.$i.')',
+                    ['exception' => $exception, 'request' => $jobRequest]
+                );
                 
-                if($i === 1) {
-                    delay(0.5, true, $cancellation);
+                if($i < $this->sendResultAttempts) {
+                    delay($this->attemptDelay, true, $cancellation);
                 }
             }
         }

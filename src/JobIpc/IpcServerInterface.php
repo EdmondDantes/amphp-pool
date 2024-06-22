@@ -22,5 +22,5 @@ interface IpcServerInterface
     public function getJobQueue(): Queue;
     public function getAddress(): SocketAddress;
     
-    public function sendJobResult(mixed $result, Channel $channel, JobRequest $jobRequest, $cancellation): void;
+    public function sendJobResult(mixed $result, Channel $channel, JobRequest $jobRequest, Cancellation $cancellation = null): void;
 }
