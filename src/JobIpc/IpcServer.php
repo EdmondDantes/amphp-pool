@@ -33,8 +33,6 @@ final class IpcServer               implements IpcServerInterface
     public const string HAND_SHAKE = 'AM PHP WORKER IPC';
     public const string CLOSE_HAND_SHAKE = 'AM PHP WORKER IPC CLOSE';
     
-    private int $workerId;
-    
     private ?string $toUnlink = null;
     private Socket\ResourceServerSocket $server;
     private SocketAddress $address;
@@ -61,7 +59,7 @@ final class IpcServer               implements IpcServerInterface
      * @throws SocketException
      */
     public function __construct(
-        int $workerId,
+        private readonly int $workerId,
         JobSerializerInterface $jobSerializer       = null,
         private readonly ?LoggerInterface $logger   = null,
         private readonly int $sendResultAttempts    = 2,
@@ -201,7 +199,7 @@ final class IpcServer               implements IpcServerInterface
                         $channel->send($this->jobSerializer->createResponse(
                             $request?->jobId ?? 0,
                             $this->workerId,
-                            $request->workerGroupId,
+                            $request?->workerGroupId ?? 0,
                             $exception
                         ));
                     }

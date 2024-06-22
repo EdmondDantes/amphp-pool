@@ -97,11 +97,9 @@ class IpcClientTest                 extends TestCase
         
         try {
             while ($iterator->continue($abortCancellation)) {
-                [$channel, $data]   = $iterator->getValue();
+                [$channel, $request]= $iterator->getValue();
                 
                 if(is_callable($this->jobHandler)) {
-                    
-                    $request        = $this->jobSerializer->parseRequest($data);
                     $response       = call_user_func($this->jobHandler, $request);
                     
                     if($request->jobId !== 0) {

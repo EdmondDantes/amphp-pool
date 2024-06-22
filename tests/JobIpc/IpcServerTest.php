@@ -39,15 +39,17 @@ class IpcServerTest                 extends TestCase
     {
         $receivedData               = null;
         
-        $this->jobHandler           = function(StreamChannel $channel, string $data) use(&$receivedData) {
-            $receivedData           = $data;
-            $channel->send('OK: '.$data);
+        $this->jobHandler           = function(StreamChannel $channel, JobRequest $jobRequest) use(&$receivedData) {
+            $receivedData           = $jobRequest->data;
+            $channel->send('OK: ' . $receivedData);
         };
         
         $client                     = $this->getSocketForClient();
         $channel                    = new StreamChannel($client, $client, new PassthroughSerializer());
         
-        $channel->send('Test');
+        $jobSerializer              = new JobSerializer();
+        
+        $channel->send($jobSerializer->createRequest(1, 1, 1, 'Test'));
         
         $response                   = $channel->receive(new TimeoutCancellation(5));
         
