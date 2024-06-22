@@ -13,8 +13,11 @@ use Amp\Pipeline\Queue;
 use Amp\Serialization\PassthroughSerializer;
 use Amp\Socket;
 use Amp\Socket\SocketAddress;
+use Amp\Socket\SocketException;
+use Amp\Sync\Channel;
 use Amp\TimeoutCancellation;
 use Revolt\EventLoop;
+use function Amp\delay;
 use const Amp\Process\IS_WINDOWS;
 
 /**
@@ -36,6 +39,7 @@ final class IpcServer               implements IpcServerInterface
     private SocketAddress $address;
     
     private Queue $jobQueue;
+    private JobSerializerInterface $jobSerializer;
     
     public static function getSocketAddress(int $workerId): SocketAddress
     {
@@ -47,11 +51,12 @@ final class IpcServer               implements IpcServerInterface
     }
     
     /**
-     * @param int $workerId
+     * @param int                         $workerId
+     * @param JobSerializerInterface|null $jobSerializer
      *
-     * @throws Socket\SocketException
+     * @throws SocketException
      */
-    public function __construct(int $workerId)
+    public function __construct(int $workerId, JobSerializerInterface $jobSerializer = null)
     {
         $address                    = self::getSocketAddress($workerId);
         
@@ -62,6 +67,7 @@ final class IpcServer               implements IpcServerInterface
         $this->address              = $address;
         $this->server               = Socket\listen($address);
         $this->jobQueue             = new Queue(10);
+        $this->jobSerializer        = $jobSerializer ?? new JobSerializer();
     }
     
     public function __destruct()
@@ -109,6 +115,31 @@ final class IpcServer               implements IpcServerInterface
         return $this->jobQueue;
     }
     
+    public function sendJobResult(mixed $result, Channel $channel, JobRequest $jobRequest, $cancellation): void
+    {
+        if($result === null) {
+            return;
+        }
+        
+        if($channel->isClosed()) {
+            return;
+        }
+        
+        // Try to send the result twice
+        for($i = 1; $i <= 2; $i++) {
+            try {
+                $channel->send($result);
+                break;
+            } catch (\Throwable $exception) {
+                $this->logger->notice('Error sending job result (try number '.$i.')', ['exception' => $exception]);
+                
+                if($i === 1) {
+                    delay(0.5, true, $cancellation);
+                }
+            }
+        }
+    }
+    
     private function createWorkerSocket(
         ReadableResourceStream|Socket\Socket $stream, Cancellation $cancellation = null): void
     {
@@ -130,7 +161,21 @@ final class IpcServer               implements IpcServerInterface
                         break;
                     }
                     
-                    $this->jobQueue->pushAsync([$channel, $data]);
+                    $request        = null;
+                    
+                    try {
+                        $request    = $this->jobSerializer->parseRequest($data);
+                        $this->jobQueue->pushAsync([$channel, $request]);
+                        
+                    } catch (\Throwable $exception) {
+                        
+                        $channel->send($this->jobSerializer->createResponse(
+                            $request?->jobId ?? 0,
+                            $this->workerId,
+                            $request->workerGroupId,
+                            $exception
+                        ));
+                    }
                 }
             } catch (CancelledException) {
                 // Ignore

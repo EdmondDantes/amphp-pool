@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace CT\AmpPool\JobIpc;
 
+use CT\AmpPool\Exceptions\RemoteException;
+
 final class JobSerializer            implements JobSerializerInterface
 {
     final const int HEADER_LENGTH   = 16;
@@ -31,9 +33,20 @@ final class JobSerializer            implements JobSerializerInterface
         return new JobRequest($jobId, $fromWorkerId, $workerGroupId, $priority, $data);
     }
     
-    public function createResponse(int $jobId, int $fromWorkerId, int $workerGroupId, string $data): string
+    public function createResponse(int $jobId, int $fromWorkerId, int $workerGroupId, string|\Throwable $data): string
     {
-        return pack('V*', $jobId, $fromWorkerId, $workerGroupId, strlen($data)).$data;
+        $isException                = $data instanceof \Throwable ? 1 : 0;
+        
+        if($data instanceof \Throwable) {
+            
+            if(false === $data instanceof RemoteException) {
+                $data               = new RemoteException($data->getMessage(), 0, $data);
+            }
+            
+            $data                   = \serialize($data);
+        }
+        
+        return pack('V*', $jobId, $fromWorkerId, $workerGroupId, $isException).$data;
     }
     
     public function parseResponse(string $response): JobResponse
@@ -49,10 +62,20 @@ final class JobSerializer            implements JobSerializerInterface
             throw new \RuntimeException('Failed to unpack data for response');
         }
         
-        [, $jobId, $fromWorkerId, $workerGroupId, $dataLength] = $buffer;
+        [, $jobId, $fromWorkerId, $workerGroupId, $isError] = $buffer;
         
         $data                       = \substr($response, self::HEADER_LENGTH);
+        $exception                  = null;
         
-        return new JobResponse($jobId, $fromWorkerId, $workerGroupId, $dataLength, $data);
+        if($isError) {
+            $exception              = \unserialize($data);
+            $data                   = '';
+            
+            if(false === $exception) {
+                $exception          = new RemoteException('Failed to unserialize response data');
+            }
+        }
+        
+        return new JobResponse($jobId, $fromWorkerId, $workerGroupId, $isError, $data, $exception);
     }
 }

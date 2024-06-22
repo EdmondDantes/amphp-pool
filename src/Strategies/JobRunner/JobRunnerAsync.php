@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace CT\AmpPool\Strategies\JobRunner;
 
+use Amp\Cancellation;
 use Amp\Future;
 use function Amp\async;
 
@@ -13,7 +14,7 @@ final class JobRunnerAsync         implements JobRunnerInterface
     
     public function __construct(private readonly JobHandlerInterface $handler) {}
     
-    public function runJob(string $data, int $priority = null): Future
+    public function runJob(string $data, int $priority = null, Cancellation $cancellation = null): Future
     {
         $handler                    = \WeakReference::create($this->handler);
         

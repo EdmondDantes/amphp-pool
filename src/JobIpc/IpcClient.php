@@ -34,7 +34,7 @@ final class IpcClient                   implements IpcClientInterface
      * @var StreamChannel[]
      */
     private array                       $workerChannels = [];
-    private JobSerializerInterface|null $jobTransport   = null;
+    private JobSerializerInterface|null $jobSerializer  = null;
     /**
      * List of futures that are waiting for the result of the job with SocketId, and time when the job was sent
      * @var array [Future, int, int]
@@ -67,7 +67,7 @@ final class IpcClient                   implements IpcClientInterface
             throw new \InvalidArgumentException('WorkerGroup must have a PickupStrategy');
         }
         
-        $this->jobTransport         = $jobSerializer ?? new JobSerializer();
+        $this->jobSerializer        = $jobSerializer ?? new JobSerializer();
     }
     
     public function mainLoop(): void
@@ -190,7 +190,7 @@ final class IpcClient                   implements IpcClientInterface
         
         try {
             $channel->send(
-                $this->jobTransport->createRequest($jobId, $this->workerId, $this->workerGroup->getWorkerGroupId(), $data, $priority)
+                $this->jobSerializer->createRequest($jobId, $this->workerId, $this->workerGroup->getWorkerGroupId(), $data, $priority)
             );
         } catch (\Throwable $exception) {
             $deferred->complete($exception);
@@ -293,7 +293,7 @@ final class IpcClient                   implements IpcClientInterface
         try {
             while (($data = $channel->receive($this->cancellation)) !== null) {
                 
-                $response           = $this->jobTransport->parseResponse($data);
+                $response           = $this->jobSerializer->parseResponse($data);
                 
                 if(array_key_exists($response->jobId, $this->resultsFutures)) {
                     [$deferred, ] = $this->resultsFutures[$response->jobId];

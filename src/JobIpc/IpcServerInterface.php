@@ -7,6 +7,7 @@ use Amp\ByteStream\StreamChannel;
 use Amp\Cancellation;
 use Amp\Pipeline\Queue;
 use Amp\Socket\SocketAddress;
+use Amp\Sync\Channel;
 
 interface IpcServerInterface
 {
@@ -20,4 +21,6 @@ interface IpcServerInterface
      */
     public function getJobQueue(): Queue;
     public function getAddress(): SocketAddress;
+    
+    public function sendJobResult(mixed $result, Channel $channel, JobRequest $jobRequest, $cancellation): void;
 }
