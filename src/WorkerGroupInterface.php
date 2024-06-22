@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace CT\AmpPool;
 
+use CT\AmpPool\Strategies\JobRunner\JobRunnerInterface;
 use CT\AmpPool\Strategies\PickupStrategy\PickupStrategyInterface;
 use CT\AmpPool\Strategies\RestartStrategy\RestartStrategyInterface;
 use CT\AmpPool\Strategies\RunnerStrategy\RunnerStrategyInterface;
@@ -33,6 +34,8 @@ interface WorkerGroupInterface
     
     public function getScalingStrategy(): ?ScalingStrategyInterface;
     
+    public function getJobRunner(): ?JobRunnerInterface;
+    
     public function defineGroupName(string $groupName): self;
     
     public function defineWorkerGroupId(int $workerGroupId): self;
@@ -46,4 +49,6 @@ interface WorkerGroupInterface
     public function defineRestartStrategy(RestartStrategyInterface $restartStrategy): self;
     
     public function defineScalingStrategy(ScalingStrategyInterface $scalingStrategy): self;
+    
+    public function defineJobRunner(JobRunnerInterface $jobRunner): self;
 }

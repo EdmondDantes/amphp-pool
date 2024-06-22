@@ -18,6 +18,7 @@ use CT\AmpPool\Internal\Messages\MessagePingPong;
 use CT\AmpPool\Internal\Messages\MessageShutdown;
 use CT\AmpPool\Internal\SocketPipe\SocketPipeFactoryWindows;
 use CT\AmpPool\JobIpc\IpcServer;
+use CT\AmpPool\JobIpc\JobRequest;
 use CT\AmpPool\PoolState\PoolStateReadableInterface;
 use CT\AmpPool\PoolState\PoolStateStorage;
 use CT\AmpPool\Strategies\JobRunner\JobRunnerInterface;
@@ -215,7 +216,7 @@ class Worker                        implements WorkerInterface
     {
         $abortCancellation          = $this->loopCancellation->getCancellation();
         
-        if($this->group->getWorkerType() === WorkerTypeEnum::JOB) {
+        if($this->group->getJobRunner() !== null) {
             EventLoop::queue($this->jobLoop(...), $abortCancellation);
         }
         
@@ -251,61 +252,34 @@ class Worker                        implements WorkerInterface
     
     protected function jobLoop(Cancellation $cancellation = null): void
     {
-        if(null === $this->jobHandler) {
+        if(null === $this->group->getJobRunner()) {
             return;
         }
+        
+        $jobRunner                  = $this->group->getJobRunner();
         
         $this->workerState          = new WorkerStateStorage($this->id, $this->group->getWorkerGroupId(), true);
         $this->workerState->workerReady();
         
         $jobQueueIterator           = $this->jobIpc->getJobQueue()->iterate();
+        $selfRef                    = \WeakReference::create($this);
         
         while ($jobQueueIterator->continue($cancellation)) {
             
-            if($this->jobHandler === null) {
-                return;
-            }
+            [$channel, $jobRequest] = $jobQueueIterator->getValue();
             
-            [$channel, $data]       = $jobQueueIterator->getValue();
-            
-            if($data === null) {
+            if($jobRequest === null) {
                 continue;
             }
             
-            EventLoop::queue(function () use ($channel, $data, $cancellation) {
-                
-                if($this->jobHandler === null) {
-                    return;
-                }
-                
-                $this->workerState->incrementJobCount();
-                
-                $result             = null;
-                
-                try {
-                    $result         = $this->jobHandler->runJob($data, $this, $cancellation);
-                } catch (\Throwable $exception) {
-                    $this->logger->error('Error processing job', ['exception' => $exception]);
-                } finally {
-                    $this->workerState->decrementJobCount();
-                }
-                
-                if($result !== null) {
-                    // Try to send the result twice
-                    for($i = 1; $i <= 2; $i++) {
-                        try {
-                            $channel->send($result);
-                            break;
-                        } catch (\Throwable $exception) {
-                            $this->logger->notice('Error sending job result (try number '.$i.')', ['exception' => $exception]);
-                            
-                            if($i === 1) {
-                                delay(0.5, true, $cancellation);
-                            }
-                        }
-                    }
-                }
-            });
+            $this->workerState->incrementJobCount();
+            
+            $jobRunner->runJob($jobRequest->data, $jobRequest->priority, $cancellation)
+                      ->finally(static function (mixed $result) use ($channel, $jobRequest, $selfRef, $cancellation) {
+                          
+                          $selfRef->get()?->workerState->decrementJobCount();
+                          $selfRef->get()?->jobIpc?->sendJobResult($result, $channel, $jobRequest, $cancellation);
+                      });
         }
     }
     

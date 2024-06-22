@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace CT\AmpPool;
 
+use CT\AmpPool\Strategies\JobRunner\JobRunnerInterface;
 use CT\AmpPool\Strategies\PickupStrategy\PickupStrategyInterface;
 use CT\AmpPool\Strategies\RestartStrategy\RestartStrategyInterface;
 use CT\AmpPool\Strategies\RunnerStrategy\RunnerStrategyInterface;
@@ -27,6 +28,7 @@ final class WorkerGroup             implements WorkerGroupInterface
         private ?PickupStrategyInterface $pickupStrategy = null,
         private ?RestartStrategyInterface $restartStrategy = null,
         private ?ScalingStrategyInterface $scalingStrategy = null,
+        private ?JobRunnerInterface     $jobRunner = null,
         private int                     $workerGroupId = 0,
     ) {}
     
@@ -83,6 +85,11 @@ final class WorkerGroup             implements WorkerGroupInterface
     public function getScalingStrategy(): ?ScalingStrategyInterface
     {
         return $this->scalingStrategy;
+    }
+    
+    public function getJobRunner(): ?JobRunnerInterface
+    {
+        return $this->jobRunner;
     }
     
     public function defineGroupName(string $groupName): self
@@ -166,6 +173,17 @@ final class WorkerGroup             implements WorkerGroupInterface
         }
         
         $this->scalingStrategy      = $scalingStrategy;
+        
+        return $this;
+    }
+    
+    public function defineJobRunner(JobRunnerInterface $jobRunner): self
+    {
+        if($this->jobRunner !== null) {
+            throw new \LogicException('Job runner is already defined');
+        }
+        
+        $this->jobRunner            = $jobRunner;
         
         return $this;
     }
