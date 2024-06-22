@@ -35,6 +35,7 @@ use CT\AmpPool\Strategies\ScalingStrategy\ScalingByRequest;
 use CT\AmpPool\Strategies\SocketStrategy\Unix\SocketUnixStrategy;
 use CT\AmpPool\Strategies\SocketStrategy\Windows\SocketWindowsStrategy;
 use CT\AmpPool\WatcherEvents\WorkerProcessStarted;
+use CT\AmpPool\WatcherEvents\WorkerProcessTerminating;
 use CT\AmpPool\Worker\Internal\WorkerDescriptor;
 use CT\AmpPool\Worker\WorkerState\WorkersInfo;
 use CT\AmpPool\Worker\WorkerState\WorkersInfoInterface;
@@ -424,44 +425,40 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
         $context                    = $this->contextFactory->start($runnerStrategy->getScript());
         
         try {
-            $key                    = $runnerStrategy->sendPoolContext(
-                $context,
+            
+            $deferredCancellation   = new DeferredCancellation();
+            
+            $workerProcess          = new WorkerProcessContext(
                 $workerDescriptor->id,
-                $workerDescriptor->group
+                $context,
+                $deferredCancellation,
+                $this->eventEmitter,
             );
             
-            if($runnerStrategy->shouldProvideSocketTransport()) {
-                $socketTransport    = $this->provider->createSocketTransport($key);
+            if($this->logger !== null) {
+                $workerProcess->setLogger($this->logger);
             }
+            
+            $workerDescriptor->setWorkerProcess($workerProcess);
+            
+            $this->eventEmitter->emitWorkerEvent(new WorkerProcessStarted($workerDescriptor->id, $context), $workerDescriptor->id);
+            
+            $workerProcess->info(\sprintf('Started %s worker #%d', $workerDescriptor->group->getWorkerType()->value, $workerDescriptor->id));
         
         } catch (\Throwable $exception) {
+            
+            $workerDescriptor->reset();
             
             if (false === $context->isClosed()) {
                 $context->close();
             }
             
-            throw new \Exception(
+            $this->eventEmitter->emitWorkerEvent(new WorkerProcessTerminating($workerDescriptor->id, $context, $exception), $workerDescriptor->id);
+            
+            throw new \RuntimeException(
                 "Starting the worker '{$workerDescriptor->id}' failed. Sending the pool context failed", previous: $exception
             );
         }
-        
-        $deferredCancellation       = new DeferredCancellation();
-        $workerProcess              = new WorkerProcessContext(
-            $workerDescriptor->id,
-            $context,
-            $deferredCancellation,
-            $this->eventEmitter,
-        );
-        
-        if($this->logger !== null) {
-            $workerProcess->setLogger($this->logger);
-        }
-        
-        $workerDescriptor->setWorkerProcess($workerProcess);
-        
-        $this->eventEmitter->emitWorkerEvent(new WorkerProcessStarted($workerDescriptor->id, $context), $workerDescriptor->id);
-        
-        $workerProcess->info(\sprintf('Started %s worker #%d', $workerDescriptor->group->getWorkerType()->value, $workerDescriptor->id));
         
         $workerDescriptor->setFuture(async($this->workerWatcher(...), $workerDescriptor, $deferredCancellation)->ignore());
     }
@@ -480,15 +477,19 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
     protected function workerWatcher(WorkerDescriptor $workerDescriptor, DeferredCancellation $deferredCancellation): void
     {
         if(false === $this->running) {
+            
+            if($workerDescriptor->getWorkerProcess() !== null) {
+                $this->eventEmitter->emitWorkerEvent(
+                    new WorkerProcessTerminating(
+                        $workerDescriptor->id, $workerDescriptor->getWorkerProcess()->getContext()
+                    ),
+                    $workerDescriptor->id
+                );
+            }
+            
+            $workerDescriptor->reset();
+            
             return;
-        }
-        
-        if($this->provider->used()) {
-            async(
-                $this->provider->provideFor(...),
-                $workerDescriptor->getWorkerProcess()->getSocketTransport(),
-                $deferredCancellation->getCancellation()
-            )->ignore();
         }
         
         $id                         = $workerDescriptor->id;
@@ -498,12 +499,25 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
             
             $exitResult             = $this->workerEventLoop($workerDescriptor, $deferredCancellation);
             
+            $this->eventEmitter->emitWorkerEvent(
+                new WorkerProcessTerminating($workerDescriptor->id, $workerDescriptor->getWorkerProcess()->getContext()),
+                $workerDescriptor->id
+            );
+            
+            if($exitResult instanceof TerminateWorkerException) {
+                $workerDescriptor->markAsStopped();
+                $workerDescriptor->reset();
+                $workerProcess->error("Worker {$id} will be stopped forever: {$exitResult->getMessage()}");
+                
+                return;
+            }
+            
             $restarting             = $workerDescriptor->group->getRestartStrategy()?->shouldRestart($exitResult) ?? -1;
             
             // Restart the worker if the server is still running and the worker should be restarted.
             // We always terminate the worker if the server is not running
             // or $exitResult is an instance of TerminateWorkerException.
-            if ($this->running && false === $exitResult instanceof TerminateWorkerException && $restarting >= 0) {
+            if ($this->running && $restarting >= 0) {
                 
                 if($restarting > 0) {
                     $workerProcess->info("Worker {$id} will be restarted in {$restarting} seconds");
@@ -515,8 +529,9 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
             } else if($restarting < 0) {
                 
                 $workerDescriptor->markAsStopped();
+                $workerDescriptor->reset();
                 
-                $workerProcess->info(
+                $workerProcess->warning(
                     "Worker {$id} will not be restarted: " .
                     $workerDescriptor->group->getRestartStrategy()?->getFailReason() ?? ''
                 );
