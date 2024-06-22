@@ -83,7 +83,7 @@ class Worker                        implements WorkerInterface
         $this->iterator             = $this->queue->iterate();
         $this->loopCancellation     = new DeferredCancellation();
         
-        if($this->group->getWorkerType() === WorkerTypeEnum::JOB) {
+        if($this->group->getRunnerStrategy() !== null) {
             $this->jobIpc           = new IpcServer($this->id);
         }
         
@@ -234,6 +234,7 @@ class Worker                        implements WorkerInterface
             
             $this->queue->complete();
             $this->ipcForTransferSocket?->close();
+            $this->jobIpc?->close();
         }
     }
     
