@@ -1,5 +1,5 @@
 {
-    "name": "ct/amp-cluster",
+    "name": "ct/amphp-pool",
     "type": "library",
     "description": "Library for creating clustered async servers using amphp/http-server and amphp/cluster",
     "keywords": [

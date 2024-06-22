@@ -30,8 +30,6 @@ interface WorkerInterface   extends WorkerEventEmitterAwareInterface
     public function getWorkerGroupId(): int;
     public function getWorkerType(): WorkerTypeEnum;
     
-    public function getJobHandler(): JobRunnerInterface|null;
-    public function setJobHandler(JobRunnerInterface $jobHandler): self;
     public function mainLoop(): void;
     
     public function getLogger(): LoggerInterface;

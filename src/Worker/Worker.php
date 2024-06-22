@@ -47,8 +47,6 @@ use function Amp\delay;
  */
 class Worker                        implements WorkerInterface
 {
-    protected int $timeout = 5;
-    
     protected readonly DeferredCancellation $loopCancellation;
     
     /** @var Queue<TReceive> */
@@ -62,7 +60,6 @@ class Worker                        implements WorkerInterface
     
     private LoggerInterface $logger;
     private IpcServer|null          $jobIpc      = null;
-    private JobRunnerInterface|null $jobHandler  = null;
     private WorkerStateStorage|null $workerState = null;
     private PoolStateReadableInterface $poolState;
     private WorkerStateStorageInterface $workerStateStorage;
@@ -79,7 +76,8 @@ class Worker                        implements WorkerInterface
          * @var array<int, WorkerGroup>
          */
         private readonly array $groupsScheme,
-        LoggerInterface          $logger = null
+        LoggerInterface        $logger = null,
+        protected int $ipcTimeout   = 5
     ) {
         $this->queue                = new Queue();
         $this->iterator             = $this->queue->iterate();
@@ -167,7 +165,7 @@ class Worker                        implements WorkerInterface
         }
         
         try {
-            $socket                 = Ipc\connect($this->uri, $this->key, new TimeoutCancellation($this->timeout));
+            $socket                 = Ipc\connect($this->uri, $this->key, new TimeoutCancellation($this->ipcTimeout));
             
             if($socket instanceof ResourceSocket) {
                 $this->ipcForTransferSocket = $socket;
@@ -202,18 +200,6 @@ class Worker                        implements WorkerInterface
         return $this->socketPipeFactory;
     }
     
-    public function getJobHandler(): JobRunnerInterface|null
-    {
-        return $this->jobHandler;
-    }
-    
-    public function setJobHandler(JobRunnerInterface $jobHandler): self
-    {
-        $this->jobHandler           = $jobHandler;
-        
-        return $this;
-    }
-    
     public function mainLoop(): void
     {
         $abortCancellation          = $this->loopCancellation->getCancellation();
@@ -240,7 +226,6 @@ class Worker                        implements WorkerInterface
         } catch (\Throwable) {
             // IPC Channel manually closed
         } finally {
-            $this->jobHandler       = null;
             $this->eventEmitter->free();
             
             if(false === $this->loopCancellation->isCancelled()) {
@@ -353,7 +338,7 @@ class Worker                        implements WorkerInterface
                 try {
                     // Pass control to other workers
                     $this->workerState->workerNotReady();
-                    delay(0.001, true, $cancellation);
+                    delay(0.0, true, $cancellation);
                 } finally {
                     // If we return here, we are ready to accept new jobs
                     $this->workerState->workerReady();
