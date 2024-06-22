@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace CT\AmpPool\Worker;
 
 use Amp\Cancellation;
+use Amp\CancelledException;
 use Amp\Cluster\ServerSocketPipeFactory;
 use Amp\DeferredCancellation;
 use Amp\DeferredFuture;
@@ -13,6 +14,7 @@ use Amp\Pipeline\Queue;
 use Amp\Socket\ResourceSocket;
 use Amp\Socket\ServerSocketFactory;
 use Amp\Sync\Channel;
+use Amp\Sync\ChannelException;
 use Amp\TimeoutCancellation;
 use CT\AmpPool\Internal\Messages\MessagePingPong;
 use CT\AmpPool\Internal\Messages\MessageShutdown;
@@ -250,39 +252,6 @@ class Worker                        implements WorkerInterface
         }
     }
     
-    protected function jobLoop(Cancellation $cancellation = null): void
-    {
-        if(null === $this->group->getJobRunner()) {
-            return;
-        }
-        
-        $jobRunner                  = $this->group->getJobRunner();
-        
-        $this->workerState          = new WorkerStateStorage($this->id, $this->group->getWorkerGroupId(), true);
-        $this->workerState->workerReady();
-        
-        $jobQueueIterator           = $this->jobIpc->getJobQueue()->iterate();
-        $selfRef                    = \WeakReference::create($this);
-        
-        while ($jobQueueIterator->continue($cancellation)) {
-            
-            [$channel, $jobRequest] = $jobQueueIterator->getValue();
-            
-            if($jobRequest === null) {
-                continue;
-            }
-            
-            $this->workerState->incrementJobCount();
-            
-            $jobRunner->runJob($jobRequest->data, $jobRequest->priority, $cancellation)
-                      ->finally(static function (mixed $result) use ($channel, $jobRequest, $selfRef, $cancellation) {
-                          
-                          $selfRef->get()?->workerState->decrementJobCount();
-                          $selfRef->get()?->jobIpc?->sendJobResult($result, $channel, $jobRequest, $cancellation);
-                      });
-        }
-    }
-    
     public function awaitTermination(?Cancellation $cancellation = null): void
     {
         $deferredFuture             = new DeferredFuture();
@@ -326,5 +295,74 @@ class Worker                        implements WorkerInterface
     public function __toString(): string
     {
         return $this->group->getGroupName().'-'.$this->id;
+    }
+    
+    /**
+     * Fiber loop for processing the request queue to create Jobs.
+     *
+     * @param Cancellation|null $cancellation
+     *
+     * @return void
+     */
+    protected function jobLoop(Cancellation $cancellation = null): void
+    {
+        if(null === $this->group->getJobRunner()) {
+            return;
+        }
+        
+        $jobRunner                  = $this->group->getJobRunner();
+        
+        $this->workerState          = new WorkerStateStorage($this->id, $this->group->getWorkerGroupId(), true);
+        $this->workerState->workerReady();
+        
+        try {
+            
+            $jobQueueIterator       = $this->jobIpc->getJobQueue()->iterate();
+            $selfRef                = \WeakReference::create($this);
+            
+            while ($jobQueueIterator->continue($cancellation)) {
+                
+                [$channel, $jobRequest] = $jobQueueIterator->getValue();
+                
+                if($jobRequest === null) {
+                    continue;
+                }
+                
+                $this->workerState->incrementJobCount();
+                
+                $jobRunner->runJob($jobRequest->data, $jobRequest->priority, $cancellation)
+                          ->finally(static function (mixed $result) use ($channel, $jobRequest, $selfRef, $cancellation) {
+                              
+                              $selfRef->get()?->workerState->decrementJobCount();
+                              $selfRef->get()?->jobIpc?->sendJobResult($result, $channel, $jobRequest, $cancellation);
+                          });
+                
+                /**
+                 * Currently, there is already at least one job in the execution queue.
+                 * However, since the queue is asynchronous, we are still in the current Fiber.
+                 * There may be a situation where the job is written incorrectly
+                 * and does not yield control back to our Fiber for a long time.
+                 * This will cause the server to think that everything is fine with the Worker
+                 * and continue sending other jobs to the queue.
+                 *
+                 * Therefore, before waiting for the next job,
+                 * we deliberately yield control to the EventLoop to allow the already accepted job to start executing.
+                 * If the job works correctly and yields control back to the current Fiber, then everything is fine.
+                 */
+                
+                try {
+                    // Pass control to other workers
+                    $this->workerState->workerNotReady();
+                    delay(0.001, true, $cancellation);
+                } finally {
+                    // If we return here, we are ready to accept new jobs
+                    $this->workerState->workerReady();
+                }
+            }
+        } catch (CancelledException) {
+            // Job loop canceled
+        } finally {
+            $this->workerState->workerNotReady();
+        }
     }
 }

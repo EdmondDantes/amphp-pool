@@ -47,7 +47,7 @@ final class WorkerStateStorage      implements WorkerStateStorageInterface
         $this->commit();
     }
     
-    public function workerBusy(): void
+    public function workerNotReady(): void
     {
         $this->isReady              = false;
         $this->commit();

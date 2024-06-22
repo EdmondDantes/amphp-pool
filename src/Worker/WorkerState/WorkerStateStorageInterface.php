@@ -6,7 +6,7 @@ namespace CT\AmpPool\Worker\WorkerState;
 interface WorkerStateStorageInterface extends WorkerStateStorageReadableInterface
 {
     public function workerReady(): void;
-    public function workerBusy(): void;
+    public function workerNotReady(): void;
     public function incrementJobCount(): void;
     public function decrementJobCount(): void;
 }
