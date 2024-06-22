@@ -14,17 +14,14 @@ use Amp\Pipeline\Queue;
 use Amp\Socket\ResourceSocket;
 use Amp\Socket\ServerSocketFactory;
 use Amp\Sync\Channel;
-use Amp\Sync\ChannelException;
 use Amp\TimeoutCancellation;
 use CT\AmpPool\Internal\Messages\MessagePingPong;
 use CT\AmpPool\Internal\Messages\MessageShutdown;
 use CT\AmpPool\Internal\SocketPipe\SocketPipeFactoryWindows;
 use CT\AmpPool\JobIpc\IpcServer;
-use CT\AmpPool\JobIpc\JobRequest;
 use CT\AmpPool\JobIpc\JobRequestInterface;
 use CT\AmpPool\PoolState\PoolStateReadableInterface;
 use CT\AmpPool\PoolState\PoolStateStorage;
-use CT\AmpPool\Strategies\JobRunner\JobRunnerInterface;
 use CT\AmpPool\Worker\Internal\WorkerLogHandler;
 use CT\AmpPool\Worker\WorkerState\WorkersInfo;
 use CT\AmpPool\Worker\WorkerState\WorkersInfoInterface;
@@ -222,7 +219,7 @@ class Worker                        implements WorkerInterface
                     break;
                 }
                 
-                $this->eventEmitter->emitWorkerEvent($message);
+                $this->eventEmitter->emitWorkerEvent($message, $this->id);
             }
         } catch (\Throwable) {
             // IPC Channel manually closed

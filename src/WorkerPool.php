@@ -254,6 +254,11 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
         }
     }
     
+    public function getMainCancellation(): ?Cancellation
+    {
+        return $this->mainCancellation?->getCancellation();
+    }
+    
     public function awaitTermination(): void
     {
         if(false === $this->running) {
@@ -676,11 +681,11 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
         return $workers;
     }
     
-    public function findWorkerProcessContext(int $workerId): ?WorkerProcessContext
+    public function findWorkerContext(int $workerId): Context|null
     {
         foreach ($this->workers as $workerDescriptor) {
             if($workerDescriptor->id === $workerId) {
-                return $workerDescriptor->getWorkerProcess();
+                return $workerDescriptor->getWorkerProcess()->getContext();
             }
         }
         

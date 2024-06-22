@@ -24,17 +24,17 @@ final class WorkerEventEmitter implements WorkerEventEmitterInterface
         }
     }
     
-    public function emitWorkerEvent(mixed $event): void
+    public function emitWorkerEvent(mixed $event, int $workerId = 0): void
     {
         foreach ($this->listeners as $key => $listener) {
-            $listener = $listener->get();
+            $listener               = $listener->get();
             
             if ($listener === null) {
                 unset($this->listeners[$key]);
                 continue;
             }
             
-            $listener($event);
+            $listener($event, $workerId);
         }
     }
     

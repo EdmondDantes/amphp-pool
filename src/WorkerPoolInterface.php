@@ -40,6 +40,8 @@ interface WorkerPoolInterface
     
     public function countWorkers(int $groupId, bool $onlyRunning = false, bool $notRunning = false): int;
     
+    public function getMainCancellation(): ?Cancellation;
+    
     /**
      * The method will block current fiber until all workers are stopped.
      *
@@ -52,7 +54,7 @@ interface WorkerPoolInterface
      */
     public function getWorkers(): array;
     
-    public function findWorkerProcessContext(int $workerId): ?WorkerProcessContext;
+    public function findWorkerContext(int $workerId): Context|null;
     
     /**
      * Scale workers in the group.

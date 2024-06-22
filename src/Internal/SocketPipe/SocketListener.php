@@ -3,15 +3,17 @@ declare(strict_types=1);
 
 namespace CT\AmpPool\Internal\SocketPipe;
 
-use Amp\Parallel\Context\ProcessContext;
+use Amp\Cancellation;
 use Amp\Socket\BindContext;
 use Amp\Socket\ResourceServerSocket;
+use Amp\Socket\ResourceSocket;
 use Amp\Socket\ServerSocket;
+use Amp\Socket\Socket;
 use Amp\Socket\SocketAddress;
+use CT\AmpPool\Internal\Messages\MessageReady;
+use CT\AmpPool\Internal\Messages\MessageSocketFree;
 use CT\AmpPool\Internal\Messages\MessageSocketTransfer;
-use CT\AmpPool\Strategies\PickupStrategy\PickupRoundRobin;
-use CT\AmpPool\Strategies\PickupStrategy\PickupStrategyInterface;
-use CT\AmpPool\WorkerPool;
+use CT\AmpPool\WorkerEventEmitterAwareInterface;
 use CT\AmpPool\WorkerPoolInterface;
 use Revolt\EventLoop;
 
@@ -22,15 +24,20 @@ use Revolt\EventLoop;
 final class SocketListener
 {
     private array                   $workers          = [];
-    private PickupStrategyInterface $pickupWorkerStrategy;
+    private array                   $transferredSockets = [];
+    private array                   $requestsByWorker   = [];
+    private Cancellation|null       $cancellation       = null;
     
     public function __construct(
         private readonly SocketAddress $address,
-        private readonly WorkerPoolInterface $workerPool,
-        PickupStrategyInterface $pickupWorkerStrategy = null
+        private readonly WorkerPoolInterface $workerPool
     )
     {
-        $this->pickupWorkerStrategy = $pickupWorkerStrategy ?? new PickupRoundRobin;
+        $this->cancellation         = $this->workerPool->getMainCancellation();
+        
+        if($this->workerPool instanceof WorkerEventEmitterAwareInterface) {
+            $this->workerPool->getWorkerEventEmitter()->addWorkerEventListener($this->eventListener(...));
+        }
     }
     
     public function getSocketAddress(): SocketAddress
@@ -53,48 +60,47 @@ final class SocketListener
         return $this;
     }
     
-    public function receiveLoop(): void
+    public function startListen(): void
     {
-        $server                     = $this->listenAddress($this->address);
-        
-        EventLoop::queue(function () use ($server) {
-            while ($socket = $server->accept()) {
-                // Select free worker
-                $foundedWorkerId    = $this->pickupWorkerStrategy->pickupWorker(
-                    possibleGroups : $this->workers,
-                    possibleWorkers: $this->workers
-                );
-                
-                if ($foundedWorkerId === null) {
-                    $socket->close();
-                    return;
-                }
-                
-                $foundedWorker              = $this->workerPool->findWorkerProcessContext($foundedWorkerId);
-                
-                if($foundedWorker === null) {
-                    $socket->close();
-                    return;
-                }
-                
-                $pid                        = $foundedWorker->getContext()->getPid();
-                
-                $socketId                   = \socket_wsaprotocol_info_export(\socket_import_stream($socket->getResource()), $pid);
-                
-                if(false === $socketId) {
-                    $socket->close();
-                    throw new \Exception('Failed to export socket information');
-                }
-                
-                try {
-                    $foundedWorker->getContext()->send(new MessageSocketTransfer($socketId));
-                    $foundedWorker->addTransferredSocket($socketId, $socket);
-                } catch (\Throwable $exception) {
-                    $socket->close();
-                    throw $exception;
-                }
+        EventLoop::queue($this->receiveLoop(...), $this->listenAddress($this->address));
+    }
+    
+    private function receiveLoop(ServerSocket $server): void
+    {
+        while (($socket = $server->accept($this->cancellation)) !== null) {
+            
+            // Select free worker
+            $foundedWorkerId            = $this->pickupWorker();
+            
+            if ($foundedWorkerId === null) {
+                $socket->close();
+                return;
             }
-        });
+            
+            $foundedWorker              = $this->workerPool->findWorkerContext($foundedWorkerId);
+            
+            if($foundedWorker === null) {
+                $socket->close();
+                return;
+            }
+            
+            $pid                        = $foundedWorker->getPid();
+            
+            $socketId                   = \socket_wsaprotocol_info_export(\socket_import_stream($socket->getResource()), $pid);
+            
+            if(false === $socketId) {
+                $socket->close();
+                throw new \Exception('Failed to export socket information');
+            }
+            
+            try {
+                $foundedWorker->send(new MessageSocketTransfer($socketId));
+                $this->addTransferredSocket($foundedWorkerId, $socketId, $socket);
+            } catch (\Throwable $exception) {
+                $socket->close();
+                throw $exception;
+            }
+        }
     }
     
     private function listenAddress(SocketAddress $address, ?BindContext $bindContext = null): ServerSocket
@@ -140,4 +146,48 @@ final class SocketListener
         
         return $server;
     }
+    
+    private function pickupWorker(): int|null
+    {
+    
+    }
+    
+    private function eventListener(mixed $event, int $workerId = 0): void
+    {
+        if($event instanceof MessageReady) {
+            $this->isReady = true;
+        } elseif($event instanceof MessageSocketTransfer) {
+            $this->isReady  = true;
+        } elseif($event instanceof MessageSocketFree) {
+            $this->isReady  = true;
+            $this->freeTransferredSocket($workerId, $event->socketId);
+        }
+    }
+    
+    private function addTransferredSocket(int $workerId, string $socketId, ResourceSocket|Socket $socket): void
+    {
+        $this->transferredSockets[$socketId] = $socket;
+        $this->requestsByWorker[$workerId]   = ($this->requestsByWorker[$workerId] ?? 0) + 1;
+    }
+    
+    private function freeTransferredSocket(int $workerId, string $socketId = null): void
+    {
+        if($socketId === null) {
+            return;
+        }
+        
+        if(array_key_exists($socketId, $this->transferredSockets)) {
+            $this->transferredSockets[$socketId]->close();
+            unset($this->transferredSockets[$socketId]);
+        }
+
+        if(array_key_exists($workerId, $this->requestsByWorker)) {
+            $this->requestsByWorker[$workerId]--;
+            
+            if($this->requestsByWorker[$workerId] < 0) {
+                $this->requestsByWorker[$workerId] = 0;
+            }
+        }
+    }
+    
 }

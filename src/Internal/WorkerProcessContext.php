@@ -113,38 +113,6 @@ final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Ps
         return $this->jobsCount;
     }
     
-    public function addTransferredSocket(string $socketId, ResourceSocket|Socket $socket): self
-    {
-        $this->transferredSockets[$socketId] = $socket;
-        $this->isUsed           = true;
-        $this->jobsCount++;
-        
-        return $this;
-    }
-    
-    public function freeTransferredSocket(string $socketId = null): self
-    {
-        if($socketId === null) {
-            return $this;
-        }
-        
-        if(array_key_exists($socketId, $this->transferredSockets)) {
-            $this->jobsCount--;
-            $this->transferredSockets[$socketId]->close();
-            unset($this->transferredSockets[$socketId]);
-        }
-        
-        if($this->jobsCount < 0) {
-            $this->jobsCount        = 0;
-        }
-        
-        if($this->jobsCount === 0) {
-            $this->isUsed           = false;
-        }
-        
-        return $this;
-    }
-    
     public function runWorkerLoop(): void
     {
         $cancellation               = $this->deferredCancellation->getCancellation();
@@ -158,26 +126,12 @@ final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Ps
                     throw $message;
                 }
                 
-                if($message instanceof MessageReady) {
-                    $this->isReady = true;
-                } elseif ($message instanceof MessageSocketListen) {
-                    
-                    if($this->socketTransport instanceof SocketListenerProvider) {
-                        $this->socketTransport->listen($this->id, $message->address);
-                    }
-                    
-                    $this->isReady  = true;
-                    
-                } elseif($message instanceof MessageSocketTransfer) {
-                    $this->isReady  = true;
-                } elseif($message instanceof MessageSocketFree) {
-                    $this->isReady  = true;
-                    $this->freeTransferredSocket($message->socketId);
-                } elseif($message instanceof MessageLog) {
+                if($message instanceof MessageLog) {
                     $this->logger?->log($message->level, $message->message, $message->context);
-                } elseif ($message !== null) {
-                    $this->eventEmitter->emitWorkerEvent($message);
+                    continue;
                 }
+                
+                $this->eventEmitter->emitWorkerEvent($message, $this->id);
             }
             
             $this->joinFuture->await(new TimeoutCancellation($this->timeoutCancellation));
