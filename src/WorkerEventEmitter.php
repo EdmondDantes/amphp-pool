@@ -3,19 +3,22 @@ declare(strict_types=1);
 
 namespace CT\AmpPool;
 
+/**
+ * Event emitter for worker events with weak references handlers.
+ */
 final class WorkerEventEmitter implements WorkerEventEmitterInterface
 {
-    private array $listeners = [];
+    private array $listeners        = [];
     
     public function addWorkerEventListener(\Closure $listener): void
     {
-        $this->listeners[] = $listener;
+        $this->listeners[]          = \WeakReference::create($listener);
     }
     
     public function removeWorkerEventListener(\Closure $listener): void
     {
         foreach ($this->listeners as $key => $value) {
-            if ($value === $listener) {
+            if ($value->get() === $listener) {
                 unset($this->listeners[$key]);
             }
         }
@@ -23,7 +26,14 @@ final class WorkerEventEmitter implements WorkerEventEmitterInterface
     
     public function emitWorkerEvent(mixed $event): void
     {
-        foreach ($this->listeners as $listener) {
+        foreach ($this->listeners as $key => $listener) {
+            $listener = $listener->get();
+            
+            if ($listener === null) {
+                unset($this->listeners[$key]);
+                continue;
+            }
+            
             $listener($event);
         }
     }

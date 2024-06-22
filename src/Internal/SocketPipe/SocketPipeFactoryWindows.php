@@ -13,11 +13,16 @@ use Amp\Sync\Channel;
 use Amp\Sync\ChannelException;
 use CT\AmpPool\Internal\Messages\MessageSocketListen;
 use CT\AmpPool\Worker\Worker;
+use CT\AmpPool\Worker\WorkerInterface;
 
-final class SocketPipeFactoryWindows implements ServerSocketFactory
+final readonly class SocketPipeFactoryWindows implements ServerSocketFactory
 {
-    public function __construct(private readonly Channel $channel, private readonly Worker $worker) {}
+    private \WeakReference $worker;
     
+    public function __construct(private Channel $channel, WorkerInterface $worker)
+    {
+        $this->worker                = \WeakReference::create($worker);
+    }
     
     public function listen(SocketAddress|string $address, ?BindContext $bindContext = null): ServerSocket
     {
@@ -42,7 +47,7 @@ final class SocketPipeFactoryWindows implements ServerSocketFactory
         /**
          * Subscribe to the worker events for catching the MessageSocketTransfer message.
          */
-        $this->worker->addEventHandler($factory->workerEventHandler(...));
+        $this->worker->get()?->getWorkerEventEmitter()->addWorkerEventListener($factory->workerEventHandler(...));
         
         return $factory;
     }

@@ -283,13 +283,6 @@ class Worker                        implements WorkerInterface
         }
     }
     
-    public function addEventHandler(callable $handler): self
-    {
-        $this->messageHandlers[]    = $handler;
-        
-        return $this;
-    }
-    
     public function awaitTermination(?Cancellation $cancellation = null): void
     {
         $deferredFuture             = new DeferredFuture();
