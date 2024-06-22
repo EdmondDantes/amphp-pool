@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Internal\SocketPipe;
+namespace CT\AmpPool\Strategies\SocketStrategy\Windows;
 
 use Amp\Cancellation;
 use Amp\Socket\BindContext;
@@ -21,7 +21,7 @@ use Revolt\EventLoop;
  * The class listens to the specified address
  * and calls a callback method to transmit the socket when a new packet is received
  */
-final class SocketListener
+final class SocketClientListenerProvider
 {
     private array                   $workers          = [];
     private array                   $transferredSockets = [];

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Internal\SocketPipe;
+namespace CT\AmpPool\Strategies\SocketStrategy\Unix;
 
 use Amp\Socket\ResourceSocket;
 

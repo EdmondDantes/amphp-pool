@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Internal\SocketPipe;
+namespace CT\AmpPool\Strategies\SocketStrategy\Windows;
 
 use Amp\Cancellation;
 use Amp\DeferredFuture;

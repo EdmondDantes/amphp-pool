@@ -8,6 +8,7 @@ use CT\AmpPool\Strategies\PickupStrategy\PickupStrategyInterface;
 use CT\AmpPool\Strategies\RestartStrategy\RestartStrategyInterface;
 use CT\AmpPool\Strategies\RunnerStrategy\RunnerStrategyInterface;
 use CT\AmpPool\Strategies\ScalingStrategy\ScalingStrategyInterface;
+use CT\AmpPool\Strategies\SocketStrategy\SocketStrategyInterface;
 
 /**
  * Data structure for describing a group of workers.
@@ -28,6 +29,7 @@ final class WorkerGroup             implements WorkerGroupInterface
         private ?PickupStrategyInterface $pickupStrategy = null,
         private ?RestartStrategyInterface $restartStrategy = null,
         private ?ScalingStrategyInterface $scalingStrategy = null,
+        private ?SocketStrategyInterface $socketStrategy = null,
         private ?JobRunnerInterface     $jobRunner = null,
         private int                     $workerGroupId = 0,
     ) {}
@@ -90,6 +92,11 @@ final class WorkerGroup             implements WorkerGroupInterface
     public function getJobRunner(): ?JobRunnerInterface
     {
         return $this->jobRunner;
+    }
+    
+    public function getSocketStrategy(): ?SocketStrategyInterface
+    {
+        return $this->socketStrategy;
     }
     
     public function defineGroupName(string $groupName): self
@@ -184,6 +191,17 @@ final class WorkerGroup             implements WorkerGroupInterface
         }
         
         $this->jobRunner            = $jobRunner;
+        
+        return $this;
+    }
+    
+    public function defineSocketStrategy(SocketStrategyInterface $socketStrategy): self
+    {
+        if($this->socketStrategy !== null) {
+            throw new \LogicException('Socket strategy is already defined');
+        }
+        
+        $this->socketStrategy       = $socketStrategy;
         
         return $this;
     }

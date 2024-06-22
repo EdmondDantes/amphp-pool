@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Internal\SocketPipe;
+namespace CT\AmpPool\Strategies\SocketStrategy\Unix;
 
 use Amp\ByteStream\ResourceStream;
 use Amp\Cancellation;
@@ -10,31 +10,23 @@ use Amp\Parallel\Ipc\IpcHub;
 use Amp\Socket\ResourceSocket;
 use Amp\Socket\Socket;
 use Amp\TimeoutCancellation;
+use const Amp\Process\IS_WINDOWS;
 
 final class SocketPipeProvider
 {
-    private ?ServerSocketPipeProvider $provider = null;
-    private ?Socket $socket         = null;
+    private ServerSocketPipeProvider $provider;
     
     public function __construct(private readonly IpcHub $hub, private readonly int $timeout = 5)
     {
-        // If windows, we can't use the ServerSocketPipeProvider
-        if (PHP_OS_FAMILY !== 'Windows') {
-            $this->provider         = new ServerSocketPipeProvider();
-        }
-    }
-    
-    public function used(): bool
-    {
-        return $this->provider !== null;
-    }
-    
-    public function createSocketTransport(string $ipcKey): SocketPipeTransport|null
-    {
-        if($this->provider === null) {
-            return null;
+        if (IS_WINDOWS) {
+            throw new \Error(__CLASS__.' can\'t be used under Windows OS');
         }
         
+        $this->provider             = new ServerSocketPipeProvider;
+    }
+    
+    public function createSocketTransport(string $ipcKey): SocketPipeTransport
+    {
         $socket                     = $this->hub->accept($ipcKey, new TimeoutCancellation($this->timeout));
         
         if (false === $socket instanceof ResourceSocket) {
@@ -51,10 +43,6 @@ final class SocketPipeProvider
     
     public function provideFor(SocketPipeTransport $pipeTransport = null, Cancellation $cancellation = null): void
     {
-        if($this->provider === null) {
-            return;
-        }
-        
         $this->provider->provideFor($pipeTransport->socket, $cancellation);
     }
 }

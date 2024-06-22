@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Internal\SocketPipe;
+namespace CT\AmpPool\Strategies\SocketStrategy\Windows;
 
 use Amp\Socket\SocketAddress;
 use CT\AmpPool\Internal\Messages\MessageSocketListen;
@@ -10,7 +10,7 @@ use CT\AmpPool\WorkerPool;
 
 final class SocketListenerProvider
 {
-    /** @var array<string, SocketListener> */
+    /** @var array<string, SocketClientListenerProvider> */
     private array $socketListeners  = [];
     private mixed $eventListener;
     
@@ -36,7 +36,7 @@ final class SocketListenerProvider
             return;
         }
         
-        $this->socketListeners[$stringAddress] = new SocketListener($address, $this->workerPool);
+        $this->socketListeners[$stringAddress] = new SocketClientListenerProvider($address, $this->workerPool);
         $this->socketListeners[$stringAddress]->addWorker($workerId);
         $this->socketListeners[$stringAddress]->startListen();
     }

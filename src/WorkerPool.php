@@ -25,8 +25,6 @@ use Amp\TimeoutCancellation;
 use CT\AmpPool\Exceptions\FatalWorkerException;
 use CT\AmpPool\Exceptions\TerminateWorkerException;
 use CT\AmpPool\Exceptions\WorkerPoolException;
-use CT\AmpPool\Internal\SocketPipe\SocketListenerProvider;
-use CT\AmpPool\Internal\SocketPipe\SocketPipeProvider;
 use CT\AmpPool\Internal\WorkerProcessContext;
 use CT\AmpPool\PoolState\PoolStateReadableInterface;
 use CT\AmpPool\PoolState\PoolStateStorage;
@@ -34,6 +32,8 @@ use CT\AmpPool\Strategies\PickupStrategy\PickupLeastJobs;
 use CT\AmpPool\Strategies\RestartStrategy\RestartAlways;
 use CT\AmpPool\Strategies\RunnerStrategy\DefaultRunner;
 use CT\AmpPool\Strategies\ScalingStrategy\ScalingByRequest;
+use CT\AmpPool\Strategies\SocketStrategy\Unix\SocketPipeProvider;
+use CT\AmpPool\Strategies\SocketStrategy\Windows\SocketListenerProvider;
 use CT\AmpPool\Strategies\WorkerStrategyInterface;
 use CT\AmpPool\Worker\Internal\WorkerDescriptor;
 use CT\AmpPool\Worker\WorkerState\WorkersInfo;
@@ -69,9 +69,6 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
     /** @var ConcurrentIterator<ClusterWorkerMessage<TReceive, TSend>> */
     private readonly ConcurrentIterator $iterator;
     private bool $running           = false;
-    private SocketPipeProvider $provider;
-    
-    private ?SocketListenerProvider $listenerProvider = null;
     
     private ?PoolStateStorage $poolState    = null;
     
@@ -89,18 +86,11 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
     public function __construct(
         protected readonly IpcHub $hub      = new LocalIpcHub(),
         protected ?ContextFactory $contextFactory = null,
-        protected string|array $script      = '',
         protected ?PsrLogger $logger        = null
     ) {
-        $this->provider             = new SocketPipeProvider($this->hub);
         $this->contextFactory       ??= new DefaultContextFactory(ipcHub: $this->hub);
         $this->workersInfo          = new WorkersInfo;
         $this->eventEmitter         = new WorkerEventEmitter;
-        
-        // For Windows, we should use the SocketListenerProvider instead of the SocketPipeProvider
-        if(PHP_OS_FAMILY === 'Windows') {
-            $this->listenerProvider = new SocketListenerProvider($this);
-        }
     }
     
     public function getIpcHub(): IpcHub
@@ -430,7 +420,6 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
         }
         
         $context                    = $this->contextFactory->start($runnerStrategy->getScript());
-        $socketTransport            = null;
         
         try {
             $key                    = $runnerStrategy->sendPoolContext(
@@ -710,7 +699,6 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
         $this->running              = false;
         
         $cancellation               ??= new TimeoutCancellation($this->workerStopTimeout);
-        $this->listenerProvider?->close();
         
         $exceptions                 = $this->stopWorkers($cancellation);
         
@@ -739,11 +727,6 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
     public function restart(?Cancellation $cancellation = null): void
     {
         $this->stop($cancellation);
-        
-        if(PHP_OS_FAMILY === 'Windows') {
-            $this->listenerProvider = new SocketListenerProvider($this);
-        }
-        
         $this->run();
         
         $this->logger?->info('Server reloaded');
@@ -791,6 +774,10 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
         
         if($group->getRestartStrategy() === null) {
             $group->defineRestartStrategy(new RestartAlways);
+        }
+        
+        if($group->getSocketStrategy() === null && $group->getWorkerType() === WorkerTypeEnum::REACTOR) {
+            $group->defineSocketStrategy(new SocketPipeProvider);
         }
     }
     
