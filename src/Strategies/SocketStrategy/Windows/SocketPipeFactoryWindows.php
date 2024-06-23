@@ -41,13 +41,8 @@ final readonly class SocketPipeFactoryWindows implements ServerSocketFactory
             );
         }
         
-        $factory                    = new ServerSocketFactoryWindows($this->channel, $address, $bindContext);
-        
-        /**
-         * Subscribe to the worker events for catching the MessageSocketTransfer message.
-         */
-        $this->worker->get()?->getWorkerEventEmitter()->addWorkerEventListener($factory->workerEventHandler(...));
-        
-        return $factory;
+        return new ServerSocketFactoryWindows(
+            $this->channel, $address, $bindContext, $this->worker->get()?->getWorkerEventEmitter()
+        );
     }
 }

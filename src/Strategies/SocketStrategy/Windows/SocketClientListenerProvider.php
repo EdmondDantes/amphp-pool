@@ -10,34 +10,63 @@ use Amp\Socket\ResourceSocket;
 use Amp\Socket\ServerSocket;
 use Amp\Socket\Socket;
 use Amp\Socket\SocketAddress;
+use CT\AmpPool\EventWeakHandler;
 use CT\AmpPool\Strategies\SocketStrategy\Windows\Messages\MessageReady;
 use CT\AmpPool\Strategies\SocketStrategy\Windows\Messages\MessageSocketFree;
 use CT\AmpPool\Strategies\SocketStrategy\Windows\Messages\MessageSocketTransfer;
-use CT\AmpPool\WorkerEventEmitterAwareInterface;
+use CT\AmpPool\WorkerGroupInterface;
 use CT\AmpPool\WorkerPoolInterface;
 use Revolt\EventLoop;
 
 /**
  * The class listens to the specified address
- * and calls a callback method to transmit the socket when a new packet is received
+ * and calls a callback method to transmit the socket when a new packet is received.
+ *
+ * This class is executed inside the Watcher process.
+ *
+ * @internal
  */
 final class SocketClientListenerProvider
 {
+    /**
+     * List of workers that bind to current SocketAddress.
+     * @var int[]
+     */
     private array                   $workers          = [];
+    /**
+     * Map of worker statuses, where key is the worker ID and value is the status.
+     * True means worker is ready to accept new socket.
+     * @var array<int, bool>
+     */
+    private array                   $workerStatus     = [];
+    /**
+     * Map of transferred sockets, where key is the socket ID and value is the socket.
+     * @var array<int, ResourceSocket|Socket>
+     */
     private array                   $transferredSockets = [];
+    /**
+     * Map of requests by worker, where key is the worker ID and value is the number of active requests.
+     * @var array<int, int>
+     */
     private array                   $requestsByWorker   = [];
     private Cancellation|null       $cancellation       = null;
     
     public function __construct(
         private readonly SocketAddress $address,
-        private readonly WorkerPoolInterface $workerPool
+        private readonly WorkerPoolInterface $workerPool,
+        private readonly WorkerGroupInterface $workerGroup
     )
     {
         $this->cancellation         = $this->workerPool->getMainCancellation();
         
-        if($this->workerPool instanceof WorkerEventEmitterAwareInterface) {
-            $this->workerPool->getWorkerEventEmitter()->addWorkerEventListener($this->eventListener(...));
-        }
+        $self                       = \WeakReference::create($this);
+        
+        $this->workerPool->getWorkerEventEmitter()->addWorkerEventListener(new EventWeakHandler(
+            $this,
+            static function (mixed $event, int $workerId = 0) use($self) {
+                $self->get()?->eventListener($event, $workerId);
+            }
+        ));
     }
     
     public function getSocketAddress(): SocketAddress
@@ -149,17 +178,55 @@ final class SocketClientListenerProvider
     
     private function pickupWorker(): int|null
     {
+        if(empty($this->workers)) {
+            return null;
+        }
+        
+        $workerId                   = $this->pickupWorkerByRequests();
+        
+        if($workerId !== null) {
+            return $workerId;
+        }
+        
+        // Try to scale a worker group
+        $this->workerGroup->getScalingStrategy()?->requestScaling();
+        
+        // Select random worker
+        return $this->workers[\array_rand($this->workers)];
+    }
     
+    private function pickupWorkerByRequests(): int|null
+    {
+        $minRequests                = 0;
+        $selectedWorkerId           = null;
+        
+        foreach ($this->workers as $workerId) {
+            
+            if(empty($this->workerStatus[$workerId])) {
+                continue;
+            }
+            
+            if(false === array_key_exists($workerId, $this->requestsByWorker) || $this->requestsByWorker[$workerId] === 0) {
+                return $workerId;
+            }
+            
+            if($minRequests === 0 || $this->requestsByWorker[$workerId] < $minRequests) {
+                $minRequests        = $this->requestsByWorker[$workerId];
+                $selectedWorkerId   = $workerId;
+            }
+        }
+        
+        return $selectedWorkerId;
     }
     
     private function eventListener(mixed $event, int $workerId = 0): void
     {
-        if($event instanceof MessageReady) {
-            $this->isReady = true;
-        } elseif($event instanceof MessageSocketTransfer) {
-            $this->isReady  = true;
-        } elseif($event instanceof MessageSocketFree) {
-            $this->isReady  = true;
+        if($event instanceof MessageReady || $event instanceof MessageSocketTransfer) {
+            $this->workerStatus[$workerId] = true;
+            return;
+        }
+        
+        if($event instanceof MessageSocketFree) {
             $this->freeTransferredSocket($workerId, $event->socketId);
         }
     }
@@ -168,6 +235,8 @@ final class SocketClientListenerProvider
     {
         $this->transferredSockets[$socketId] = $socket;
         $this->requestsByWorker[$workerId]   = ($this->requestsByWorker[$workerId] ?? 0) + 1;
+        
+        $this->workerStatus[$workerId]       = false;
     }
     
     private function freeTransferredSocket(int $workerId, string $socketId = null): void
@@ -175,6 +244,8 @@ final class SocketClientListenerProvider
         if($socketId === null) {
             return;
         }
+        
+        $this->workerStatus[$workerId]      = true;
         
         if(array_key_exists($socketId, $this->transferredSockets)) {
             $this->transferredSockets[$socketId]->close();

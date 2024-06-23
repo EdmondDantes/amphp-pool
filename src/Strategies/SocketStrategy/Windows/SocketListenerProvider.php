@@ -6,6 +6,7 @@ namespace CT\AmpPool\Strategies\SocketStrategy\Windows;
 use Amp\Socket\SocketAddress;
 use CT\AmpPool\Strategies\SocketStrategy\Windows\Messages\MessageSocketListen;
 use CT\AmpPool\WorkerEventEmitterAwareInterface;
+use CT\AmpPool\WorkerGroupInterface;
 use CT\AmpPool\WorkerPool;
 
 final class SocketListenerProvider
@@ -14,7 +15,7 @@ final class SocketListenerProvider
     private array $socketListeners  = [];
     private mixed $eventListener;
     
-    public function __construct(private readonly WorkerPool $workerPool)
+    public function __construct(private readonly WorkerPool $workerPool, private readonly WorkerGroupInterface $workerGroup)
     {
         if($this->workerPool instanceof WorkerEventEmitterAwareInterface) {
             $this->eventListener    = $this->eventListener(...);
@@ -36,7 +37,7 @@ final class SocketListenerProvider
             return;
         }
         
-        $this->socketListeners[$stringAddress] = new SocketClientListenerProvider($address, $this->workerPool);
+        $this->socketListeners[$stringAddress] = new SocketClientListenerProvider($address, $this->workerPool, $this->workerGroup);
         $this->socketListeners[$stringAddress]->addWorker($workerId);
         $this->socketListeners[$stringAddress]->startListen();
     }

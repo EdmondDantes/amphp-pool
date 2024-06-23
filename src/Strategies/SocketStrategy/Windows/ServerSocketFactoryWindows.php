@@ -15,6 +15,7 @@ use Amp\Socket\Socket;
 use Amp\Socket\SocketAddress;
 use Amp\Socket\SocketException;
 use Amp\Sync\Channel;
+use CT\AmpPool\EventWeakHandler;
 use CT\AmpPool\Strategies\SocketStrategy\Windows\Messages\MessageSocketTransfer;
 use CT\AmpPool\WorkerEventEmitterInterface;
 
@@ -39,7 +40,15 @@ final class ServerSocketFactoryWindows implements ServerSocket
         $this->queue                = new Queue();
         $this->iterator             = $this->queue->iterate();
         
-        $this->workerEventHandler    = $this->workerEventHandler(...);
+        $self                       = \WeakReference::create($this);
+        
+        $this->workerEventHandler   = new EventWeakHandler(
+            $this,
+            static function (mixed $message, int $workerId = 0) use($self) {
+                $self->get()?->workerEventHandler($message, $workerId);
+            }
+        );
+        
         $this->workerEventEmitter->addWorkerEventListener($this->workerEventHandler);
     }
     

@@ -5,7 +5,6 @@ namespace CT\AmpPool\Strategies\ScalingStrategy;
 
 use CT\AmpPool\EventWeakHandler;
 use CT\AmpPool\Strategies\WorkerStrategyAbstract;
-use CT\AmpPool\WorkerEventEmitterAwareInterface;
 use Revolt\EventLoop;
 
 final class ScalingByRequest        extends WorkerStrategyAbstract
@@ -34,6 +33,13 @@ final class ScalingByRequest        extends WorkerStrategyAbstract
             return false;
         }
         
+        // For watcher process, try to scale immediately
+        if($this->getWorkerPool() !== null) {
+            $this->tryToScale();
+            return true;
+        }
+        
+        // Inside worker process, send a message to a watcher process
         $this->getWorker()?->sendMessageToWatcher(new ScalingRequest($this->getWorker()?->getWorkerId()));
         
         return true;
@@ -50,7 +56,7 @@ final class ScalingByRequest        extends WorkerStrategyAbstract
             $workerPool->getWorkerEventEmitter()->addWorkerEventListener(new EventWeakHandler(
                 $this,
                 static function (mixed $event, int $workerId = 0) use($self) {
-                    $self->get()?->handleScalingRequest($event);
+                    $self->get()?->handleScalingRequest($event, $workerId);
                 }
             ));
             
@@ -72,12 +78,17 @@ final class ScalingByRequest        extends WorkerStrategyAbstract
         }
     }
     
-    private function handleScalingRequest(mixed $message): void
+    private function handleScalingRequest(mixed $message, int $workerId = 0): void
     {
         if($message instanceof ScalingRequest === false) {
             return;
         }
         
+        $this->tryToScale();
+    }
+    
+    private function tryToScale(): void
+    {
         $workerGroup                = $this->getWorkerGroup();
         
         if($workerGroup === null) {

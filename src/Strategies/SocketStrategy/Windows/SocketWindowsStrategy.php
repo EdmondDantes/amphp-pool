@@ -38,7 +38,7 @@ final class SocketWindowsStrategy   extends WorkerStrategyAbstract
             return;
         }
         
-        $this->socketListenerProvider = new SocketListenerProvider($workerPool);
+        $this->socketListenerProvider = new SocketListenerProvider($workerPool, $this->getWorkerGroup());
     }
     
     public function onStopped(): void
