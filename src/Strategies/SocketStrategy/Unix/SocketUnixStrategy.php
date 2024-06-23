@@ -74,7 +74,14 @@ final class SocketUnixStrategy      extends WorkerStrategyAbstract
     {
         if(false === $this->deferredFuture?->isComplete()) {
             $this->deferredFuture->complete();
-            $this->deferredFuture = null;
+            $this->deferredFuture   = null;
+        }
+        
+        $providers                  = $this->workerSocketProviders;
+        $this->workerSocketProviders = [];
+        
+        foreach ($providers as $socketProvider) {
+            $socketProvider->stop();
         }
     }
     
