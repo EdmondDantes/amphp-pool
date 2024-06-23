@@ -76,6 +76,11 @@ final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Ps
         return $this->id;
     }
     
+    public function getCancellation(): Cancellation
+    {
+        return $this->deferredCancellation->getCancellation();
+    }
+    
     public function runWorkerLoop(): void
     {
         $cancellation               = $this->deferredCancellation->getCancellation();

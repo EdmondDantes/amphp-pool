@@ -59,6 +59,8 @@ interface WorkerPoolInterface       extends WorkerEventEmitterAwareInterface
     
     public function findWorkerContext(int $workerId): Context|null;
     
+    public function findWorkerCancellation(int $workerId): Cancellation|null;
+    
     /**
      * Scale workers in the group.
      * Returns the number of workers that were actually scaled (started or shutdown).

@@ -703,6 +703,17 @@ class WorkerPool                    implements WorkerPoolInterface
         return null;
     }
     
+    public function findWorkerCancellation(int $workerId): Cancellation|null
+    {
+        foreach ($this->workers as $workerDescriptor) {
+            if($workerDescriptor->id === $workerId) {
+                return $workerDescriptor->getWorkerProcess()->getCancellation();
+            }
+        }
+        
+        return null;
+    }
+    
     /**
      * Stops all server workers. Workers are killed if the cancellation token is canceled.
      *

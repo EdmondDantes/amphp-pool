@@ -164,11 +164,13 @@ final class SocketUnixStrategy      extends WorkerStrategyAbstract
                 return;
             }
             
+            $workerCancellation         = $workerPool->findWorkerCancellation($message->workerId);
+            
             try {
                 
                 $ipcHub                 = $workerPool->getIpcHub();
                 $ipcKey                 = $ipcHub->generateKey();
-                $socketPipeProvider     = new SocketProvider($ipcHub, $ipcKey, $workerPool->getMainCancellation(), $this->ipcTimeout);
+                $socketPipeProvider     = new SocketProvider($ipcHub, $ipcKey, $workerCancellation, $this->ipcTimeout);
                 
                 $workerContext->send(new SocketTransferInfo($ipcHub->getUri(), $ipcKey));
                 
@@ -183,10 +185,6 @@ final class SocketUnixStrategy      extends WorkerStrategyAbstract
             } catch (\Throwable $exception) {
                 $workerPool->getLogger()?->error('Could not send socket transfer info to worker', ['exception' => $exception]);
             }
-        }
-        
-        if($message instanceof WorkerProcessStarted) {
-        
         }
     }
 }
