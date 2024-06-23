@@ -8,13 +8,13 @@ use Amp\Parallel\Context\Context;
 use Amp\Serialization\SerializationException;
 use Amp\Sync\Channel;
 use Amp\Sync\ChannelException;
+use Amp\TimeoutCancellation;
 use CT\AmpPool\Exceptions\FatalWorkerException;
 use CT\AmpPool\Exceptions\RemoteException;
 use CT\AmpPool\Strategies\WorkerStrategyAbstract;
 use CT\AmpPool\Worker\Worker;
 use CT\AmpPool\Worker\WorkerEntryPointInterface;
 use CT\AmpPool\WorkerGroupInterface;
-use CT\AmpPool\WorkerTypeEnum;
 use function Amp\async;
 
 class DefaultRunner extends WorkerStrategyAbstract implements RunnerStrategyInterface
@@ -110,7 +110,7 @@ class DefaultRunner extends WorkerStrategyAbstract implements RunnerStrategyInte
      * @throws SerializationException
      * @throws ChannelException
      */
-    public function sendPoolContext(Context $processContext, int $workerId, WorkerGroupInterface $group): string
+    public function initiateWorkerContext(Context $processContext, int $workerId, WorkerGroupInterface $group): void
     {
         $workerPool                 = $this->getWorkerPool();
         
@@ -118,36 +118,27 @@ class DefaultRunner extends WorkerStrategyAbstract implements RunnerStrategyInte
             throw new \RuntimeException('Worker pool is not defined.');
         }
         
-        $key                        = $workerPool->getIpcHub()->generateKey();
-        
         $processContext->send([
             'id'                    => $workerId,
-            'uri'                   => $workerPool->getIpcHub()->getUri(),
-            'key'                   => $key,
             'group'                 => $group,
             'groupsScheme'          => $workerPool->getGroupsScheme(),
         ]);
-        
-        return $key;
     }
     
-    public function shouldProvideSocketTransport(): bool
-    {
-        return $this->getWorkerGroup()->getWorkerType() === WorkerTypeEnum::REACTOR;
-    }
-    
-    public static function readWorkerMetadata(Channel $channel): array
+    protected static function readWorkerMetadata(Channel $channel): array
     {
         // Read random IPC hub URI and associated key from a process channel.
-        $data                   = $channel->receive();
+        $data                   = $channel->receive(
+            new TimeoutCancellation(2, 'Worker <== Watcher: The waiting time for the message has expired.')
+        );
         
         if(empty($data)) {
-            throw new FatalWorkerException('Could not read IPC data from channel');
+            throw new FatalWorkerException('Worker <== Watcher: Could not read IPC data from channel');
         }
         
         foreach (['id', 'group', 'groupsScheme'] as $key) {
             if (false === array_key_exists($key, $data)) {
-                throw new FatalWorkerException('Invalid IPC data received. Expected key: '.$key);
+                throw new FatalWorkerException('Worker <== Watcher: Invalid IPC data received. Expected key: '.$key);
             }
         }
         

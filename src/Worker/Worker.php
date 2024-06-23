@@ -5,13 +5,10 @@ namespace CT\AmpPool\Worker;
 
 use Amp\Cancellation;
 use Amp\CancelledException;
-use Amp\Cluster\ServerSocketPipeFactory;
 use Amp\DeferredCancellation;
 use Amp\DeferredFuture;
 use Amp\Pipeline\ConcurrentIterator;
 use Amp\Pipeline\Queue;
-use Amp\Socket\ResourceSocket;
-use Amp\Socket\ServerSocketFactory;
 use Amp\Sync\Channel;
 use CT\AmpPool\Internal\Messages\MessagePingPong;
 use CT\AmpPool\Internal\Messages\MessageShutdown;
@@ -19,7 +16,6 @@ use CT\AmpPool\JobIpc\IpcServer;
 use CT\AmpPool\JobIpc\JobRequestInterface;
 use CT\AmpPool\PoolState\PoolStateReadableInterface;
 use CT\AmpPool\PoolState\PoolStateStorage;
-use CT\AmpPool\Strategies\SocketStrategy\Windows\SocketPipeFactoryWindows;
 use CT\AmpPool\Worker\Internal\WorkerLogHandler;
 use CT\AmpPool\Worker\WorkerState\WorkersInfo;
 use CT\AmpPool\Worker\WorkerState\WorkersInfoInterface;
@@ -50,9 +46,6 @@ class Worker                        implements WorkerInterface
     
     /** @var ConcurrentIterator<TReceive> */
     protected readonly ConcurrentIterator $iterator;
-    
-    protected ?ResourceSocket $ipcForTransferSocket = null;
-    protected ?ServerSocketFactory $socketPipeFactory = null;
     
     private LoggerInterface $logger;
     private IpcServer|null          $jobIpc      = null;
@@ -161,21 +154,6 @@ class Worker                        implements WorkerInterface
         return $this->eventEmitter;
     }
     
-    public function getSocketPipeFactory(): ServerSocketFactory
-    {
-        if (PHP_OS_FAMILY === 'Windows') {
-            return new SocketPipeFactoryWindows($this->ipcChannel, $this);
-        }
-        
-        if($this->socketPipeFactory !== null) {
-            return $this->socketPipeFactory;
-        }
-        
-        $this->socketPipeFactory    = new ServerSocketPipeFactory($this->getIpcForTransferSocket());
-        
-        return $this->socketPipeFactory;
-    }
-    
     public function mainLoop(): void
     {
         $abortCancellation          = $this->loopCancellation->getCancellation();
@@ -208,9 +186,12 @@ class Worker                        implements WorkerInterface
                 $this->loopCancellation->cancel();
             }
             
-            $this->queue->complete();
-            $this->ipcForTransferSocket?->close();
+            if(false === $this->queue->isComplete()) {
+                $this->queue->complete();
+            }
+            
             $this->jobIpc?->close();
+            $this->jobIpc           = null;
         }
     }
     

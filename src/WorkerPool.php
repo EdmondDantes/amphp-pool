@@ -436,7 +436,14 @@ class WorkerPool                    implements WorkerPoolInterface
             throw new \Error('The runner strategy is not defined');
         }
         
-        $context                    = $this->contextFactory->start($runnerStrategy->getScript());
+        try {
+            $context                = $this->contextFactory->start(
+                $runnerStrategy->getScript(), new TimeoutCancellation(5)
+            );
+        } catch (\Throwable $exception) {
+            $this->logger?->critical('Starting the worker failed: ' . $exception->getMessage(), ['exception' => $exception]);
+            throw new FatalWorkerException('Starting the worker failed', 0, $exception);
+        }
         
         try {
             
@@ -454,6 +461,8 @@ class WorkerPool                    implements WorkerPoolInterface
             }
             
             $workerDescriptor->setWorkerProcess($workerProcess);
+            
+            $runnerStrategy->initiateWorkerContext($context, $workerDescriptor->id, $workerDescriptor->group);
             
             $this->eventEmitter->emitWorkerEvent(
                 new WorkerProcessStarted($workerDescriptor->id, $workerDescriptor->group, $context),
@@ -507,28 +516,28 @@ class WorkerPool                    implements WorkerPoolInterface
                 );
             }
             
-            $workerDescriptor->reset();
-            
             return;
         }
         
         $id                         = $workerDescriptor->id;
         $workerProcess              = $workerDescriptor->getWorkerProcess();
+        $processContext             = $workerProcess->getContext();
         
         try {
             
             $exitResult             = $this->workerEventLoop($workerDescriptor, $deferredCancellation);
             
             $this->eventEmitter->emitWorkerEvent(
-                new WorkerProcessTerminating(
-                    $workerDescriptor->id, $workerDescriptor->group, $workerDescriptor->getWorkerProcess()->getContext()
-                ),
+                new WorkerProcessTerminating($workerDescriptor->id, $workerDescriptor->group, $processContext),
                 $workerDescriptor->id
             );
             
+            if (false === $processContext->isClosed()) {
+                $processContext->close();
+            }
+            
             if($exitResult instanceof TerminateWorkerException) {
                 $workerDescriptor->markAsStopped();
-                $workerDescriptor->reset();
                 $workerProcess->error("Worker {$id} will be stopped forever: {$exitResult->getMessage()}");
                 
                 return;
@@ -551,7 +560,6 @@ class WorkerPool                    implements WorkerPoolInterface
             } else if($restarting < 0) {
                 
                 $workerDescriptor->markAsStopped();
-                $workerDescriptor->reset();
                 
                 $workerProcess->warning(
                     "Worker {$id} will not be restarted: " .
@@ -632,12 +640,6 @@ class WorkerPool                    implements WorkerPoolInterface
             
             if(false === $deferredCancellation->isCancelled()) {
                 $deferredCancellation->cancel();
-            }
-            
-            $workerDescriptor->reset();
-            
-            if (false === $workerProcess->getContext()->isClosed()) {
-                $workerProcess->getContext()->close();
             }
         }
         
@@ -845,7 +847,7 @@ class WorkerPool                    implements WorkerPoolInterface
                 
                 try {
                     $workerDescriptor->getWorkerProcess()?->shutdown($cancellation);
-                } catch (ContextException) {
+                } catch (ContextException|CancelledException) {
                     // Ignore if the worker has already died unexpectedly.
                 }
 

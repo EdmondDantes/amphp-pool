@@ -18,9 +18,7 @@ interface RunnerStrategyInterface
      * @param int                  $workerId
      * @param WorkerGroupInterface $group
      *
-     * @return string
-     */
-    public function sendPoolContext(Context $processContext, int $workerId, WorkerGroupInterface $group): string;
-    
-    public function shouldProvideSocketTransport(): bool;
+     * @return void
+     **/
+    public function initiateWorkerContext(Context $processContext, int $workerId, WorkerGroupInterface $group): void;
 }
