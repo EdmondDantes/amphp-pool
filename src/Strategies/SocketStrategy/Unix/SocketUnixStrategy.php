@@ -14,6 +14,7 @@ use CT\AmpPool\Strategies\SocketStrategy\Unix\Messages\InitiateSocketTransfer;
 use CT\AmpPool\Strategies\SocketStrategy\Unix\Messages\SocketTransferInfo;
 use CT\AmpPool\Strategies\WorkerStrategyAbstract;
 use Amp\Parallel\Ipc;
+use CT\AmpPool\WatcherEvents\WorkerProcessStarted;
 use function Amp\Future\await;
 
 final class SocketUnixStrategy      extends WorkerStrategyAbstract
@@ -24,6 +25,9 @@ final class SocketUnixStrategy      extends WorkerStrategyAbstract
     private string              $key                = '';
     private DeferredFuture|null $deferredFuture     = null;
     private EventWeakHandler|null $workerEventHandler = null;
+    
+    /** @var SocketProvider[] */
+    private array $workerSocketProviders = [];
     
     public function __construct(private readonly int $ipcTimeout = 5) {}
     
@@ -61,7 +65,9 @@ final class SocketUnixStrategy      extends WorkerStrategyAbstract
         
         $worker->getWorkerEventEmitter()->addWorkerEventListener($this->workerEventHandler);
         
-        $worker->sendMessageToWatcher(new InitiateSocketTransfer($worker->getWorkerId()));
+        $worker->sendMessageToWatcher(
+            new InitiateSocketTransfer($worker->getWorkerId(), $worker->getWorkerGroup()->getWorkerGroupId())
+        );
     }
     
     public function onStopped(): void
@@ -136,26 +142,51 @@ final class SocketUnixStrategy      extends WorkerStrategyAbstract
             return;
         }
         
+        $workerPool             = $this->getWorkerPool();
+        
+        if($workerPool === null) {
+            return;
+        }
+        
+        //
+        // Events from the watcher
+        //
+        
         if($message instanceof InitiateSocketTransfer) {
-            $workerPool             = $this->getWorkerPool();
             
-            if($workerPool === null) {
+            if($message->groupId !== $this->getWorkerGroup()?->getWorkerGroupId()) {
                 return;
             }
             
-            $workerContext              = $workerPool->findWorkerContext($workerId);
+            $workerContext              = $workerPool->findWorkerContext($message->workerId);
             
             if($workerContext === null) {
                 return;
             }
             
             try {
-                $workerContext->send(
-                    new SocketTransferInfo($workerPool->getIpcHub()->getUri(), $workerPool->getIpcHub()->generateKey())
-                );
+                
+                $ipcHub                 = $workerPool->getIpcHub();
+                $ipcKey                 = $ipcHub->generateKey();
+                $socketPipeProvider     = new SocketProvider($ipcHub, $ipcKey, $workerPool->getMainCancellation(), $this->ipcTimeout);
+                
+                $workerContext->send(new SocketTransferInfo($ipcHub->getUri(), $ipcKey));
+                
+                if(array_key_exists($message->workerId, $this->workerSocketProviders)) {
+                    $this->workerSocketProviders[$message->workerId]->close();
+                }
+                
+                $this->workerSocketProviders[$message->workerId] = $socketPipeProvider;
+                
+                $socketPipeProvider->start();
+                
             } catch (\Throwable $exception) {
                 $workerPool->getLogger()?->error('Could not send socket transfer info to worker', ['exception' => $exception]);
             }
+        }
+        
+        if($message instanceof WorkerProcessStarted) {
+        
         }
     }
 }

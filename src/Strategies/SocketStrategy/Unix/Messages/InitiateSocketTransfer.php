@@ -5,5 +5,5 @@ namespace CT\AmpPool\Strategies\SocketStrategy\Unix\Messages;
 
 final readonly class InitiateSocketTransfer
 {
-    public function __construct(public int $workerId) {}
+    public function __construct(public int $workerId, public int $groupId) {}
 }

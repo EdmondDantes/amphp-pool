@@ -446,7 +446,10 @@ class WorkerPool                    implements WorkerPoolInterface
             
             $workerDescriptor->setWorkerProcess($workerProcess);
             
-            $this->eventEmitter->emitWorkerEvent(new WorkerProcessStarted($workerDescriptor->id, $context), $workerDescriptor->id);
+            $this->eventEmitter->emitWorkerEvent(
+                new WorkerProcessStarted($workerDescriptor->id, $workerDescriptor->group, $context),
+                $workerDescriptor->id
+            );
             
             $workerProcess->info(\sprintf('Started %s worker #%d', $workerDescriptor->group->getWorkerType()->value, $workerDescriptor->id));
         
@@ -458,7 +461,10 @@ class WorkerPool                    implements WorkerPoolInterface
                 $context->close();
             }
             
-            $this->eventEmitter->emitWorkerEvent(new WorkerProcessTerminating($workerDescriptor->id, $context, $exception), $workerDescriptor->id);
+            $this->eventEmitter->emitWorkerEvent(
+                new WorkerProcessTerminating(
+                    $workerDescriptor->id, $workerDescriptor->group, $context, $exception), $workerDescriptor->id
+            );
             
             throw new \RuntimeException(
                 "Starting the worker '{$workerDescriptor->id}' failed. Sending the pool context failed", previous: $exception
@@ -486,7 +492,7 @@ class WorkerPool                    implements WorkerPoolInterface
             if($workerDescriptor->getWorkerProcess() !== null) {
                 $this->eventEmitter->emitWorkerEvent(
                     new WorkerProcessTerminating(
-                        $workerDescriptor->id, $workerDescriptor->getWorkerProcess()->getContext()
+                        $workerDescriptor->id, $workerDescriptor->group, $workerDescriptor->getWorkerProcess()->getContext()
                     ),
                     $workerDescriptor->id
                 );
@@ -505,7 +511,9 @@ class WorkerPool                    implements WorkerPoolInterface
             $exitResult             = $this->workerEventLoop($workerDescriptor, $deferredCancellation);
             
             $this->eventEmitter->emitWorkerEvent(
-                new WorkerProcessTerminating($workerDescriptor->id, $workerDescriptor->getWorkerProcess()->getContext()),
+                new WorkerProcessTerminating(
+                    $workerDescriptor->id, $workerDescriptor->group, $workerDescriptor->getWorkerProcess()->getContext()
+                ),
                 $workerDescriptor->id
             );
             

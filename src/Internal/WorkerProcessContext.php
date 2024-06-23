@@ -45,9 +45,6 @@ final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Ps
     
     private readonly Future $joinFuture;
     private string $watcher     = '';
-    private bool $isReady       = false;
-    private bool  $isUsed       = false;
-    private int $jobsCount      = 0;
     /**
      * Equals true if the client uses the worker exclusively.
      * @var bool
@@ -134,7 +131,6 @@ final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Ps
         }
         
         $this->context->close();
-        $this->socketTransport?->close();
         
         if(false === $this->deferredCancellation->isCancelled()) {
             $this->deferredCancellation->cancel();
