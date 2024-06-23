@@ -7,6 +7,7 @@ use Amp\Cancellation;
 use Amp\CancelledException;
 use Amp\Cluster\ClusterException;
 use Amp\Cluster\ClusterWorkerMessage;
+use Amp\CompositeCancellation;
 use Amp\CompositeException;
 use Amp\DeferredCancellation;
 use Amp\Future;
@@ -34,6 +35,7 @@ use CT\AmpPool\Strategies\RunnerStrategy\DefaultRunner;
 use CT\AmpPool\Strategies\ScalingStrategy\ScalingByRequest;
 use CT\AmpPool\Strategies\SocketStrategy\Unix\SocketUnixStrategy;
 use CT\AmpPool\Strategies\SocketStrategy\Windows\SocketWindowsStrategy;
+use CT\AmpPool\Strategies\WorkerStrategyInterface;
 use CT\AmpPool\WatcherEvents\WorkerProcessStarted;
 use CT\AmpPool\WatcherEvents\WorkerProcessTerminating;
 use CT\AmpPool\Worker\Internal\WorkerDescriptor;
@@ -257,13 +259,20 @@ class WorkerPool                    implements WorkerPoolInterface
         return $this->mainCancellation?->getCancellation();
     }
     
-    public function awaitTermination(): void
+    public function awaitTermination(Cancellation $cancellation = null): void
     {
         if(false === $this->running) {
             return;
         }
         
-        EventLoop::queue(function () {
+        EventLoop::queue(function () use ($cancellation): void {
+            
+            if($cancellation !== null) {
+                $cancellation       = new CompositeCancellation($cancellation, $this->mainCancellation->getCancellation());
+            } else {
+                $cancellation       = $this->mainCancellation->getCancellation();
+            }
+            
             while ($this->running) {
                 
                 $futures            = [];
@@ -284,7 +293,7 @@ class WorkerPool                    implements WorkerPoolInterface
                 }
                 
                 try {
-                    Future\awaitAll($futures, $this->mainCancellation->getCancellation());
+                    Future\awaitAll($futures, $cancellation);
                 } catch (CancelledException) {
                     break;
                 }
@@ -819,7 +828,9 @@ class WorkerPool                    implements WorkerPoolInterface
     protected function initWorkerStrategies(WorkerGroup $group): void
     {
         foreach ($group->getWorkerStrategies() as $strategy) {
-            $strategy->setWorkerPool($this)->setWorkerGroup($group);
+            if($strategy instanceof WorkerStrategyInterface) {
+                $strategy->setWorkerPool($this)->setWorkerGroup($group);
+            }
         }
     }
     

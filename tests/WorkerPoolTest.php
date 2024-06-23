@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace CT\AmpPool;
 
 use Amp\Parallel\Context\ContextException;
+use Amp\TimeoutCancellation;
 use CT\AmpPool\WorkerPoolMocks\FatalWorkerEntryPoint;
 use CT\AmpPool\WorkerPoolMocks\RestartStrategies\RestartNeverWithLastError;
 use CT\AmpPool\WorkerPoolMocks\RestartStrategies\RestartTwice;
@@ -28,7 +29,7 @@ class WorkerPoolTest                extends TestCase
         ));
         
         $workerPool->run();
-        $workerPool->awaitTermination();
+        $workerPool->awaitTermination(new TimeoutCancellation(5));
         
         $this->assertFileExists(TestEntryPoint::getFile());
         

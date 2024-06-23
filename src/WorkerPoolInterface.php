@@ -48,9 +48,11 @@ interface WorkerPoolInterface       extends WorkerEventEmitterAwareInterface
     /**
      * The method will block current fiber until all workers are stopped.
      *
+     * @param Cancellation|null $cancellation
+     *
      * @return void
      */
-    public function awaitTermination(): void;
+    public function awaitTermination(Cancellation $cancellation = null): void;
     
     /**
      * @return int[]

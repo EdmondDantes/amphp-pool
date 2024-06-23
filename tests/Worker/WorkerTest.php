@@ -79,8 +79,6 @@ class WorkerTest                    extends TestCase
         $this->worker              = new Worker(
             1,
             $this->channelOut,
-            'testKey',
-            'testUri',
             $this->workerGroup,
             [$this->workerGroup]
         );

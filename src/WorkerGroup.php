@@ -9,6 +9,7 @@ use CT\AmpPool\Strategies\RestartStrategy\RestartStrategyInterface;
 use CT\AmpPool\Strategies\RunnerStrategy\RunnerStrategyInterface;
 use CT\AmpPool\Strategies\ScalingStrategy\ScalingStrategyInterface;
 use CT\AmpPool\Strategies\SocketStrategy\SocketStrategyInterface;
+use CT\AmpPool\Strategies\WorkerStrategyInterface;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -20,7 +21,9 @@ final class WorkerGroup             implements WorkerGroupInterface
     {
         foreach ($groupsScheme as $group) {
             foreach ($group->getWorkerStrategies() as $strategy) {
-                $strategy->onStarted();
+                if($strategy instanceof WorkerStrategyInterface) {
+                    $strategy->onStarted();
+                }
             }
         }
     }
@@ -29,6 +32,11 @@ final class WorkerGroup             implements WorkerGroupInterface
     {
         foreach ($groupsScheme as $group) {
             foreach ($group->getWorkerStrategies() as $strategy) {
+                
+                if(false === $strategy instanceof WorkerStrategyInterface) {
+                    continue;
+                }
+                
                 try {
                     $strategy->onStopped();
                 } catch (\Throwable $exception) {
