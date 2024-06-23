@@ -4,8 +4,8 @@ declare(strict_types=1);
 namespace CT\AmpPool\Strategies\SocketStrategy\Windows;
 
 use Amp\Socket\SocketAddress;
+use CT\AmpPool\EventWeakHandler;
 use CT\AmpPool\Strategies\SocketStrategy\Windows\Messages\MessageSocketListen;
-use CT\AmpPool\WorkerEventEmitterAwareInterface;
 use CT\AmpPool\WorkerGroupInterface;
 use CT\AmpPool\WorkerPool;
 
@@ -17,13 +17,17 @@ final class SocketListenerProvider
     
     public function __construct(private readonly WorkerPool $workerPool, private readonly WorkerGroupInterface $workerGroup)
     {
-        if($this->workerPool instanceof WorkerEventEmitterAwareInterface) {
-            $this->eventListener    = $this->eventListener(...);
-            $this->workerPool->getWorkerEventEmitter()->addWorkerEventListener($this->eventListener);
-        }
+        $self                   = \WeakReference::create($this);
+        
+        $this->eventListener    = new EventWeakHandler($this,
+            static function (mixed $event, int $workerId = 0) use($self) {
+                $self->get()?->eventListener($event, $workerId);
+            });
+        
+        $this->workerPool->getWorkerEventEmitter()->addWorkerEventListener($this->eventListener);
     }
     
-    public function listen(int $workerId, SocketAddress|string $address): void
+    private function listen(int $workerId, SocketAddress|string $address): void
     {
         if (false === $address instanceof SocketAddress) {
             // Normalize to SocketAddress here to avoid throwing exception for invalid strings at a receiving end.
@@ -46,7 +50,7 @@ final class SocketListenerProvider
     {
         $this->socketListeners = [];
         
-        if($this->workerPool instanceof WorkerEventEmitterAwareInterface && $this->eventListener !== null) {
+        if($this->eventListener !== null) {
             $this->workerPool->getWorkerEventEmitter()->removeWorkerEventListener($this->eventListener);
             $this->eventListener = null;
         }

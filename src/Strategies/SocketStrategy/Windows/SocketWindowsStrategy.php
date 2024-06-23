@@ -44,6 +44,7 @@ final class SocketWindowsStrategy   extends WorkerStrategyAbstract
     public function onStopped(): void
     {
         $this->socketListenerProvider?->close();
-        $this->socketListenerProvider = null;
+        $this->socketListenerProvider   = null;
+        $this->socketPipeFactory        = null;
     }
 }

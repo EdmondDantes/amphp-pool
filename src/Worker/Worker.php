@@ -16,6 +16,7 @@ use CT\AmpPool\JobIpc\IpcServer;
 use CT\AmpPool\JobIpc\JobRequestInterface;
 use CT\AmpPool\PoolState\PoolStateReadableInterface;
 use CT\AmpPool\PoolState\PoolStateStorage;
+use CT\AmpPool\Strategies\WorkerStrategyInterface;
 use CT\AmpPool\Worker\Internal\WorkerLogHandler;
 use CT\AmpPool\Worker\WorkerState\WorkersInfo;
 use CT\AmpPool\Worker\WorkerState\WorkersInfoInterface;
@@ -88,6 +89,7 @@ class Worker                        implements WorkerInterface
     
     public function initWorker(): void
     {
+        $this->initWorkerStrategies();
         WorkerGroup::startStrategies($this->groupsScheme);
     }
 
@@ -240,6 +242,15 @@ class Worker                        implements WorkerInterface
     public function __toString(): string
     {
         return $this->group->getGroupName().'-'.$this->id;
+    }
+    
+    protected function initWorkerStrategies(): void
+    {
+        foreach ($this->group->getWorkerStrategies() as $strategy) {
+            if($strategy instanceof WorkerStrategyInterface) {
+                $strategy->setWorker($this)->setWorkerGroup($this->group);
+            }
+        }
     }
     
     /**
