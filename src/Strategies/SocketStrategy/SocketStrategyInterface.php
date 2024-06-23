@@ -12,5 +12,5 @@ interface SocketStrategyInterface
      *
      * This method can be used only inside the worker!
      */
-    public function getServerSocketFactory(): ServerSocketFactory;
+    public function getServerSocketFactory(): ServerSocketFactory|null;
 }

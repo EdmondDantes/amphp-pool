@@ -54,7 +54,7 @@ use const Amp\Process\IS_WINDOWS;
  * @template-covariant TReceive
  * @template TSend
  */
-class WorkerPool                    implements WorkerPoolInterface, WorkerEventEmitterAwareInterface
+class WorkerPool                    implements WorkerPoolInterface
 {
     protected int $workerStartTimeout = 5;
     protected int $workerStopTimeout  = 5;
@@ -97,6 +97,11 @@ class WorkerPool                    implements WorkerPoolInterface, WorkerEventE
     public function getIpcHub(): IpcHub
     {
         return $this->hub;
+    }
+    
+    public function getLogger(): PsrLogger|null
+    {
+        return $this->logger;
     }
     
     public function getPoolStateStorage(): PoolStateReadableInterface

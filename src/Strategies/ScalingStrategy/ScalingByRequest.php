@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace CT\AmpPool\Strategies\ScalingStrategy;
 
+use CT\AmpPool\EventWeakHandler;
 use CT\AmpPool\Strategies\WorkerStrategyAbstract;
 use CT\AmpPool\WorkerEventEmitterAwareInterface;
 use Revolt\EventLoop;
@@ -11,7 +12,6 @@ final class ScalingByRequest        extends WorkerStrategyAbstract
                                     implements ScalingStrategyInterface
 {
     private int $lastScalingRequest   = 0;
-    private mixed $handleScalingRequest;
     private string $decreaseCallbackId = '';
     
     public function __construct(
@@ -43,9 +43,16 @@ final class ScalingByRequest        extends WorkerStrategyAbstract
     {
         $workerPool                 = $this->getWorkerPool();
         
-        if($workerPool instanceof WorkerEventEmitterAwareInterface) {
-            $this->handleScalingRequest = $this->handleScalingRequest(...);
-            $workerPool->getWorkerEventEmitter()->addWorkerEventListener($this->handleScalingRequest);
+        if($workerPool !== null) {
+            
+            $self                   = \WeakReference::create($this);
+            
+            $workerPool->getWorkerEventEmitter()->addWorkerEventListener(new EventWeakHandler(
+                $this,
+                static function (mixed $event, int $workerId = 0) use($self) {
+                    $self->get()?->handleScalingRequest($event);
+                }
+            ));
             
             $this->decreaseCallbackId = EventLoop::repeat($this->decreaseCheckInterval, $this->decreaseWorkers(...));
         }
@@ -53,12 +60,6 @@ final class ScalingByRequest        extends WorkerStrategyAbstract
     
     public function onStopped(): void
     {
-        $workerPool                 = $this->getWorkerPool();
-    
-        if($workerPool instanceof WorkerEventEmitterAwareInterface && $this->handleScalingRequest !== null) {
-            $workerPool->getWorkerEventEmitter()->removeWorkerEventListener($this->handleScalingRequest);
-        }
-        
         if($this->decreaseCallbackId !== '') {
             EventLoop::cancel($this->decreaseCallbackId);
         }

@@ -95,7 +95,7 @@ class Worker                        implements WorkerInterface
     
     public function initWorker(): void
     {
-        $this->getSocketPipeFactory();
+        WorkerGroup::startStrategies($this->groupsScheme);
     }
 
     public function sendMessageToWatcher(mixed $message): void
@@ -242,6 +242,8 @@ class Worker                        implements WorkerInterface
         }
         
         $this->loopCancellation->cancel();
+        
+        WorkerGroup::stopStrategies($this->groupsScheme, $this->logger);
     }
     
     public function isStopped(): bool

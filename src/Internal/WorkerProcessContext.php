@@ -17,8 +17,6 @@ use CT\AmpPool\Exceptions\RemoteException;
 use CT\AmpPool\Internal\Messages\MessageLog;
 use CT\AmpPool\Internal\Messages\MessagePingPong;
 use CT\AmpPool\Internal\Messages\MessageShutdown;
-use CT\AmpPool\Strategies\SocketStrategy\Unix\SocketPipeTransport;
-use CT\AmpPool\Strategies\SocketStrategy\Windows\SocketListenerProvider;
 use CT\AmpPool\WorkerEventEmitterInterface;
 use Revolt\EventLoop;
 use function Amp\async;

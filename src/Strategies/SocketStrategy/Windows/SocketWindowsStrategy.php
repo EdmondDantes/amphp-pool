@@ -13,7 +13,7 @@ final class SocketWindowsStrategy   extends WorkerStrategyAbstract
     private SocketListenerProvider|null $socketListenerProvider = null;
     private SocketPipeFactoryWindows|null $socketPipeFactory = null;
     
-    public function getServerSocketFactory(): ServerSocketFactory
+    public function getServerSocketFactory(): ServerSocketFactory|null
     {
         if($this->socketPipeFactory !== null) {
             return $this->socketPipeFactory;

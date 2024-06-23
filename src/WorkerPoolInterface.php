@@ -9,12 +9,15 @@ use Amp\Parallel\Ipc\IpcHub;
 use CT\AmpPool\Internal\WorkerProcessContext;
 use CT\AmpPool\PoolState\PoolStateReadableInterface;
 use CT\AmpPool\Worker\WorkerState\WorkersInfoInterface;
+use Psr\Log\LoggerInterface as PsrLogger;
 
-interface WorkerPoolInterface
+interface WorkerPoolInterface       extends WorkerEventEmitterAwareInterface
 {
     public function describeGroup(WorkerGroupInterface $group): self;
     
     public function getIpcHub(): IpcHub;
+    
+    public function getLogger(): PsrLogger|null;
     
     public function getPoolStateStorage(): PoolStateReadableInterface;
     
