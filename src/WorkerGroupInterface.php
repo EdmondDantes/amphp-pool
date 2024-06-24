@@ -3,7 +3,8 @@ declare(strict_types=1);
 
 namespace CT\AmpPool;
 
-use CT\AmpPool\Strategies\JobRunner\JobRunnerInterface;
+use CT\AmpPool\JobIpc\JobClientInterface;
+use CT\AmpPool\Strategies\JobExecutor\JobExecutorInterface;
 use CT\AmpPool\Strategies\PickupStrategy\PickupStrategyInterface;
 use CT\AmpPool\Strategies\RestartStrategy\RestartStrategyInterface;
 use CT\AmpPool\Strategies\RunnerStrategy\RunnerStrategyInterface;
@@ -38,7 +39,9 @@ interface WorkerGroupInterface
     
     public function getSocketStrategy(): ?SocketStrategyInterface;
     
-    public function getJobRunner(): ?JobRunnerInterface;
+    public function getJobExecutor(): ?JobExecutorInterface;
+    
+    public function getJobClient(): ?JobClientInterface;
     
     public function defineGroupName(string $groupName): self;
     
@@ -54,7 +57,9 @@ interface WorkerGroupInterface
     
     public function defineScalingStrategy(ScalingStrategyInterface $scalingStrategy): self;
     
-    public function defineJobRunner(JobRunnerInterface $jobRunner): self;
+    public function defineJobExecutor(JobExecutorInterface $jobRunner): self;
+    
+    public function defineJobClient(JobClientInterface $jobClient): self;
     
     public function defineSocketStrategy(SocketStrategyInterface $socketStrategy): self;
     

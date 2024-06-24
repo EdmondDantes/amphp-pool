@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace CT\AmpPool\Worker;
 
+use Amp\Cancellation;
 use Amp\Sync\Channel;
 use CT\AmpPool\PoolState\PoolStateReadableInterface;
 use CT\AmpPool\Worker\WorkerState\WorkersInfoInterface;
@@ -31,6 +32,8 @@ interface WorkerInterface   extends WorkerEventEmitterAwareInterface
     public function getWorkerGroup(): WorkerGroup;
     public function getWorkerGroupId(): int;
     public function getWorkerType(): WorkerTypeEnum;
+    
+    public function getAbortCancellation(): Cancellation;
     
     public function mainLoop(): void;
     

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Strategies\JobRunner;
+namespace CT\AmpPool\Strategies\JobExecutor;
 
 use Amp\Cancellation;
 use CT\AmpPool\Coroutine\CoroutineInterface;

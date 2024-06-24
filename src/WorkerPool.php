@@ -29,6 +29,8 @@ use CT\AmpPool\Exceptions\WorkerPoolException;
 use CT\AmpPool\Internal\WorkerProcessContext;
 use CT\AmpPool\PoolState\PoolStateReadableInterface;
 use CT\AmpPool\PoolState\PoolStateStorage;
+use CT\AmpPool\Strategies\JobClient\JobClientDefault;
+use CT\AmpPool\Strategies\JobExecutor\JobExecutorScheduler;
 use CT\AmpPool\Strategies\PickupStrategy\PickupLeastJobs;
 use CT\AmpPool\Strategies\RestartStrategy\RestartAlways;
 use CT\AmpPool\Strategies\RunnerStrategy\DefaultRunner;
@@ -819,6 +821,14 @@ class WorkerPool                    implements WorkerPoolInterface
         
         if($group->getRestartStrategy() === null) {
             $group->defineRestartStrategy(new RestartAlways);
+        }
+        
+        if($group->getJobExecutor() === null && $group->getWorkerType() === WorkerTypeEnum::JOB) {
+            $group->defineJobExecutor(new JobExecutorScheduler);
+        }
+        
+        if($group->getJobClient() === null && $group->getWorkerType() === WorkerTypeEnum::REACTOR) {
+            $group->defineJobClient(new JobClientDefault);
         }
         
         if($group->getSocketStrategy() === null && $group->getWorkerType() === WorkerTypeEnum::REACTOR) {

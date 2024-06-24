@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Strategies\JobRunner;
+namespace CT\AmpPool\Strategies\JobExecutor;
 
 use Amp\Cancellation;
 use Amp\CompositeCancellation;
@@ -9,7 +9,9 @@ use Amp\Future;
 use Amp\TimeoutCancellation;
 use CT\AmpPool\Coroutine\Coroutine;
 use CT\AmpPool\Coroutine\CoroutineInterface;
+use CT\AmpPool\Coroutine\Scheduler;
 use CT\AmpPool\Coroutine\SchedulerInterface;
+use CT\AmpPool\JobIpc\IpcServer;
 
 /**
  * Class JobRunnerScheduler
@@ -18,15 +20,46 @@ use CT\AmpPool\Coroutine\SchedulerInterface;
  *
  * @package CT\AmpPool\Strategies\JobRunner
  */
-final readonly class JobRunnerScheduler implements JobRunnerInterface
+final class JobExecutorScheduler extends JobExecutorAbstract
 {
+    private SchedulerInterface  $scheduler;
+    
     public function __construct(
-        private SchedulerInterface  $scheduler,
-        private JobHandlerInterface $handler,
-        private int                 $maxJobCount        = 100,
-        private int                 $defaultPriority    = 10,
-        private int                 $maxAwaitAllTimeout = 0
-    ) {}
+        private int $maxJobCount        = 100,
+        private int $defaultPriority    = 10,
+        private int $maxAwaitAllTimeout = 0
+    )
+    {}
+    
+    public function __serialize(): array
+    {
+        return [
+            'maxJobCount'           => $this->maxJobCount,
+            'defaultPriority'       => $this->defaultPriority,
+            'maxAwaitAllTimeout'    => $this->maxAwaitAllTimeout
+        ];
+    }
+    
+    public function __unserialize(array $data): void
+    {
+        $this->maxJobCount          = $data['maxJobCount'] ?? 100;
+        $this->defaultPriority      = $data['defaultPriority'] ?? 10;
+        $this->maxAwaitAllTimeout   = $data['maxAwaitAllTimeout'] ?? 0;
+    }
+    
+    public function onStarted(): void
+    {
+        parent::onStarted();
+        
+        if($this->isWorker()) {
+            $this->scheduler        = new Scheduler();
+        }
+    }
+    
+    protected function initIpcServer(): void
+    {
+        $this->jobIpc               = new IpcServer(workerId: $this->workerId, logger: $this->logger);
+    }
     
     public function runJob(string $data, int $priority = null, int $weight = null, Cancellation $cancellation = null): Future
     {

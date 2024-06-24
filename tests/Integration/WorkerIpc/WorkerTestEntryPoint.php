@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Integration;
+namespace CT\AmpPool\Integration\WorkerIpc;
 
 use Amp\DeferredCancellation;
 use CT\AmpPool\Exceptions\FatalWorkerException;

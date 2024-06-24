@@ -1,24 +1,43 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Strategies\JobRunner;
+namespace CT\AmpPool\Strategies\JobExecutor;
 
 use Amp\Cancellation;
 use Amp\CompositeCancellation;
 use Amp\Future;
 use Amp\TimeoutCancellation;
+use CT\AmpPool\JobIpc\IpcServer;
 use function Amp\async;
 
-final class JobRunnerAsync         implements JobRunnerInterface
+final class JobExecutorAsync         extends JobExecutorAbstract
 {
     private int $jobCount           = 0;
     private array $jobFutures       = [];
     
     public function __construct(
-        private readonly JobHandlerInterface $handler,
-        private readonly int                 $maxJobCount = 100,
-        private readonly int                 $maxAwaitAllTimeout = 0
+        private readonly int        $maxJobCount = 100,
+        private readonly int        $maxAwaitAllTimeout = 0
     ) {}
+    
+    public function __serialize(): array
+    {
+        return [
+            'maxJobCount'           => $this->maxJobCount,
+            'maxAwaitAllTimeout'    => $this->maxAwaitAllTimeout
+        ];
+    }
+    
+    public function __unserialize(array $data): void
+    {
+        $this->maxJobCount          = $data['maxJobCount'] ?? 100;
+        $this->maxAwaitAllTimeout   = $data['maxAwaitAllTimeout'] ?? 0;
+    }
+    
+    protected function initIpcServer(): void
+    {
+        $this->jobIpc               = new IpcServer(workerId: $this->workerId, logger: $this->logger);
+    }
     
     public function runJob(string $data, int $priority = null, int $weight = null, Cancellation $cancellation = null): Future
     {

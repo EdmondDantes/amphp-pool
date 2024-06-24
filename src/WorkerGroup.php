@@ -3,7 +3,8 @@ declare(strict_types=1);
 
 namespace CT\AmpPool;
 
-use CT\AmpPool\Strategies\JobRunner\JobRunnerInterface;
+use CT\AmpPool\JobIpc\JobClientInterface;
+use CT\AmpPool\Strategies\JobExecutor\JobExecutorInterface;
 use CT\AmpPool\Strategies\PickupStrategy\PickupStrategyInterface;
 use CT\AmpPool\Strategies\RestartStrategy\RestartStrategyInterface;
 use CT\AmpPool\Strategies\RunnerStrategy\RunnerStrategyInterface;
@@ -51,18 +52,19 @@ final class WorkerGroup             implements WorkerGroupInterface
         private readonly WorkerTypeEnum $workerType,
         private readonly int            $minWorkers = 0,
         private int                     $maxWorkers = 0,
-        private string                  $groupName = '',
+        private string                    $groupName = '',
         /**
          * @var int[]
          */
-        private readonly array          $jobGroups = [],
-        private ?RunnerStrategyInterface $runnerStrategy = null,
-        private ?PickupStrategyInterface $pickupStrategy = null,
+        private readonly array            $jobGroups = [],
+        private ?RunnerStrategyInterface  $runnerStrategy = null,
+        private ?PickupStrategyInterface  $pickupStrategy = null,
         private ?RestartStrategyInterface $restartStrategy = null,
         private ?ScalingStrategyInterface $scalingStrategy = null,
-        private ?SocketStrategyInterface $socketStrategy = null,
-        private ?JobRunnerInterface     $jobRunner = null,
-        private int                     $workerGroupId = 0,
+        private ?SocketStrategyInterface  $socketStrategy = null,
+        private ?JobExecutorInterface     $jobExecutor = null,
+        private ?JobClientInterface       $jobClient = null,
+        private int                       $workerGroupId = 0,
     ) {}
     
     public function getEntryPointClass(): string
@@ -120,9 +122,14 @@ final class WorkerGroup             implements WorkerGroupInterface
         return $this->scalingStrategy;
     }
     
-    public function getJobRunner(): ?JobRunnerInterface
+    public function getJobExecutor(): ?JobExecutorInterface
     {
-        return $this->jobRunner;
+        return $this->jobExecutor;
+    }
+    
+    public function getJobClient(): ?JobClientInterface
+    {
+        return $this->jobClient;
     }
     
     public function getSocketStrategy(): ?SocketStrategyInterface
@@ -215,13 +222,24 @@ final class WorkerGroup             implements WorkerGroupInterface
         return $this;
     }
     
-    public function defineJobRunner(JobRunnerInterface $jobRunner): self
+    public function defineJobExecutor(JobExecutorInterface $jobRunner): self
     {
-        if($this->jobRunner !== null) {
+        if($this->jobExecutor !== null) {
             throw new \LogicException('Job runner is already defined');
         }
         
-        $this->jobRunner            = $jobRunner;
+        $this->jobExecutor = $jobRunner;
+        
+        return $this;
+    }
+    
+    public function defineJobClient(JobClientInterface $jobClient): self
+    {
+        if($this->jobClient !== null) {
+            throw new \LogicException('Job client is already defined');
+        }
+        
+        $this->jobClient            = $jobClient;
         
         return $this;
     }

@@ -1,13 +1,15 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Strategies\JobRunner;
+namespace CT\AmpPool\Strategies\JobExecutor;
 
 use Amp\Cancellation;
 use Amp\Future;
 
-interface JobRunnerInterface
+interface JobExecutorInterface
 {
+    public function defineJobHandler(JobHandlerInterface $handler): void;
+    
     /**
      * @param string            $data
      * @param int|null          $priority
