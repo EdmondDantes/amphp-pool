@@ -261,19 +261,9 @@ class WorkerPool                    implements WorkerPoolInterface
     
     public function awaitTermination(Cancellation $cancellation = null): void
     {
-        if(false === $this->running) {
-            return;
-        }
-        
-        EventLoop::queue(function () use ($cancellation): void {
+        $awaitWorkers               = async(function () use ($cancellation): void {
             
-            if($cancellation !== null) {
-                $cancellation       = new CompositeCancellation($cancellation, $this->mainCancellation->getCancellation());
-            } else {
-                $cancellation       = $this->mainCancellation->getCancellation();
-            }
-            
-            while ($this->running) {
+            while (true) {
                 
                 $futures            = [];
                 
@@ -293,7 +283,14 @@ class WorkerPool                    implements WorkerPoolInterface
                 }
                 
                 try {
-                    Future\awaitAll($futures, $cancellation);
+                    [$errors]       = Future\awaitAll($futures, $cancellation);
+
+                    if(count($errors) > 1) {
+                        throw new CompositeException($errors);
+                    } elseif (count($errors) === 1) {
+                        throw $errors[0];
+                    }
+
                 } catch (CancelledException) {
                     break;
                 }
@@ -305,6 +302,8 @@ class WorkerPool                    implements WorkerPoolInterface
         } else {
             $this->awaitUnixEvents();
         }
+
+        Future\await([$awaitWorkers]);
     }
     
     public function scaleWorkers(int $groupId, int $count): int
@@ -633,7 +632,7 @@ class WorkerPool                    implements WorkerPoolInterface
             
         } catch (\Throwable $exception) {
             
-            $workerProcess->error("Worker {$id} failed: " . $exception, ['exception' => $exception]);
+            $workerProcess->error("Worker {$id} failed: " . $exception->getMessage(), ['exception' => $exception]);
             throw $exception;
             
         } finally {
@@ -839,9 +838,10 @@ class WorkerPool                    implements WorkerPoolInterface
     protected function stopWorkers(Cancellation $cancellation): array
     {
         $futures                    = [];
+        $logger                     = $this->logger;
         
         foreach ($this->workers as $workerDescriptor) {
-            $futures[]              = async(static function () use ($workerDescriptor, $cancellation): void {
+            $futures[]              = async(static function () use ($workerDescriptor, $cancellation, $logger): void {
                 
                 $future             = $workerDescriptor->getFuture();
                 
@@ -856,7 +856,7 @@ class WorkerPool                    implements WorkerPoolInterface
                     // event-loop exits immediately after.
                     $future?->await($cancellation);
                 } catch (CancelledException) {
-                    $this->logger?->error('Worker did not die normally within a cancellation window');
+                    $logger?->error('Worker did not die normally within a cancellation window');
                 }
             });
         }

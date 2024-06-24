@@ -98,6 +98,24 @@ class RemoteException               extends \RuntimeException
     
     public function __unserialize(array $data): void
     {
+        if(\array_key_exists('message', $data)) {
+            $this->message          = 'Remote exception: '.$data['message'];
+        } else {
+            $this->message          = 'Remote exception';
+        }
+
+        if(\array_key_exists('code', $data)) {
+            $this->code             = $data['code'];
+        }
+
+        if(\array_key_exists('file', $data)) {
+            $this->file             = $data['file'];
+        }
+
+        if(\array_key_exists('line', $data)) {
+            $this->line             = $data['line'];
+        }
+
         $this->remoteException      = $data;
     }
 }

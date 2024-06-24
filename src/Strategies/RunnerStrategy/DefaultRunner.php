@@ -89,8 +89,14 @@ class DefaultRunner extends WorkerStrategyAbstract implements RunnerStrategyInte
         } catch (\Throwable $exception) {
             
             if(false === $exception instanceof RemoteException) {
+
+                $pid                = getmypid();
+
                 // Make sure that the exception is a FatalWorkerException
-                $exception = new FatalWorkerException('Worker encountered a fatal error', 0, $exception);
+                $exception = new FatalWorkerException(
+                    "Worker #$id, pid:$pid encountered a fatal error: {$exception->getMessage()} "
+                    ."in {$exception->getFile()}:{$exception->getLine()}", 0, $exception
+                );
             }
             
             $channel->send($exception);
