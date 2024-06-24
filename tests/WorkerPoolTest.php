@@ -5,6 +5,7 @@ namespace CT\AmpPool;
 
 use Amp\Parallel\Context\ContextException;
 use Amp\TimeoutCancellation;
+use CT\AmpPool\Exceptions\FatalWorkerException;
 use CT\AmpPool\WorkerPoolMocks\FatalWorkerEntryPoint;
 use CT\AmpPool\WorkerPoolMocks\RestartStrategies\RestartNeverWithLastError;
 use CT\AmpPool\WorkerPoolMocks\RestartStrategies\RestartTwice;
@@ -86,8 +87,15 @@ class WorkerPoolTest                extends TestCase
         ));
         
         $workerPool->run();
-        $workerPool->awaitTermination();
-        
+
+        $exception                  = null;
+
+        try {
+            $workerPool->awaitTermination();
+        } catch (\Throwable $exception) {
+        }
+
+        $this->assertInstanceOf(FatalWorkerException::class, $exception);
         $this->assertEquals(0, $restartStrategy->restarts, 'Worker should not be restarted');
     }
     
