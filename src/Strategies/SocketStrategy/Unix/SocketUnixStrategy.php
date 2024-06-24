@@ -179,10 +179,10 @@ final class SocketUnixStrategy      extends WorkerStrategyAbstract
                 $ipcKey                 = $ipcHub->generateKey();
                 $socketPipeProvider     = new SocketProvider($ipcHub, $ipcKey, $workerCancellation, $this->ipcTimeout);
                 
-                $workerContext->send(new SocketTransferInfo($ipcHub->getUri(), $ipcKey));
+                $workerContext->send(new SocketTransferInfo($ipcKey, $ipcHub->getUri()));
                 
                 if(array_key_exists($message->workerId, $this->workerSocketProviders)) {
-                    $this->workerSocketProviders[$message->workerId]->close();
+                    $this->workerSocketProviders[$message->workerId]->stop();
                 }
                 
                 $this->workerSocketProviders[$message->workerId] = $socketPipeProvider;
@@ -193,5 +193,15 @@ final class SocketUnixStrategy      extends WorkerStrategyAbstract
                 $workerPool->getLogger()?->error('Could not send socket transfer info to worker', ['exception' => $exception]);
             }
         }
+    }
+
+    public function __serialize(): array
+    {
+        return ['ipcTimeout' => $this->ipcTimeout];
+    }
+
+    public function __unserialize(array $data): void
+    {
+        $this->ipcTimeout           = $data['ipcTimeout'] ?? 5;
     }
 }
