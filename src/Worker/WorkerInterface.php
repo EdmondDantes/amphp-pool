@@ -38,4 +38,10 @@ interface WorkerInterface   extends WorkerEventEmitterAwareInterface
     public function mainLoop(): void;
     
     public function getLogger(): LoggerInterface;
+    
+    public function awaitTermination(?Cancellation $cancellation = null): void;
+    
+    public function stop(): void;
+    
+    public function isStopped(): bool;
 }

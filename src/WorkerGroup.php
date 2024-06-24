@@ -275,6 +275,14 @@ final class WorkerGroup             implements WorkerGroupInterface
             $strategyList[]         = $this->scalingStrategy;
         }
         
+        if($this->jobExecutor !== null) {
+            $strategyList[]         = $this->jobExecutor;
+        }
+        
+        if($this->jobClient !== null) {
+            $strategyList[]         = $this->jobClient;
+        }
+        
         if($this->socketStrategy !== null) {
             $strategyList[]         = $this->socketStrategy;
         }

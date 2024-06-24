@@ -6,10 +6,12 @@ namespace CT\AmpPool\Integration\WorkerIpc;
 use Amp\Cancellation;
 use Amp\TimeoutCancellation;
 use CT\AmpPool\Coroutine\CoroutineInterface;
+use CT\AmpPool\Exceptions\FatalWorkerException;
 use CT\AmpPool\Strategies\JobExecutor\JobHandlerInterface;
 use CT\AmpPool\Worker\WorkerEntryPointInterface;
 use CT\AmpPool\Worker\WorkerInterface;
 use CT\AmpPool\WorkerTypeEnum;
+use Revolt\EventLoop;
 
 final class EntryPoint              implements WorkerEntryPointInterface, JobHandlerInterface
 {
@@ -51,6 +53,8 @@ final class EntryPoint              implements WorkerEntryPointInterface, JobHan
                               Cancellation       $cancellation = null
     ): mixed
     {
+        EventLoop::delay(1, fn() => $this->worker->stop());
+        
         return $data.self::WAS_HANDLED;
     }
     
@@ -59,11 +63,17 @@ final class EntryPoint              implements WorkerEntryPointInterface, JobHan
         $group                      = $this->worker->getWorkerGroup();
         
         if($group->getWorkerType() === WorkerTypeEnum::REACTOR) {
-            $result                 = $group->getJobClient()
-                                            ->sendJobImmediately($group->getGroupName())
-                                            ->await(new TimeoutCancellation(5));
+            $future                 = $group->getJobClient()?->sendJobImmediately($group->getGroupName());
+            
+            if($future === null) {
+                throw new FatalWorkerException('Could not send job to client');
+            }
+            
+            $result                 = $future->await(new TimeoutCancellation(5));
             
             file_put_contents(self::getFile(), $result);
+        } else {
+            $this->worker->awaitTermination(new TimeoutCancellation(5));
         }
     }
 }
