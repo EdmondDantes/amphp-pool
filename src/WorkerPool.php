@@ -472,7 +472,7 @@ class WorkerPool                    implements WorkerPoolInterface
         
         } catch (\Throwable $exception) {
             
-            $workerDescriptor->reset();
+            //$workerDescriptor->reset();
             
             if (false === $context->isClosed()) {
                 $context->close();
@@ -483,7 +483,7 @@ class WorkerPool                    implements WorkerPoolInterface
                     $workerDescriptor->id, $workerDescriptor->group, $context, $exception), $workerDescriptor->id
             );
             
-            throw new \RuntimeException(
+            throw new FatalWorkerException(
                 "Starting the worker '{$workerDescriptor->id}' failed. Sending the pool context failed", previous: $exception
             );
         }

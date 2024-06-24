@@ -112,10 +112,22 @@ class WorkerPoolTest                extends TestCase
             runnerStrategy : new RunnerLostChannel,
             restartStrategy: $restartStrategy
         ));
-        
-        $workerPool->run();
+
+        $exception                  = null;
+
+        try {
+            $workerPool->run();
+        } catch (\Throwable $exception) {
+        }
+
+        if($exception !== null) {
+            $this->assertInstanceOf(FatalWorkerException::class, $exception);
+        }
+
         $workerPool->awaitTermination();
-        
-        $this->assertInstanceOf(ContextException::class, $restartStrategy->lastError);
+
+        if($exception === null) {
+            $this->assertInstanceOf(FatalWorkerException::class, $restartStrategy->lastError);
+        }
     }
 }

@@ -110,7 +110,7 @@ final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Ps
                 )
             );
 
-        } catch (ChannelException) {
+        } catch (ChannelException $exception) {
 
             /**
              * When we receive a ChannelException, it means that the child process might have crashed.
@@ -127,6 +127,8 @@ final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Ps
                     .' The connection with the worker process was lost. The state is undefined.'
                 )
             );
+
+            throw $exception;
 
         } catch (\Throwable $exception) {
             $this->joinFuture->ignore();
