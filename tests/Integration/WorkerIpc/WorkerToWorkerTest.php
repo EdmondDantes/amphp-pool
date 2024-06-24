@@ -29,6 +29,7 @@ class WorkerToWorkerTest            extends TestCase
                                        workerType     : WorkerTypeEnum::REACTOR,
                                        minWorkers     : 1,
                                        groupName      : EntryPoint::GROUP2,
+                                       jobGroups      : [1],
                                        restartStrategy: new RestartNever
         ));
         

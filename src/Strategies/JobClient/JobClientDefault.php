@@ -5,6 +5,7 @@ namespace CT\AmpPool\Strategies\JobClient;
 
 use Amp\DeferredFuture;
 use Amp\Future;
+use CT\AmpPool\Exceptions\FatalWorkerException;
 use CT\AmpPool\JobIpc\IpcClient;
 use CT\AmpPool\JobIpc\IpcClientInterface;
 use CT\AmpPool\JobIpc\JobClientInterface;
@@ -41,6 +42,13 @@ final class JobClientDefault        extends WorkerStrategyAbstract
     
     public function onStarted(): void
     {
+        if($this->getWorkerGroup() !== null && $this->getWorkerGroup()->getJobGroups() === []) {
+            throw new FatalWorkerException(
+                'JobClient strategy requires at least one JobGroup to be defined in the WorkerGroup. '
+                .'Please define jobGroups before starting the WorkerPool.'
+            );
+        }
+        
         $worker                     = $this->getWorker();
         
         if($worker === null) {

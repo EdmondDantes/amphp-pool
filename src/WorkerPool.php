@@ -203,7 +203,7 @@ class WorkerPool                    implements WorkerPoolInterface
             }
             
             foreach ($group->getJobGroups() as $jobGroupId) {
-                if(\array_key_exists($jobGroupId, $this->groupsScheme)) {
+                if(false === \array_key_exists($jobGroupId, $this->groupsScheme)) {
                     throw new \Exception("The job group id '{$jobGroupId}' is not found in the worker groups scheme");
                 }
                 
