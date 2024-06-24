@@ -60,7 +60,10 @@ abstract class JobExecutorAbstract  extends WorkerStrategyAbstract
             throw new FatalWorkerException('IPC Server is not initialized');
         }
         
-        EventLoop::queue($this->jobLoop(...), $worker->getAbortCancellation());
+        $abortCancellation           = $worker->getAbortCancellation();
+        
+        EventLoop::queue($this->jobIpc->receiveLoop(...), $abortCancellation);
+        EventLoop::queue($this->jobLoop(...), $abortCancellation);
     }
     
     /**
@@ -92,12 +95,21 @@ abstract class JobExecutorAbstract  extends WorkerStrategyAbstract
                     continue;
                 }
                 
-                $this->runJob($jobRequest->getData(), $jobRequest->getPriority(), $jobRequest->getWeight(), $cancellation)
-                          ->finally(static function (mixed $result) use ($channel, $jobRequest, $selfRef, $cancellation) {
-                              
-                              $selfRef->get()?->workerState->jobDequeued($jobRequest->getWeight(), $selfRef->get()->canAcceptMoreJobs());
-                              $selfRef->get()?->jobIpc?->sendJobResult($result, $channel, $jobRequest, $cancellation);
-                          });
+                $future             = $this->runJob(
+                    $jobRequest->getData(), $jobRequest->getPriority(), $jobRequest->getWeight(), $cancellation
+                );
+                
+                EventLoop::queue(static function () use ($channel, $future, $jobRequest, $selfRef, $cancellation) {
+                    
+                    try {
+                        $result     = $future->await($cancellation);
+                    } catch (\Throwable $exception) {
+                        $result     = $exception;
+                    }
+                    
+                    $selfRef->get()?->workerState->jobDequeued($jobRequest->getWeight(), $selfRef->get()->canAcceptMoreJobs());
+                    $selfRef->get()?->jobIpc?->sendJobResult($result, $channel, $jobRequest, $cancellation);
+                });
                 
                 if(false === $this->canAcceptMoreJobs()) {
                     

@@ -11,6 +11,7 @@ use Amp\ForbidCloning;
 use Amp\ForbidSerialization;
 use Amp\Future;
 use Amp\Serialization\PassthroughSerializer;
+use Amp\Sync\ChannelException;
 use Amp\TimeoutCancellation;
 use Amp\TimeoutException;
 use CT\AmpPool\Exceptions\NoWorkersAvailable;
@@ -130,6 +131,8 @@ final class IpcClient                   implements IpcClientInterface
             $ignoreWorkers[]        = $this->workerId;
         }
         
+        $this->poolState->update();
+        
         while($tryCount < $this->maxTryCount) {
             
             $tryCount++;
@@ -162,9 +165,11 @@ final class IpcClient                   implements IpcClientInterface
                 if($isScalingPossible && $this->scalingTimeout > 0) {
                     // suspend the current task for a while
                     delay($this->scalingTimeout, true, $this->cancellation);
+                    $this->poolState->update();
                 } else if($this->retryInterval > 0) {
                     // suspend the current task for a while
                     delay((float)$this->retryInterval, true, $this->cancellation);
+                    $this->poolState->update();
                 } else {
                     $deferred?->complete($exception);
                     throw $exception;
@@ -331,7 +336,10 @@ final class IpcClient                   implements IpcClientInterface
             } catch (\Throwable) {
             }
             
-            throw $exception;
+            // Ignore the exception if it is not a ChannelException
+            if(false === $exception instanceof ChannelException) {
+                throw $exception;
+            }
         }
     }
     

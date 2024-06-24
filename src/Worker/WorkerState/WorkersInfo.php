@@ -22,7 +22,7 @@ final class WorkersInfo             implements WorkersInfoInterface
             $storage                = $this->getWorkerStateStorage($workerId);
             $storage->update();
             
-            return new WorkerState($storage->isWorkerReady(), $storage->getJobCount(), $storage->getWorkerGroupId());
+            return new WorkerState($storage->isWorkerReady(), $storage->getJobCount(), $storage->getWorkerGroupId(), $storage->getJobWeight());
         } catch (WorkerStateNotAvailable|WorkerStateReadFailed) {
             return null;
         }

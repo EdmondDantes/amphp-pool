@@ -63,7 +63,7 @@ final class EntryPoint              implements WorkerEntryPointInterface, JobHan
         $group                      = $this->worker->getWorkerGroup();
         
         if($group->getWorkerType() === WorkerTypeEnum::REACTOR) {
-            $future                 = $group->getJobClient()?->sendJobImmediately($group->getGroupName());
+            $future                 = $group->getJobClient()?->sendJobImmediately($group->getGroupName(), awaitResult: true);
             
             if($future === null) {
                 throw new FatalWorkerException('Could not send job to client');
