@@ -73,7 +73,7 @@ final class EntryPoint              implements WorkerEntryPointInterface, JobHan
             
             file_put_contents(self::getFile(), $result);
         } else {
-            $this->worker->awaitTermination(new TimeoutCancellation(5));
+            $this->worker->awaitTermination();
         }
     }
 }

@@ -132,6 +132,7 @@ final class IpcClient                   implements IpcClientInterface
         
         while($tryCount < $this->maxTryCount) {
             
+            $tryCount++;
             $isScalingPossible      = false;
             $foundedWorkerId        = $this->pickupWorker($allowedGroups, $allowedWorkers, $ignoreWorkers, $priority, $weight, $tryCount);
             
@@ -153,12 +154,15 @@ final class IpcClient                   implements IpcClientInterface
                 
             } catch (NoWorkersAvailable $exception) {
                 
+                if($tryCount >= $this->maxTryCount) {
+                    $deferred?->complete($exception);
+                    throw $exception;
+                }
+                
                 if($isScalingPossible && $this->scalingTimeout > 0) {
-                    $tryCount++;
                     // suspend the current task for a while
                     delay($this->scalingTimeout, true, $this->cancellation);
                 } else if($this->retryInterval > 0) {
-                    $tryCount++;
                     // suspend the current task for a while
                     delay((float)$this->retryInterval, true, $this->cancellation);
                 } else {
@@ -167,7 +171,6 @@ final class IpcClient                   implements IpcClientInterface
                 }
                 
             } catch (StreamException) {
-                $tryCount++;
                 $ignoreWorkers[]    = $foundedWorkerId;
             }
         }
