@@ -24,7 +24,7 @@ class WorkerPoolTest                extends TestCase
         $workerPool                 = new WorkerPool;
         $workerPool->describeGroup(new WorkerGroup(
             TestEntryPoint::class,
-            WorkerTypeEnum::JOB,
+            WorkerTypeEnum::SERVICE,
             minWorkers: 1,
             restartStrategy: new RestartNever
         ));
@@ -44,7 +44,7 @@ class WorkerPoolTest                extends TestCase
         $workerPool                 = new WorkerPool;
         $workerPool->describeGroup(new WorkerGroup(
             TestEntryPointWaitTermination::class,
-            WorkerTypeEnum::JOB,
+            WorkerTypeEnum::SERVICE,
             minWorkers: 1,
             restartStrategy: new RestartNever
         ));
@@ -63,7 +63,7 @@ class WorkerPoolTest                extends TestCase
         $workerPool                 = new WorkerPool;
         $workerPool->describeGroup(new WorkerGroup(
             TestEntryPoint::class,
-            WorkerTypeEnum::JOB,
+            WorkerTypeEnum::SERVICE,
             minWorkers: 1,
             restartStrategy: $restartStrategy
         ));
@@ -81,7 +81,7 @@ class WorkerPoolTest                extends TestCase
         $workerPool                 = new WorkerPool;
         $workerPool->describeGroup(new WorkerGroup(
             FatalWorkerEntryPoint::class,
-            WorkerTypeEnum::JOB,
+            WorkerTypeEnum::SERVICE,
             minWorkers: 1,
             restartStrategy: $restartStrategy
         ));
@@ -107,7 +107,7 @@ class WorkerPoolTest                extends TestCase
         
         $workerPool->describeGroup(new WorkerGroup(
             TestEntryPoint::class,
-            WorkerTypeEnum::JOB,
+            WorkerTypeEnum::SERVICE,
             minWorkers     : 1,
             runnerStrategy : new RunnerLostChannel,
             restartStrategy: $restartStrategy

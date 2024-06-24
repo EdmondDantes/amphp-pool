@@ -827,7 +827,7 @@ class WorkerPool                    implements WorkerPoolInterface
             $group->defineJobExecutor(new JobExecutorScheduler);
         }
         
-        if($group->getJobClient() === null && $group->getWorkerType() === WorkerTypeEnum::REACTOR) {
+        if($group->getJobClient() === null && $group->getJobGroups() !== []) {
             $group->defineJobClient(new JobClientDefault);
         }
         
