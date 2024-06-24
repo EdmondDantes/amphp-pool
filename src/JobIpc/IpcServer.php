@@ -71,7 +71,12 @@ final class IpcServer               implements IpcServerInterface
         if (!IS_WINDOWS) {
             $this->toUnlink         = \sys_get_temp_dir() . '/worker-' . $workerId . '.sock';
         }
-        
+
+        // Try to remove existing file
+        if(\file_exists($this->toUnlink)) {
+            \unlink($this->toUnlink);
+        }
+
         $this->address              = $address;
         $this->server               = Socket\listen($address);
         $this->jobQueue             = new Queue(10);

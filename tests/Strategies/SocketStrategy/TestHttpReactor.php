@@ -68,7 +68,7 @@ final class TestHttpReactor         implements WorkerEntryPointInterface
                 
                 file_put_contents(self::getFile(), __CLASS__);
                 
-                EventLoop::defer(static function () use($worker) {
+                EventLoop::delay(2, static function () use($worker) {
                     $worker->stop();
                 });
                 
