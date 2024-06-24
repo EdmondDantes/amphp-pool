@@ -44,7 +44,7 @@ class SocketStrategyTest            extends TestCase
             $context->send('http://'.TestHttpReactor::ADDRESS.'/');
             $response               = $context->receive(new TimeoutCancellation(5));
             
-            //$this->assertEquals(TestHttpReactor::class, $response);
+            $this->assertEquals(TestHttpReactor::class, $response);
         });
         
         $workerPool->awaitTermination();

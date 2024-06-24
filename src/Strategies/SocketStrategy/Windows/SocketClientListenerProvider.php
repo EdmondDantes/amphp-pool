@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace CT\AmpPool\Strategies\SocketStrategy\Windows;
 
 use Amp\Cancellation;
+use Amp\CancelledException;
 use Amp\Socket\BindContext;
 use Amp\Socket\ResourceServerSocket;
 use Amp\Socket\ResourceSocket;
@@ -96,38 +97,46 @@ final class SocketClientListenerProvider
     
     private function receiveLoop(ServerSocket $server): void
     {
-        while (($socket = $server->accept($this->cancellation)) !== null) {
-            
-            // Select free worker
-            $foundedWorkerId            = $this->pickupWorker();
-            
-            if ($foundedWorkerId === null) {
-                $socket->close();
-                return;
+        try {
+            while (($socket = $server->accept($this->cancellation)) !== null) {
+                
+                // Select free worker
+                $foundedWorkerId    = $this->pickupWorker();
+                
+                if ($foundedWorkerId === null) {
+                    $socket->close();
+                    return;
+                }
+                
+                $foundedWorker      = $this->workerPool->findWorkerContext($foundedWorkerId);
+                
+                if($foundedWorker === null) {
+                    $socket->close();
+                    return;
+                }
+                
+                $pid                = $foundedWorker->getPid();
+                
+                $socketId           = \socket_wsaprotocol_info_export(\socket_import_stream($socket->getResource()), $pid);
+                
+                if(false === $socketId) {
+                    $socket->close();
+                    throw new \Exception('Failed to export socket information');
+                }
+                
+                try {
+                    $foundedWorker->send(new MessageSocketTransfer($socketId));
+                    $this->addTransferredSocket($foundedWorkerId, $socketId, $socket);
+                } catch (\Throwable $exception) {
+                    $socket->close();
+                    throw $exception;
+                }
             }
-            
-            $foundedWorker              = $this->workerPool->findWorkerContext($foundedWorkerId);
-            
-            if($foundedWorker === null) {
-                $socket->close();
-                return;
-            }
-            
-            $pid                        = $foundedWorker->getPid();
-            
-            $socketId                   = \socket_wsaprotocol_info_export(\socket_import_stream($socket->getResource()), $pid);
-            
-            if(false === $socketId) {
-                $socket->close();
-                throw new \Exception('Failed to export socket information');
-            }
-            
-            try {
-                $foundedWorker->send(new MessageSocketTransfer($socketId));
-                $this->addTransferredSocket($foundedWorkerId, $socketId, $socket);
-            } catch (\Throwable $exception) {
-                $socket->close();
-                throw $exception;
+        } catch (CancelledException) {
+            // ignore
+        } finally {
+            if(false === $server->isClosed()) {
+                $server->close();
             }
         }
     }

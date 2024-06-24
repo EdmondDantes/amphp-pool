@@ -73,7 +73,7 @@ final class IpcServer               implements IpcServerInterface
         }
 
         // Try to remove existing file
-        if(\file_exists($this->toUnlink)) {
+        if($this->toUnlink !== null && \file_exists($this->toUnlink)) {
             \unlink($this->toUnlink);
         }
 
