@@ -10,7 +10,7 @@ use Examples\HttpServer\HttpReactor;
 use CT\AmpPool\WorkerGroup;
 use CT\AmpPool\WorkerTypeEnum;
 
-$logger = new Logger('cluster');
+$logger = new Logger('server');
 $logger->pushHandler(new StreamHandler('php://stdout'));
 $logger->useLoggingLoopDetection(false);
 

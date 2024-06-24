@@ -50,6 +50,8 @@ class Worker                        implements WorkerInterface
     private WorkersInfoInterface $workersInfo;
     private WorkerEventEmitterInterface $eventEmitter;
     
+    private bool $isStopped         = false;
+    
     public function __construct(
         private readonly int     $id,
         private readonly Channel $ipcChannel,
@@ -164,7 +166,7 @@ class Worker                        implements WorkerInterface
                 }
                 
                 if($message instanceof MessageShutdown) {
-                    $this->logger->info('Received shutdown message');
+                    $this->logger->notice('Worker #'.$this->id.' received shutdown message');
                     break;
                 }
                 
@@ -198,6 +200,7 @@ class Worker                        implements WorkerInterface
         } finally {
             /** @psalm-suppress PossiblyNullArgument $cancellationId is not null if $cancellation is not null. */
             $cancellation?->unsubscribe($cancellationId);
+            $loopCancellation->unsubscribe($loopId);
         }
     }
     
@@ -208,18 +211,22 @@ class Worker                        implements WorkerInterface
     
     public function stop(): void
     {
-        if($this->loopCancellation->isCancelled()) {
+        if($this->isStopped) {
             return;
         }
         
-        $this->loopCancellation->cancel();
+        $this->isStopped            = true;
+        
+        if(false === $this->loopCancellation->isCancelled()) {
+            $this->loopCancellation->cancel();
+        }
         
         WorkerGroup::stopStrategies($this->groupsScheme, $this->logger);
     }
     
     public function isStopped(): bool
     {
-        return $this->loopCancellation->isCancelled();
+        return $this->isStopped;
     }
     
     public function onClose(\Closure $onClose): void

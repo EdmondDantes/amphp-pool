@@ -74,10 +74,10 @@ class DefaultRunner extends WorkerStrategyAbstract implements RunnerStrategyInte
                     $referenceWorker->get()?->mainLoop();
                 }),
                 async(static function () use ($referenceEntryPoint, $referenceWorker): void {
-                    
                     try {
                         $referenceEntryPoint->get()?->run();
                     } finally {
+                        // Stop the worker process if the entry point has finished running.
                         $referenceWorker->get()?->stop();
                     }
                 }),

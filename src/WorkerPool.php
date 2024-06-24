@@ -292,9 +292,10 @@ class WorkerPool                    implements WorkerPoolInterface
                     } elseif (count($errors) === 1) {
                         throw $errors[0];
                     }
-
-                } catch (CancelledException) {
-                    break;
+                } finally {
+                    if(false === $this->mainCancellation?->isCancelled()) {
+                        $this->mainCancellation->cancel();
+                    }
                 }
             }
         });
@@ -406,11 +407,24 @@ class WorkerPool                    implements WorkerPoolInterface
         
         $suspension             = EventLoop::getSuspension();
         $cancellation           = $this->mainCancellation->getCancellation();
-        $id                     = $cancellation?->subscribe(static fn (CancelledException $exception) => $suspension->throw($exception));
+        $id                     = $cancellation->subscribe(static fn (CancelledException $exception) => $suspension->throw($exception));
         
-        \sapi_windows_set_ctrl_handler(static function () use ($suspension) {
+        $handler                = null;
+        
+        $handler                = static function () use ($suspension, &$handler) {
+            
+            if($handler === null) {
+                return;
+            }
+            
+            \sapi_windows_set_ctrl_handler($handler, false);
+            $handler            = null;
+            
+            echo 'The server will attempt to stop gracefully with CTRL-C...'.PHP_EOL;
             $suspension->resume();
-        });
+        };
+        
+        \sapi_windows_set_ctrl_handler($handler);
         
         try {
             $suspension->suspend();
@@ -418,7 +432,12 @@ class WorkerPool                    implements WorkerPoolInterface
             // Ignore
         } finally {
             /** @psalm-suppress PossiblyNullArgument $id will not be null if $cancellation is not null. */
-            $cancellation?->unsubscribe($id);
+            $cancellation->unsubscribe($id);
+            
+            if($handler !== null) {
+                \sapi_windows_set_ctrl_handler($handler, false);
+                $handler            = null;
+            }
         }
     }
     
@@ -473,8 +492,6 @@ class WorkerPool                    implements WorkerPoolInterface
             $workerProcess->info(\sprintf('Started %s worker #%d', $workerDescriptor->group->getWorkerType()->value, $workerDescriptor->id));
         
         } catch (\Throwable $exception) {
-            
-            //$workerDescriptor->reset();
             
             if (false === $context->isClosed()) {
                 $context->close();
@@ -653,7 +670,7 @@ class WorkerPool                    implements WorkerPoolInterface
             throw new \Error('The group id must be greater than zero');
         }
         
-        if($group->getMinWorkers() <= 0) {
+        if($group->getMinWorkers() < 0) {
             throw new \Error('The minimum number of workers must be greater than zero');
         }
 
@@ -747,7 +764,10 @@ class WorkerPool                    implements WorkerPoolInterface
         
         $exceptions                 = $this->stopWorkers($cancellation);
         
-        $this->mainCancellation?->cancel();
+        if(false === $this->mainCancellation?->isCancelled()) {
+            $this->mainCancellation->cancel();
+        }
+        
         $this->mainCancellation     = null;
         
         WorkerGroup::stopStrategies($this->groupsScheme, $this->logger);

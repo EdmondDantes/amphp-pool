@@ -45,7 +45,7 @@ final class HttpReactor             implements WorkerEntryPointInterface
             return;
         }
         
-        $socketFactory              = $worker->getSocketPipeFactory();
+        $socketFactory              = $worker->getWorkerGroup()->getSocketStrategy()->getServerSocketFactory();
         $clientFactory              = new SocketClientFactory($worker->getLogger());
         $httpServer                 = new SocketHttpServer($worker->getLogger(), $socketFactory, $clientFactory);
         
