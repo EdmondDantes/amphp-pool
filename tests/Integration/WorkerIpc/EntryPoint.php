@@ -3,32 +3,67 @@ declare(strict_types=1);
 
 namespace CT\AmpPool\Integration\WorkerIpc;
 
+use Amp\Cancellation;
+use Amp\TimeoutCancellation;
+use CT\AmpPool\Coroutine\CoroutineInterface;
+use CT\AmpPool\Strategies\JobExecutor\JobHandlerInterface;
 use CT\AmpPool\Worker\WorkerEntryPointInterface;
 use CT\AmpPool\Worker\WorkerInterface;
 use CT\AmpPool\WorkerTypeEnum;
 
-final class EntryPoint              implements WorkerEntryPointInterface
+final class EntryPoint              implements WorkerEntryPointInterface, JobHandlerInterface
 {
     public const string GROUP1      = 'group1';
     public const string GROUP2      = 'group2';
+    public const string WAS_HANDLED = ' was handled';
+    
+    public static function getFile(): string
+    {
+        return sys_get_temp_dir() . '/worker-integration-test.text';
+    }
+    
+    public static function removeFile(): void
+    {
+        $file                       = self::getFile();
+        
+        if(file_exists($file)) {
+            unlink($file);
+        }
+        
+        if(file_exists($file)) {
+            throw new \RuntimeException('Could not remove file: ' . $file);
+        }
+    }
     
     private WorkerInterface $worker;
     
     public function initialize(WorkerInterface $worker): void
     {
         $this->worker               = $worker;
+        
+        if($worker->getWorkerGroup()->getWorkerType() === WorkerTypeEnum::JOB) {
+            $worker->getWorkerGroup()->getJobExecutor()->defineJobHandler($this);
+        }
+    }
+    
+    public function handleJob(string             $data,
+                              CoroutineInterface $coroutine = null,
+                              Cancellation       $cancellation = null
+    ): mixed
+    {
+        return $data.self::WAS_HANDLED;
     }
     
     public function run(): void
     {
         $group                      = $this->worker->getWorkerGroup();
-
+        
         if($group->getWorkerType() === WorkerTypeEnum::REACTOR) {
-        
-        } elseif ($group->getWorkerType() === WorkerTypeEnum::JOB) {
-        
-        } else {
-            throw new \RuntimeException('Unknown Worker Type');
+            $result                 = $group->getJobClient()
+                                            ->sendJobImmediately($group->getGroupName())
+                                            ->await(new TimeoutCancellation(5));
+            
+            file_put_contents(self::getFile(), $result);
         }
     }
 }

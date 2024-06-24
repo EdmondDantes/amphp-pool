@@ -17,7 +17,7 @@ class WorkerToWorkerTest            extends TestCase
         $workerPool                 = new WorkerPool();
         
         $workerPool->describeGroup(new WorkerGroup(
-                                       entryPointClass: WorkerTestEntryPoint::class,
+                                       entryPointClass: EntryPoint::class,
                                        workerType     : WorkerTypeEnum::JOB,
                                        minWorkers     : 1,
                                        groupName      : EntryPoint::GROUP1,
@@ -34,5 +34,20 @@ class WorkerToWorkerTest            extends TestCase
         
         $workerPool->run();
         $workerPool->awaitTermination(new TimeoutCancellation(5));
+        
+        $this->assertFileExists(EntryPoint::getFile());
+        
+        // Assert file content
+        $this->assertEquals(EntryPoint::GROUP2.EntryPoint::WAS_HANDLED, file_get_contents(EntryPoint::getFile()));
+    }
+    
+    protected function setUp(): void
+    {
+        EntryPoint::removeFile();
+    }
+    
+    protected function tearDown(): void
+    {
+        EntryPoint::removeFile();
     }
 }
