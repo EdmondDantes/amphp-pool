@@ -102,7 +102,32 @@ final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Ps
                 $this->eventEmitter->emitWorkerEvent($message, $this->id);
             }
             
-            $this->joinFuture->await(new TimeoutCancellation($this->timeoutCancellation));
+            $this->joinFuture->await(
+                new TimeoutCancellation(
+                    $this->timeoutCancellation,
+                    'Waiting for the worker process #'.$this->id.' was interrupted due to a timeout ('.$this->timeoutCancellation.'). '
+                    .'The child process properly closed the IPC connection.'
+                )
+            );
+
+        } catch (ChannelException) {
+
+            /**
+             * When we receive a ChannelException, it means that the child process might have crashed.
+             * In this case, we wait for its termination and at the same time expect
+             * the result that the process returned.
+             */
+
+            // If the child process terminated with an unhandled exception, that exception will be thrown at this line.
+            $this->joinFuture->await(
+                new TimeoutCancellation(
+                    $this->timeoutCancellation,
+                    'Waiting for the worker process #'.$this->id
+                    .' to complete was interrupted due to a timeout ('.$this->timeoutCancellation.').'
+                    .' The connection with the worker process was lost. The state is undefined.'
+                )
+            );
+
         } catch (\Throwable $exception) {
             $this->joinFuture->ignore();
             throw $exception;
