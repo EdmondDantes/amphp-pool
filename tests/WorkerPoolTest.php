@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace CT\AmpPool;
 
-use Amp\Parallel\Context\ContextException;
+use Amp\Sync\ChannelException;
 use Amp\TimeoutCancellation;
 use CT\AmpPool\Exceptions\FatalWorkerException;
 use CT\AmpPool\WorkerPoolMocks\FatalWorkerEntryPoint;
@@ -127,7 +127,7 @@ class WorkerPoolTest                extends TestCase
         $workerPool->awaitTermination();
 
         if($exception === null) {
-            $this->assertInstanceOf(FatalWorkerException::class, $restartStrategy->lastError);
+            $this->assertInstanceOf(ChannelException::class, $restartStrategy->lastError);
         }
     }
 }
