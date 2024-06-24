@@ -76,7 +76,14 @@ final class SocketUnixStrategy      extends WorkerStrategyAbstract
             $this->deferredFuture->complete();
             $this->deferredFuture   = null;
         }
-        
+
+        if($this->workerEventHandler !== null) {
+            $this->getWorker()?->getWorkerEventEmitter()->removeWorkerEventListener($this->workerEventHandler);
+            $this->workerEventHandler = null;
+        }
+
+        $this->socketPipeFactory    = null;
+
         $providers                  = $this->workerSocketProviders;
         $this->workerSocketProviders = [];
         

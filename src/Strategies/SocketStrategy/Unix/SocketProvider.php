@@ -12,6 +12,7 @@ use Amp\DeferredCancellation;
 use Amp\Parallel\Ipc\IpcHub;
 use Amp\Socket\ResourceSocket;
 use Amp\Socket\Socket;
+use Amp\Socket\SocketException;
 use Amp\TimeoutCancellation;
 use Revolt\EventLoop;
 use const Amp\Process\IS_WINDOWS;
@@ -47,6 +48,15 @@ final class SocketProvider
             
             try {
                 $provider->provideFor($self->get()->createSocketTransport(), $self->get()->cancellation);
+            } catch (SocketException $exception) {
+
+                $deferredCancellation = $self->get()?->deferredCancellation;
+
+                // Stop the service
+                if($deferredCancellation instanceof DeferredCancellation && false === $deferredCancellation->isCancelled()) {
+                    $deferredCancellation->cancel($exception);
+                }
+
             } catch (CancelledException) {
                 // Ignore
             }
