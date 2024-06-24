@@ -65,7 +65,14 @@ final class SocketProvider
     private function createSocketTransport(): ResourceSocket
     {
         $socket                     = $this->hub->accept(
-            $this->ipcKey, new CompositeCancellation($this->cancellation, new TimeoutCancellation($this->timeout))
+            $this->ipcKey,
+            new CompositeCancellation(
+                    $this->cancellation,
+                    new TimeoutCancellation(
+                        $this->timeout,
+                        'Timeout while attempting to create a channel for socket transmission between processes.'
+                    )
+            )
         );
         
         if (false === $socket instanceof ResourceSocket) {
