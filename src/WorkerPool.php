@@ -275,7 +275,7 @@ class WorkerPool                    implements WorkerPoolInterface
                 
                 if(empty($futures)) {
                     
-                    if(false === $this->mainCancellation->isCancelled()) {
+                    if(false === $this->mainCancellation?->isCancelled()) {
                         $this->mainCancellation->cancel();
                     }
                     
