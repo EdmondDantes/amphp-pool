@@ -46,15 +46,6 @@ interface WorkerPoolInterface       extends WorkerEventEmitterAwareInterface
     public function getMainCancellation(): ?Cancellation;
     
     /**
-     * The method will block current fiber until all workers are stopped.
-     *
-     * @param Cancellation|null $cancellation
-     *
-     * @return void
-     */
-    public function awaitTermination(Cancellation $cancellation = null): void;
-    
-    /**
      * @return int[]
      */
     public function getWorkers(): array;

@@ -12,9 +12,8 @@ use CT\AmpPool\WorkerGroup;
  */
 final class WorkerDescriptor
 {
-    private ?WorkerProcessContext $workerProcess = null;
-    private ?Future               $future        = null;
-    private bool                  $stopped       = false;
+    private ?WorkerProcessContext $workerProcess    = null;
+    private bool                  $isStoppedForever = false;
     
     public function __construct(
         public readonly int $id,
@@ -32,29 +31,23 @@ final class WorkerDescriptor
         $this->workerProcess        = $workerProcess;
     }
     
-    public function getFuture(): ?Future
+    public function resetWorkerProcess(): void
     {
-        return $this->future;
+        $this->workerProcess        = null;
     }
     
-    public function setFuture(Future $future): void
+    public function isStoppedForever(): bool
     {
-        $this->future               = $future;
+        return $this->isStoppedForever;
     }
     
-    public function isStopped(): bool
+    public function availableForRun(): bool
     {
-        return $this->stopped;
+        return false === $this->isStoppedForever;
     }
     
-    public function markAsStopped(): void
+    public function markAsStoppedForever(): void
     {
-        $this->stopped              = true;
-    }
-    
-    public function reset(): void
-    {
-        $this->workerProcess = null;
-        $this->future        = null;
+        $this->isStoppedForever     = true;
     }
 }

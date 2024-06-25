@@ -28,9 +28,7 @@ $workerPool->describeGroup(new WorkerGroup(
 ));
 
 // 3. Run the worker pool
-$workerPool->run();
-
-// 4. Start the main loop of the worker pool
+// Start the main loop of the worker pool
 // Now the server is ready to accept incoming connections.
 // Try http://127.0.0.1:9095/ in your browser.
-$workerPool->awaitTermination();
+$workerPool->run();

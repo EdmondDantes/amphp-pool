@@ -94,6 +94,8 @@ class WorkerPool                    implements WorkerPoolInterface
      */
     private ?DeferredCancellation $workerCancellation = null;
     
+    private ?DeferredFuture $workersFuture = null;
+    
     private WorkersInfoInterface $workersInfo;
     
     /**
@@ -277,8 +279,16 @@ class WorkerPool                    implements WorkerPoolInterface
     
     private function runWorkers(): void
     {
+        if(false === $this->workerCancellation?->isCancelled()) {
+            $this->workerCancellation->cancel();
+        }
+        
+        if(false === $this->workersFuture->isComplete()) {
+            $this->workersFuture->complete();
+        }
+        
         $this->workerCancellation   = new DeferredCancellation;
-        $workersFuture              = new DeferredFuture();
+        $this->workersFuture        = null;
         
         try {
             foreach ($this->workers as $worker) {
@@ -288,17 +298,15 @@ class WorkerPool                    implements WorkerPoolInterface
             }
             
             $this->updateGroupsState();
+            
         } catch (\Throwable $exception) {
-            $this->workerCancellation->cancel();
-            $workersFuture->complete();
+            
+            if(false === $this->workerCancellation->isCancelled()) {
+                $this->workerCancellation->cancel();
+            }
+            
             throw $exception;
         }
-
-        EventLoop::queue(static function () {
-        
-        
-        
-        });
     }
     
     /**
@@ -347,52 +355,19 @@ class WorkerPool                    implements WorkerPoolInterface
         return $this->mainCancellation?->getCancellation();
     }
     
-    public function awaitTermination(Cancellation $cancellation = null): void
+    private function awaitTermination(Cancellation $cancellation = null): void
     {
-        $awaitWorkers               = async(function () use ($cancellation): void {
-            
-            while (true) {
-                
-                $futures            = [];
-                
-                foreach ($this->workers as $workerDescriptor) {
-                    if($workerDescriptor->getFuture() !== null && false === $workerDescriptor->isStopped()) {
-                        $futures[]  = $workerDescriptor->getFuture();
-                    }
-                }
-                
-                if(empty($futures)) {
-                    
-                    if(false === $this->mainCancellation?->isCancelled()) {
-                        $this->mainCancellation->cancel();
-                    }
-                    
-                    break;
-                }
-                
-                try {
-                    [$errors]       = Future\awaitAll($futures, $cancellation);
-
-                    if(count($errors) > 1) {
-                        throw new CompositeException($errors);
-                    } elseif (count($errors) === 1) {
-                        throw $errors[0];
-                    }
-                } finally {
-                    if(false === $this->mainCancellation?->isCancelled()) {
-                        $this->mainCancellation->cancel();
-                    }
-                }
-            }
-        });
-        
         if(IS_WINDOWS) {
             $this->awaitWindowsEvents();
         } else {
             $this->awaitUnixEvents();
         }
 
-        Future\await([$awaitWorkers]);
+        if($this->workersFuture === null) {
+            return;
+        }
+        
+        Future\await([$this->workersFuture->getFuture()], $cancellation);
     }
     
     public function scaleWorkers(int $groupId, int $count): int
@@ -418,7 +393,7 @@ class WorkerPool                    implements WorkerPoolInterface
             }
             
             // Skip stopped workers
-            if($workerDescriptor->isStopped()) {
+            if($workerDescriptor->isStoppedForever()) {
                 continue;
             }
             
@@ -487,18 +462,19 @@ class WorkerPool                    implements WorkerPoolInterface
     
     protected function awaitWindowsEvents(): void
     {
-        if($this->mainCancellation === null) {
+        if($this->mainCancellation === null || $this->workerCancellation === null) {
             return;
         }
         
         $suspension             = EventLoop::getSuspension();
-        $cancellation           = $this->mainCancellation->getCancellation();
-        $deferredCancellation   = $this->mainCancellation;
+        $cancellation           = new CompositeCancellation($this->mainCancellation->getCancellation(), $this->workerCancellation->getCancellation());
+        
+        $mainCancellation       = $this->mainCancellation;
         $id                     = $cancellation->subscribe(static fn (CancelledException $exception) => $suspension->throw($exception));
         
         $handler                = null;
         
-        $handler                = static function () use ($suspension, $deferredCancellation, &$handler, $cancellation, $id): void {
+        $handler                = static function () use ($suspension, $cancellation, &$handler, $mainCancellation, $id): void {
             
             if($handler === null) {
                 return;
@@ -511,8 +487,8 @@ class WorkerPool                    implements WorkerPoolInterface
             
             $cancellation->unsubscribe($id);
             
-            if(false === $deferredCancellation->isCancelled()) {
-                $deferredCancellation->cancel();
+            if(false === $mainCancellation->isCancelled()) {
+                $mainCancellation->cancel();
             }
             
             $suspension->resume();
@@ -552,7 +528,7 @@ class WorkerPool                    implements WorkerPoolInterface
         
         try {
             $context                = $this->contextFactory->start(
-                $runnerStrategy->getScript(), new TimeoutCancellation(5)
+                $runnerStrategy->getScript(), new TimeoutCancellation($this->workerStartTimeout)
             );
         } catch (\Throwable $exception) {
             $this->logger?->critical('Starting the worker failed: ' . $exception->getMessage(), ['exception' => $exception]);
@@ -564,6 +540,7 @@ class WorkerPool                    implements WorkerPoolInterface
             $workerProcess          = new WorkerProcessContext(
                 $workerDescriptor->id,
                 $context,
+                $this->workerCancellation->getCancellation(),
                 $this->eventEmitter,
             );
             
@@ -598,7 +575,26 @@ class WorkerPool                    implements WorkerPoolInterface
             );
         }
         
-        $workerDescriptor->setFuture(async($this->workerWatcher(...), $workerDescriptor));
+        EventLoop::queue($this->workerRunner(...), $workerDescriptor);
+    }
+    
+    private function workerRunner(WorkerDescriptor $workerDescriptor): void
+    {
+        if($this->workersFuture === null) {
+            $this->workersFuture    = new DeferredFuture;
+        }
+        
+        try {
+            $this->workerWatcher($workerDescriptor);
+        } finally {
+            foreach ($this->workers as $workerDescriptor) {
+                if($workerDescriptor->availableForRun()) {
+                    return;
+                }
+            }
+            
+            $this->workersFuture->complete();
+        }
     }
     
     /**
@@ -640,12 +636,8 @@ class WorkerPool                    implements WorkerPoolInterface
                 $workerDescriptor->id
             );
             
-            if (false === $processContext->isClosed()) {
-                $processContext->close();
-            }
-            
             if($exitResult instanceof TerminateWorkerException) {
-                $workerDescriptor->markAsStopped();
+                $workerDescriptor->markAsStoppedForever();
                 $workerProcess->error("Worker {$id} will be stopped forever: {$exitResult->getMessage()}");
                 
                 return;
@@ -667,7 +659,7 @@ class WorkerPool                    implements WorkerPoolInterface
                 
             } else if($restarting < 0) {
                 
-                $workerDescriptor->markAsStopped();
+                $workerDescriptor->markAsStoppedForever();
                 
                 $workerProcess->warning(
                     "Worker {$id} will not be restarted: " .
@@ -699,12 +691,12 @@ class WorkerPool                    implements WorkerPoolInterface
         try {
             
             $workerProcess->runWorkerLoop();
-            $workerProcess->info("Worker {$id} terminated cleanly");
+            $workerProcess->info("Worker #{$id} terminated cleanly");
             
         } catch (CancelledException $exception) {
             
             $exitResult         = $exception;
-            $workerProcess->info("Worker {$id} forcefully terminated");
+            $workerProcess->notice("Worker #{$id} should be forcefully terminated");
             
         } catch (ChannelException $exception) {
             
@@ -716,8 +708,8 @@ class WorkerPool                    implements WorkerPoolInterface
             $exitResult         = $exception;
             
             $workerProcess->error(
-                "Worker {$id} died unexpectedly: {$exception->getMessage()}" .
-                ($this->running ? ", restarting..." : "")
+                "Worker #{$id} died unexpectedly: {$exception->getMessage()}" .
+                ($this->running ? ', restarting...' : '')
             );
             
             $remoteException    = $exception->getPrevious();
@@ -729,18 +721,20 @@ class WorkerPool                    implements WorkerPoolInterface
                 && $remoteException->getOriginalClassName() === FatalWorkerException::class) {
                 
                 // The Worker died due to a fatal error, so we should stop the server.
-                $this->logger?->error('Server shutdown due to fatal worker error');
+                $this->logger?->error('Server shutdown due to fatal worker error: '.$remoteException->getMessage());
+                
                 throw $remoteException;
             }
+            
         } catch (TerminateWorkerException $exception) {
             
             // The worker has terminated itself cleanly.
             $exitResult         = $exception;
-            $workerProcess->info("Worker {$id} terminated cleanly without restart");
+            $workerProcess->info("Worker #{$id} terminated cleanly without restart");
             
         } catch (\Throwable $exception) {
             
-            $workerProcess->error("Worker {$id} failed: " . $exception->getMessage(), ['exception' => $exception]);
+            $workerProcess->error("Worker #{$id} failed: " . $exception->getMessage(), ['exception' => $exception]);
             throw $exception;
             
         }
@@ -827,6 +821,13 @@ class WorkerPool                    implements WorkerPoolInterface
         return null;
     }
     
+    public function stop(?Cancellation $cancellation = null): void
+    {
+        if(false === $this->mainCancellation?->isCancelled()) {
+            $this->mainCancellation->cancel();
+        }
+    }
+    
     /**
      * Stops all server workers. Workers are killed if the cancellation token is canceled.
      *
@@ -836,7 +837,7 @@ class WorkerPool                    implements WorkerPoolInterface
      *
      * @throws ClusterException
      */
-    public function stop(?Cancellation $cancellation = null): void
+    private function _stop(?Cancellation $cancellation = null): void
     {
         if (false === $this->running) {
             return;
