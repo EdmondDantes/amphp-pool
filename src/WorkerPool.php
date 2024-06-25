@@ -355,7 +355,7 @@ class WorkerPool                    implements WorkerPoolInterface
         return $this->mainCancellation?->getCancellation();
     }
     
-    private function awaitTermination(Cancellation $cancellation = null): void
+    protected function awaitTermination(Cancellation $cancellation = null): void
     {
         if(IS_WINDOWS) {
             $this->awaitWindowsEvents();
@@ -870,17 +870,16 @@ class WorkerPool                    implements WorkerPoolInterface
             );
         }
         
-        $exception              = new CompositeException($exceptions);
-        $message                = \implode('; ', \array_map(static fn (\Throwable $e) => $e->getMessage(), $exceptions));
+        $exception                  = new CompositeException($exceptions);
+        $message                    = \implode('; ', \array_map(static fn (\Throwable $e) => $e->getMessage(), $exceptions));
         
         throw new WorkerPoolException('Stopping the server failed: ' . $message, previous: $exception);
     }
     
     public function restart(?Cancellation $cancellation = null): void
     {
-        $this->stop($cancellation);
-        $this->run();
-        
+        $this->shouldRestart        = true;
+        $this->workerCancellation?->cancel();
         $this->logger?->info('Server reloaded');
     }
     
