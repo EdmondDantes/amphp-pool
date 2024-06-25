@@ -142,6 +142,8 @@ final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Ps
      * The method starts and freezes the execution thread until the process is completed.
      * The process can also be forcibly terminated or stopped due to a timeout.
      *
+     * @throws \Throwable
+     *
      * @return void
      */
     public function runWorkerLoop(): void
