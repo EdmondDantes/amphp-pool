@@ -29,11 +29,23 @@ interface WorkerPoolInterface       extends WorkerEventEmitterAwareInterface
     public function getGroupsScheme(): array;
     public function validateGroupsScheme(): void;
     
+    /**
+     * Run the worker pool.
+     * This method will block the current fiber and release it after the pool is stopped.
+     *
+     * @return void
+     */
     public function run(): void;
-    public function stop(?Cancellation $cancellation = null): void;
     
     /**
-     * The method stops all workers and restarts them.
+     * The method leads to the termination of the worker pool gracefully.
+     *
+     * @return void
+     */
+    public function stop(): void;
+    
+    /**
+     * The method stops all workers and restarts them gracefully (not immediately).
      *
      * @return void
      */

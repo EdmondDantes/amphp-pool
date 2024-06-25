@@ -14,6 +14,7 @@ use CT\AmpPool\WorkerPoolMocks\TestEntryPoint;
 use CT\AmpPool\WorkerPoolMocks\TestEntryPointWaitTermination;
 use CT\AmpPool\Strategies\RestartStrategy\RestartNever;
 use PHPUnit\Framework\TestCase;
+use Revolt\EventLoop;
 
 class WorkerPoolTest                extends TestCase
 {
@@ -30,7 +31,6 @@ class WorkerPoolTest                extends TestCase
         ));
         
         $workerPool->run();
-        $workerPool->awaitTermination(new TimeoutCancellation(5));
         
         $this->assertFileExists(TestEntryPoint::getFile());
         
@@ -49,9 +49,9 @@ class WorkerPoolTest                extends TestCase
             restartStrategy: new RestartNever
         ));
         
+        EventLoop::queue(fn() => $workerPool->stop());
+        
         $workerPool->run();
-        $workerPool->stop();
-        $workerPool->awaitTermination();
         
         $this->assertFileExists(TestEntryPointWaitTermination::getFile());
     }
@@ -68,8 +68,9 @@ class WorkerPoolTest                extends TestCase
             restartStrategy: $restartStrategy
         ));
         
+        EventLoop::queue(fn() => $workerPool->restart());
+        
         $workerPool->run();
-        $workerPool->awaitTermination();
         
         $this->assertEquals(2, $restartStrategy->restarts);
     }
@@ -86,12 +87,10 @@ class WorkerPoolTest                extends TestCase
             restartStrategy: $restartStrategy
         ));
         
-        $workerPool->run();
-
         $exception                  = null;
 
         try {
-            $workerPool->awaitTermination();
+            $workerPool->run();
         } catch (\Throwable $exception) {
         }
 

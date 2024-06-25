@@ -283,7 +283,7 @@ class WorkerPool                    implements WorkerPoolInterface
             $this->workerCancellation->cancel();
         }
         
-        if(false === $this->workersFuture->isComplete()) {
+        if(false === $this->workersFuture?->isComplete()) {
             $this->workersFuture->complete();
         }
         
@@ -305,47 +305,6 @@ class WorkerPool                    implements WorkerPoolInterface
                 $this->workerCancellation->cancel();
             }
             
-            throw $exception;
-        }
-    }
-    
-    /**
-     * @throws \Throwable
-     */
-    public function _run(): void
-    {
-        if ($this->running) {
-            throw new \Exception('The server watcher is already running or has already run');
-        }
-        
-        $this->validateGroupsScheme();
-        $this->applyGroupScheme();
-        
-        if (count($this->workers) <= 0) {
-            throw new \Exception('The number of workers must be greater than zero');
-        }
-        
-        $this->running              = true;
-        $this->mainCancellation     = new DeferredCancellation;
-        
-        try {
-            
-            if($this->poolState === null) {
-                $this->poolState    = new PoolStateStorage(count($this->groupsScheme));
-            }
-            
-            WorkerGroup::startStrategies($this->groupsScheme);
-            
-            foreach ($this->workers as $worker) {
-                if($worker->shouldBeStarted) {
-                    $this->startWorker($worker);
-                }
-            }
-            
-            $this->updateGroupsState();
-            
-        } catch (\Throwable $exception) {
-            $this->stop();
             throw $exception;
         }
     }
@@ -580,6 +539,9 @@ class WorkerPool                    implements WorkerPoolInterface
     
     private function workerRunner(WorkerDescriptor $workerDescriptor): void
     {
+        //
+        // NOTICE: $workersFuture should be completed only inside this method
+        //
         if($this->workersFuture === null) {
             $this->workersFuture    = new DeferredFuture;
         }
@@ -593,6 +555,11 @@ class WorkerPool                    implements WorkerPoolInterface
                 }
             }
             
+            if(false === $this->workerCancellation?->isCancelled()) {
+                $this->workerCancellation->cancel();
+            }
+            
+            // When all workers are stopped, complete the future
             $this->workersFuture->complete();
         }
     }
@@ -821,10 +788,14 @@ class WorkerPool                    implements WorkerPoolInterface
         return null;
     }
     
-    public function stop(?Cancellation $cancellation = null): void
+    public function stop(): void
     {
         if(false === $this->mainCancellation?->isCancelled()) {
             $this->mainCancellation->cancel();
+        }
+        
+        if(false === $this->workerCancellation?->isCancelled()) {
+            $this->workerCancellation->cancel();
         }
     }
     
