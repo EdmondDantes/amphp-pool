@@ -10,6 +10,7 @@ use Amp\Cluster\ClusterWorkerMessage;
 use Amp\CompositeCancellation;
 use Amp\CompositeException;
 use Amp\DeferredCancellation;
+use Amp\DeferredFuture;
 use Amp\Future;
 use Amp\Parallel\Context\Context;
 use Amp\Parallel\Context\ContextException;
@@ -64,6 +65,8 @@ class WorkerPool                    implements WorkerPoolInterface
     protected int $workerStopTimeout  = 5;
     private int $lastGroupId        = 0;
     
+    private bool $shouldRestart      = false;
+    
     /**
      * @var WorkerDescriptor[]
      */
@@ -77,7 +80,19 @@ class WorkerPool                    implements WorkerPoolInterface
     
     private ?PoolStateStorage $poolState    = null;
     
+    /**
+     * Cancellation token for the main process watcher.
+     *
+     * @var DeferredCancellation|null
+     */
     private ?DeferredCancellation $mainCancellation = null;
+    
+    /**
+     * Cancellation token for the workers.
+     *
+     * @var DeferredCancellation|null
+     */
+    private ?DeferredCancellation $workerCancellation = null;
     
     private WorkersInfoInterface $workersInfo;
     
@@ -215,10 +230,81 @@ class WorkerPool                    implements WorkerPoolInterface
         }
     }
     
+    public function run(): void
+    {
+        if ($this->running) {
+            throw new \Exception('The server watcher is already running or has already run');
+        }
+        
+        $this->validateGroupsScheme();
+        $this->applyGroupScheme();
+        
+        if (count($this->workers) <= 0) {
+            throw new \Exception('The number of workers must be greater than zero');
+        }
+        
+        if($this->poolState === null) {
+            $this->poolState        = new PoolStateStorage(count($this->groupsScheme));
+        }
+        
+        $this->running              = true;
+        $this->mainCancellation     = new DeferredCancellation;
+        
+        
+        try {
+            WorkerGroup::startStrategies($this->groupsScheme);
+        } catch (\Throwable $exception) {
+            $this->running          = false;
+            
+            if($this->mainCancellation->isCancelled() === false) {
+                $this->mainCancellation->cancel();
+            }
+            
+            $this->mainCancellation = null;
+            
+            throw $exception;
+        }
+        
+        do {
+            
+            $this->shouldRestart    = false;
+            
+            $this->runWorkers();
+            $this->awaitTermination();
+            
+        } while($this->shouldRestart);
+    }
+    
+    private function runWorkers(): void
+    {
+        $this->workerCancellation   = new DeferredCancellation;
+        $workersFuture              = new DeferredFuture();
+        
+        try {
+            foreach ($this->workers as $worker) {
+                if($worker->shouldBeStarted) {
+                    $this->startWorker($worker);
+                }
+            }
+            
+            $this->updateGroupsState();
+        } catch (\Throwable $exception) {
+            $this->workerCancellation->cancel();
+            $workersFuture->complete();
+            throw $exception;
+        }
+
+        EventLoop::queue(static function () {
+        
+        
+        
+        });
+    }
+    
     /**
      * @throws \Throwable
      */
-    public function run(): void
+    public function _run(): void
     {
         if ($this->running) {
             throw new \Exception('The server watcher is already running or has already run');
@@ -467,12 +553,9 @@ class WorkerPool                    implements WorkerPoolInterface
         
         try {
             
-            $deferredCancellation   = new DeferredCancellation();
-            
             $workerProcess          = new WorkerProcessContext(
                 $workerDescriptor->id,
                 $context,
-                $deferredCancellation,
                 $this->eventEmitter,
             );
             
@@ -507,21 +590,20 @@ class WorkerPool                    implements WorkerPoolInterface
             );
         }
         
-        $workerDescriptor->setFuture(async($this->workerWatcher(...), $workerDescriptor, $deferredCancellation)->ignore());
+        $workerDescriptor->setFuture(async($this->workerWatcher(...), $workerDescriptor));
     }
     
     /**
      * Watcher for the worker process and restarts it if necessary.
      *
      * @param WorkerDescriptor     $workerDescriptor
-     * @param DeferredCancellation $deferredCancellation
      *
      * @return void
      * @throws ClusterException
      * @throws TaskFailureThrowable
      * @throws \Throwable
      */
-    protected function workerWatcher(WorkerDescriptor $workerDescriptor, DeferredCancellation $deferredCancellation): void
+    protected function workerWatcher(WorkerDescriptor $workerDescriptor): void
     {
         if(false === $this->running) {
             
@@ -543,7 +625,7 @@ class WorkerPool                    implements WorkerPoolInterface
         
         try {
             
-            $exitResult             = $this->workerEventLoop($workerDescriptor, $deferredCancellation);
+            $exitResult             = $this->workerEventLoop($workerDescriptor);
             
             $this->eventEmitter->emitWorkerEvent(
                 new WorkerProcessTerminating($workerDescriptor->id, $workerDescriptor->group, $processContext),
@@ -595,13 +677,12 @@ class WorkerPool                    implements WorkerPoolInterface
      * Run the worker event loop and return the exit result.
      *
      * @param WorkerDescriptor     $workerDescriptor
-     * @param DeferredCancellation $deferredCancellation
      *
      * @return mixed
      * @throws TaskFailureThrowable
      * @throws \Throwable
      */
-    protected function workerEventLoop(WorkerDescriptor $workerDescriptor, DeferredCancellation $deferredCancellation): mixed
+    protected function workerEventLoop(WorkerDescriptor $workerDescriptor): mixed
     {
         $id                         = $workerDescriptor->id;
         $workerProcess              = $workerDescriptor->getWorkerProcess();
@@ -654,11 +735,6 @@ class WorkerPool                    implements WorkerPoolInterface
             $workerProcess->error("Worker {$id} failed: " . $exception->getMessage(), ['exception' => $exception]);
             throw $exception;
             
-        } finally {
-            
-            if(false === $deferredCancellation->isCancelled()) {
-                $deferredCancellation->cancel();
-            }
         }
         
         return $exitResult;
