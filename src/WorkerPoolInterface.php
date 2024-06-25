@@ -35,11 +35,9 @@ interface WorkerPoolInterface       extends WorkerEventEmitterAwareInterface
     /**
      * The method stops all workers and restarts them.
      *
-     * @param Cancellation|null $cancellation
-     *
      * @return void
      */
-    public function restart(?Cancellation $cancellation = null): void;
+    public function restart(): void;
     
     public function countWorkers(int $groupId, bool $onlyRunning = false, bool $notRunning = false): int;
     

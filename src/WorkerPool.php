@@ -876,7 +876,7 @@ class WorkerPool                    implements WorkerPoolInterface
         throw new WorkerPoolException('Stopping the server failed: ' . $message, previous: $exception);
     }
     
-    public function restart(?Cancellation $cancellation = null): void
+    public function restart(): void
     {
         $this->shouldRestart        = true;
         $this->workerCancellation?->cancel();
