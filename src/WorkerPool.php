@@ -427,7 +427,7 @@ class WorkerPool                    implements WorkerPoolInterface
             }
             
             if($isDecrease && $workerDescriptor->shouldBeStarted === false && $workerDescriptor->getWorkerProcess() !== null) {
-                $workerDescriptor->getWorkerProcess()->shutdownSoftly();
+                $workerDescriptor->getWorkerProcess()->shutdown();
                 $handled++;
                 $stoppedWorkers[]   = $workerDescriptor->id;
             } elseif(false === $isDecrease && $workerDescriptor->getWorkerProcess() === null) {
@@ -493,11 +493,12 @@ class WorkerPool                    implements WorkerPoolInterface
         
         $suspension             = EventLoop::getSuspension();
         $cancellation           = $this->mainCancellation->getCancellation();
+        $deferredCancellation   = $this->mainCancellation;
         $id                     = $cancellation->subscribe(static fn (CancelledException $exception) => $suspension->throw($exception));
         
         $handler                = null;
         
-        $handler                = static function () use ($suspension, &$handler) {
+        $handler                = static function () use ($suspension, $deferredCancellation, &$handler, $cancellation, $id): void {
             
             if($handler === null) {
                 return;
@@ -507,6 +508,13 @@ class WorkerPool                    implements WorkerPoolInterface
             $handler            = null;
             
             echo 'The server will attempt to stop gracefully with CTRL-C...'.PHP_EOL;
+            
+            $cancellation->unsubscribe($id);
+            
+            if(false === $deferredCancellation->isCancelled()) {
+                $deferredCancellation->cancel();
+            }
+            
             $suspension->resume();
         };
         

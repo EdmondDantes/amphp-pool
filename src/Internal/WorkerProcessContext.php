@@ -39,8 +39,7 @@ final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Ps
     use ForbidCloning;
     use ForbidSerialization;
     
-    protected int $pingTimeout         = 10;
-    protected int $timeoutCancellation = 5;
+    protected int $pingTimeout          = 10;
     
     private int $lastActivity;
     
@@ -54,6 +53,7 @@ final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Ps
     private array $transferredSockets = [];
     /**
      * When the worker process was terminated or should be terminated.
+     * This descriptor will always be canceled if the child process has terminated.
      * @var DeferredCancellation
      */
     private readonly DeferredCancellation $processCancellation;
@@ -66,28 +66,58 @@ final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Ps
         private readonly int                         $id,
         private readonly Context                     $context,
         private readonly Cancellation $workerCancellation,
-        private readonly WorkerEventEmitterInterface $eventEmitter
+        private readonly WorkerEventEmitterInterface $eventEmitter,
+        protected readonly int $processTimeout       = 5
     ) {
         $this->lastActivity         = \time();
         $this->processCancellation  = new DeferredCancellation;
         
         $processCancellation        = $this->processCancellation;
         $context                    = $this->context;
+        $processTimeout             = $this->processTimeout;
         
-        $this->processFuture        = async(static function () use ($processCancellation, $context): mixed {
-            
+        /**
+         * The processFuture is a future that waits for the worker process to end.
+         */
+        $this->processFuture        = async(static function () use ($processCancellation, $context, $processTimeout): mixed {
+
             try {
-                return $context->join($processCancellation->getCancellation());
-            } catch (CancelledException) {
-                // ignore
-                return null;
-            } catch (\Throwable $exception) {
                 
+                // First, wait for the end of the worker process
+                // while waiting for the cancellation.
+                try {
+                    return $context->join($processCancellation->getCancellation());
+                } catch (CancelledException) {
+                    // Awaiting the worker process was interrupted by a cancellation not related to the worker process.
+                }
+                
+                // Try to gracefully close the worker process if possible.
+                try {
+                    if(false === $context->isClosed()) {
+                        $context->send(new MessageShutdown);
+                    }
+                } catch (ChannelException) {
+                    // Ignore if the worker has already exited or the channel is closed
+                }
+                
+                // Second, try to wait for the worker process to end
+                return $context->join(
+                    new TimeoutCancellation(
+                        $processTimeout,
+                        'The child process wait was interrupted by a timeout. The status is unknown.'
+                    )
+                );
+                
+            } catch (\Throwable $exception) {
                 if(false === $processCancellation->isCancelled()) {
                     $processCancellation->cancel($exception);
                 }
                 
                 throw $exception;
+            } finally {
+                if(false === $processCancellation->isCancelled()) {
+                    $processCancellation->cancel();
+                }
             }
         });
     }
@@ -107,6 +137,13 @@ final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Ps
         return $this->processCancellation->getCancellation();
     }
     
+    /**
+     * The loop for receiving messages from the child process.
+     * The method starts and freezes the execution thread until the process is completed.
+     * The process can also be forcibly terminated or stopped due to a timeout.
+     *
+     * @return void
+     */
     public function runWorkerLoop(): void
     {
         $cancellation               = new CompositeCancellation(
@@ -114,54 +151,75 @@ final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Ps
         );
         
         try {
-            while (($message = $this->context->receive($cancellation)) !== null) {
-                
-                $this->lastActivity = \time();
-                
-                if($message instanceof RemoteException) {
-                    throw $message;
+            
+            $exception              = null;
+            
+            try {
+                /**
+                 * There are several situations in which this loop will be interrupted:
+                 *
+                 * 1. The child process sent a NULL value - it completed successfully without errors.
+                 * 2. workerCancellation triggered, meaning WorkerPool requires the process to be terminated.
+                 * 3. processCancellation triggered, meaning the process was abruptly stopped or something else occurred.
+                 *
+                 */
+                while (($message = $this->context->receive($cancellation)) !== null) {
+                    
+                    $this->lastActivity = \time();
+                    
+                    if($message instanceof RemoteException) {
+                        throw $message;
+                    }
+                    
+                    if($message instanceof MessageLog) {
+                        $this->logger?->log($message->level, $message->message, $message->context);
+                        continue;
+                    }
+                    
+                    $this->eventEmitter->emitWorkerEvent($message, $this->id);
                 }
                 
-                if($message instanceof MessageLog) {
-                    $this->logger?->log($message->level, $message->message, $message->context);
-                    continue;
-                }
+            } catch (\Throwable $exception) {
+            
+            } finally {
                 
-                $this->eventEmitter->emitWorkerEvent($message, $this->id);
+                // Stop waiting for the worker process to end.
+                if(false === $this->processCancellation->isCancelled()) {
+                    $this->processCancellation->cancel();
+                }
+            }
+
+        } finally {
+            
+            if($exception === null) {
+                $text               = 'Waiting for the worker process #'.$this->id.' was interrupted due to a timeout ('.$this->processTimeout . '). '
+                                    .'The child process properly closed the IPC connection.';
+            } elseif ($exception instanceof ChannelException) {
+                
+                /**
+                 * When we receive a ChannelException, it means that the child process might have crashed.
+                 * In this case, we wait for its termination and at the same time expect
+                 * the result that the process returned.
+                 */
+                $text               = 'Waiting for the worker process #'.$this->id
+                                    .' to complete was interrupted due to a timeout ('.$this->processTimeout . ').'
+                                    .' The connection with the worker process was lost. The state is undefined.';
+                
+            } elseif($exception instanceof CancelledException) {
+                
+                $text               = 'Waiting for the worker process #'.$this->id.' was interrupted due to a timeout ('.$this->processTimeout . '). '
+                                    .'The child process was cancelled: '.$exception->getMessage();
+            
+            } else {
+                $text               = 'Waiting for the worker process #'.$this->id.' was interrupted due to a timeout ('.$this->processTimeout . '). '
+                                    .'Error occurred: '.$exception->getMessage();
             }
             
-            $this->processFuture->await(
-                new TimeoutCancellation(
-                    $this->timeoutCancellation,
-                    'Waiting for the worker process #'.$this->id.' was interrupted due to a timeout ('.$this->timeoutCancellation.'). '
-                    .'The child process properly closed the IPC connection.'
-                )
-            );
-
-        } catch (ChannelException $exception) {
-
-            /**
-             * When we receive a ChannelException, it means that the child process might have crashed.
-             * In this case, we wait for its termination and at the same time expect
-             * the result that the process returned.
-             */
-
-            // If the child process terminated with an unhandled exception, that exception will be thrown at this line.
-            $this->processFuture->await(
-                new TimeoutCancellation(
-                    $this->timeoutCancellation,
-                    'Waiting for the worker process #'.$this->id
-                    .' to complete was interrupted due to a timeout ('.$this->timeoutCancellation.').'
-                    .' The connection with the worker process was lost. The state is undefined.'
-                )
-            );
-
-            throw $exception;
-
-        } catch (\Throwable $exception) {
-            throw $exception;
-        } finally {
-            $this->close();
+            try {
+                $this->processFuture->await(new TimeoutCancellation($this->processTimeout, $text));
+            } finally {
+                $this->close();
+            }
         }
     }
     
@@ -191,40 +249,19 @@ final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Ps
         
         if($this->watcher !== '') {
             EventLoop::cancel($this->watcher);
+            $this->watcher          = '';
         }
         
-        $this->context->close();
-    }
-    
-    public function shutdown(?Cancellation $cancellation = null): void
-    {
-        try {
-            if (!$this->context->isClosed()) {
-                try {
-                    $this->context->send(new MessageShutdown);
-                } catch (ChannelException) {
-                    // Ignore if the worker has already exited
-                }
-            }
-            
-            try {
-                $this->processFuture->await($cancellation);
-            } catch (CancelledException) {
-                // Worker did not die normally within a cancellation window
-            }
-        } finally {
-            $this->close();
+        if(false === $this->context->isClosed()) {
+            $this->context->close();
         }
     }
     
-    public function shutdownSoftly(): void
+    public function shutdown(): void
     {
-        if (false === $this->context->isClosed()) {
-            try {
-                $this->context->send(new MessageShutdown(true));
-            } catch (ChannelException) {
-                // Ignore if the worker has already exited
-            }
+        // Gracefully close the worker process.
+        if(false === $this->processCancellation->isCancelled()) {
+            $this->processCancellation->cancel();
         }
     }
     
