@@ -152,7 +152,7 @@ final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Ps
         
         try {
             
-            $exception              = null;
+            $loopException          = null;
             
             try {
                 /**
@@ -179,8 +179,19 @@ final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Ps
                     $this->eventEmitter->emitWorkerEvent($message, $this->id);
                 }
                 
-            } catch (\Throwable $exception) {
-            
+            } catch (\Throwable $loopException) {
+                
+                // Resolve the CancelledException
+                if($loopException instanceof CancelledException && $loopException->getPrevious() !== null) {
+                    $loopException  = $loopException->getPrevious();
+                }
+                
+                if($loopException instanceof CancelledException) {
+                    $this->logger?->info('Worker process #'.$this->id.' should be stop: '.$loopException->getMessage());
+                } else {
+                    $this->logger?->error('Worker process #'.$this->id.' error: '.$loopException->getMessage());
+                }
+                
             } finally {
                 
                 // Stop waiting for the worker process to end.
@@ -191,10 +202,10 @@ final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Ps
 
         } finally {
             
-            if($exception === null) {
+            if($loopException === null) {
                 $text               = 'Waiting for the worker process #'.$this->id.' was interrupted due to a timeout ('.$this->processTimeout . '). '
                                     .'The child process properly closed the IPC connection.';
-            } elseif ($exception instanceof ChannelException) {
+            } elseif ($loopException instanceof ChannelException) {
                 
                 /**
                  * When we receive a ChannelException, it means that the child process might have crashed.
@@ -205,18 +216,29 @@ final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Ps
                                     .' to complete was interrupted due to a timeout ('.$this->processTimeout . ').'
                                     .' The connection with the worker process was lost. The state is undefined.';
                 
-            } elseif($exception instanceof CancelledException) {
+            } elseif($loopException instanceof CancelledException) {
+                
+                if($loopException->getPrevious() !== null) {
+                    $loopException  = $loopException->getPrevious();
+                }
                 
                 $text               = 'Waiting for the worker process #'.$this->id.' was interrupted due to a timeout ('.$this->processTimeout . '). '
-                                    .'The child process was cancelled: '.$exception->getMessage();
+                                    .'The child process was cancelled: '.$loopException->getMessage();
             
             } else {
                 $text               = 'Waiting for the worker process #'.$this->id.' was interrupted due to a timeout ('.$this->processTimeout . '). '
-                                    .'Error occurred: '.$exception->getMessage();
+                                    .'Error occurred: '.$loopException->getMessage();
             }
             
             try {
-                $this->processFuture->await(new TimeoutCancellation($this->processTimeout, $text));
+                $this->processFuture->await(new TimeoutCancellation($this->processTimeout));
+            } catch (CancelledException) {
+                $this->logger?->error($text);
+                
+                if($loopException !== null) {
+                    throw $loopException;
+                }
+                
             } finally {
                 $this->close();
             }

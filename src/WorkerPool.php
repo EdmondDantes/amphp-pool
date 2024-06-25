@@ -703,16 +703,16 @@ class WorkerPool                    implements WorkerPoolInterface
             
         } catch (CancelledException $exception) {
             
-            /**
-             * The IPC socket has broken the connection,
-             * and communication with the child process has been disrupted.
-             * We interpret this as an abnormal termination of the worker.
-             */
             $exitResult         = $exception;
             $workerProcess->info("Worker {$id} forcefully terminated");
             
         } catch (ChannelException $exception) {
             
+            /**
+             * The IPC socket has broken the connection,
+             * and communication with the child process has been disrupted.
+             * We interpret this as an abnormal termination of the worker.
+             */
             $exitResult         = $exception;
             
             $workerProcess->error(
