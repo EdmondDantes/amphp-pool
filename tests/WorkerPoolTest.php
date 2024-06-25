@@ -3,8 +3,8 @@ declare(strict_types=1);
 
 namespace CT\AmpPool;
 
+use Amp\Parallel\Context\ContextPanicError;
 use Amp\Sync\ChannelException;
-use Amp\TimeoutCancellation;
 use CT\AmpPool\Exceptions\FatalWorkerException;
 use CT\AmpPool\WorkerPoolMocks\FatalWorkerEntryPoint;
 use CT\AmpPool\WorkerPoolMocks\RestartStrategies\RestartNeverWithLastError;
@@ -94,7 +94,7 @@ class WorkerPoolTest                extends TestCase
         } catch (\Throwable $exception) {
         }
 
-        $this->assertInstanceOf(FatalWorkerException::class, $exception);
+        $this->assertInstanceOf(ContextPanicError::class, $exception);
         $this->assertEquals(0, $restartStrategy->restarts, 'Worker should not be restarted');
     }
     
@@ -122,8 +122,6 @@ class WorkerPoolTest                extends TestCase
         if($exception !== null) {
             $this->assertInstanceOf(FatalWorkerException::class, $exception);
         }
-
-        $workerPool->awaitTermination();
 
         if($exception === null) {
             $this->assertInstanceOf(ChannelException::class, $restartStrategy->lastError);

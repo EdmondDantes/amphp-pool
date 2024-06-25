@@ -11,6 +11,7 @@ use Amp\ForbidCloning;
 use Amp\ForbidSerialization;
 use Amp\Future;
 use Amp\Parallel\Context\Context;
+use Amp\Parallel\Context\ContextException;
 use Amp\Parallel\Context\ProcessContext;
 use Amp\Sync\ChannelException;
 use Amp\TimeoutCancellation;
@@ -232,17 +233,23 @@ final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Ps
                                     .'Error occurred: '.$loopException->getMessage();
             }
             
+            $processException       = null;
+            
             try {
                 $this->processFuture->await(new TimeoutCancellation($this->processTimeout));
             } catch (CancelledException) {
                 $this->logger?->error($text);
+            } catch (\Throwable $processException) {
+            } finally {
+                $this->close();
+                
+                if($processException !== null) {
+                    throw $processException;
+                }
                 
                 if($loopException !== null) {
                     throw $loopException;
                 }
-                
-            } finally {
-                $this->close();
             }
         }
     }

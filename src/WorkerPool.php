@@ -279,9 +279,7 @@ class WorkerPool                    implements WorkerPoolInterface
     
     private function runWorkers(): void
     {
-        if(false === $this->workerCancellation?->isCancelled()) {
-            $this->workerCancellation->cancel();
-        }
+        $this->stopWorkers();
         
         if(false === $this->workersFuture?->isComplete()) {
             $this->workersFuture->complete();
@@ -546,21 +544,26 @@ class WorkerPool                    implements WorkerPoolInterface
             $this->workersFuture    = new DeferredFuture;
         }
         
+        $exception                  = null;
+        
         try {
             $this->workerWatcher($workerDescriptor);
+        } catch (\Throwable $exception) {
         } finally {
             foreach ($this->workers as $workerDescriptor) {
                 if($workerDescriptor->availableForRun()) {
                     return;
                 }
             }
-            
-            if(false === $this->workerCancellation?->isCancelled()) {
-                $this->workerCancellation->cancel();
-            }
+
+            $this->stopWorkers($exception);
             
             // When all workers are stopped, complete the future
-            $this->workersFuture->complete();
+            if($exception !== null) {
+                $this->workersFuture->error($exception);
+            } else {
+                $this->workersFuture->complete();
+            }
         }
     }
     
@@ -688,6 +691,7 @@ class WorkerPool                    implements WorkerPoolInterface
                 && $remoteException->getOriginalClassName() === FatalWorkerException::class) {
                 
                 // The Worker died due to a fatal error, so we should stop the server.
+                $workerDescriptor->markAsStoppedForever();
                 $this->logger?->error('Server shutdown due to fatal worker error: '.$remoteException->getMessage());
                 
                 throw $remoteException;
@@ -799,52 +803,11 @@ class WorkerPool                    implements WorkerPoolInterface
         }
     }
     
-    /**
-     * Stops all server workers. Workers are killed if the cancellation token is canceled.
-     *
-     * @param Cancellation|null $cancellation Token to request cancellation of waiting for shutdown.
-     *                                        When canceled, the workers are forcefully killed. If null, the workers
-     *                                        are killed immediately.
-     *
-     * @throws ClusterException
-     */
-    private function _stop(?Cancellation $cancellation = null): void
+    protected function stopWorkers(\Throwable $throwable = null): void
     {
-        if (false === $this->running) {
-            return;
+        if(false === $this->workerCancellation?->isCancelled()) {
+            $this->workerCancellation->cancel($throwable);
         }
-        
-        $this->running              = false;
-        
-        $cancellation               ??= new TimeoutCancellation($this->workerStopTimeout);
-        
-        $exceptions                 = $this->stopWorkers($cancellation);
-        
-        if(false === $this->mainCancellation?->isCancelled()) {
-            $this->mainCancellation->cancel();
-        }
-        
-        $this->mainCancellation     = null;
-        
-        WorkerGroup::stopStrategies($this->groupsScheme, $this->logger);
-        
-        if (!$exceptions) {
-            return;
-        }
-        
-        if (\count($exceptions) === 1) {
-            $exception              = \array_shift($exceptions);
-            
-            throw new WorkerPoolException(
-                'Stopping the server failed: ' . $exception->getMessage(),
-                previous: $exception,
-            );
-        }
-        
-        $exception                  = new CompositeException($exceptions);
-        $message                    = \implode('; ', \array_map(static fn (\Throwable $e) => $e->getMessage(), $exceptions));
-        
-        throw new WorkerPoolException('Stopping the server failed: ' . $message, previous: $exception);
     }
     
     public function restart(): void
@@ -918,39 +881,6 @@ class WorkerPool                    implements WorkerPoolInterface
                 $strategy->setWorkerPool($this)->setWorkerGroup($group);
             }
         }
-    }
-    
-    protected function stopWorkers(Cancellation $cancellation): array
-    {
-        $futures                    = [];
-        $logger                     = $this->logger;
-        
-        foreach ($this->workers as $workerDescriptor) {
-            $futures[]              = async(static function () use ($workerDescriptor, $cancellation, $logger): void {
-                
-                $future             = $workerDescriptor->getFuture();
-                
-                try {
-                    $workerDescriptor->getWorkerProcess()?->shutdown($cancellation);
-                } catch (ContextException|CancelledException) {
-                    // Ignore if the worker has already died unexpectedly.
-                }
-
-                try {
-                    // We need to await this future here, otherwise we may not log things properly if the
-                    // event-loop exits immediately after.
-                    $future?->await($cancellation);
-                } catch (CancelledException) {
-                    $logger?->error('Worker did not die normally within a cancellation window');
-                }
-            });
-        }
-        
-        [$exceptions]               = Future\awaitAll($futures);
-        
-        $this->workers              = [];
-        
-        return $exceptions;
     }
     
     protected function updateGroupsState(): void
