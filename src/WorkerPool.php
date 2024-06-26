@@ -446,6 +446,10 @@ class WorkerPool                    implements WorkerPoolInterface
             $suspension->resume();
         };
         
+        //
+        // WARNING: sapi_windows_set_ctrl_handler() breaks the event loop suspension.
+        // No use this on the production server.
+        //
         \sapi_windows_set_ctrl_handler($handler);
         
         try {
@@ -547,7 +551,7 @@ class WorkerPool                    implements WorkerPoolInterface
             $this->workerWatcher($workerDescriptor);
             
             foreach ($this->workers as $workerDescriptor) {
-                if($workerDescriptor->shouldBeStarted()) {
+                if($workerDescriptor->isRunning()) {
                     return;
                 }
             }

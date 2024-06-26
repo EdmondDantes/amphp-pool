@@ -11,8 +11,8 @@ use Amp\ForbidCloning;
 use Amp\ForbidSerialization;
 use Amp\Future;
 use Amp\Parallel\Context\Context;
-use Amp\Parallel\Context\ContextException;
 use Amp\Parallel\Context\ProcessContext;
+use Amp\Process\ProcessException;
 use Amp\Sync\ChannelException;
 use Amp\TimeoutCancellation;
 use CT\AmpPool\Exceptions\RemoteException;
@@ -24,6 +24,7 @@ use CT\AmpPool\WorkerEventEmitterInterface;
 use Revolt\EventLoop;
 use function Amp\async;
 use function Amp\weakClosure;
+use const Amp\Process\IS_WINDOWS;
 
 /**
  * Worker Process Context.
@@ -113,6 +114,14 @@ final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Ps
             } catch (\Throwable $exception) {
                 if(false === $processCancellation->isCancelled()) {
                     $processCancellation->cancel($exception);
+                }
+                
+                //
+                // HACK: On Windows, we got: Failed to read exit code from process wrapper
+                // because sapi_windows_set_ctrl_handler broke the fibers.
+                //
+                if(IS_WINDOWS && $exception instanceof ProcessException) {
+                    return null;
                 }
                 
                 throw $exception;
@@ -253,6 +262,11 @@ final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Ps
                 }
             }
         }
+    }
+    
+    public function wasTerminated(): bool
+    {
+        return $this->processFuture->isComplete();
     }
     
     private function ping(): void

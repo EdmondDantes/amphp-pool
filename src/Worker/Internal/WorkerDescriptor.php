@@ -36,6 +36,16 @@ final class WorkerDescriptor
         $this->workerProcess        = null;
     }
     
+    public function isRunning(): bool
+    {
+        return $this->workerProcess !== null && false === $this->workerProcess->wasTerminated();
+    }
+    
+    public function isNotRunning(): bool
+    {
+        return $this->workerProcess === null || $this->workerProcess->wasTerminated();
+    }
+    
     public function isStoppedForever(): bool
     {
         return $this->isStoppedForever;
