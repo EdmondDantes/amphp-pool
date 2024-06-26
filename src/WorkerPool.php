@@ -292,7 +292,7 @@ class WorkerPool                    implements WorkerPoolInterface
         
         try {
             foreach ($this->workers as $worker) {
-                if($worker->shouldBeStarted) {
+                if($worker->shouldBeStarted()) {
                     $this->startWorker($worker);
                 }
             }
@@ -360,7 +360,7 @@ class WorkerPool                    implements WorkerPoolInterface
                 break;
             }
             
-            if($isDecrease && $workerDescriptor->shouldBeStarted === false && $workerDescriptor->getWorkerProcess() !== null) {
+            if($isDecrease && $workerDescriptor->shouldBeStarted() === false && $workerDescriptor->getWorkerProcess() !== null) {
                 $workerDescriptor->getWorkerProcess()->shutdown();
                 $handled++;
                 $stoppedWorkers[]   = $workerDescriptor->id;
@@ -547,7 +547,7 @@ class WorkerPool                    implements WorkerPoolInterface
             $this->workerWatcher($workerDescriptor);
             
             foreach ($this->workers as $workerDescriptor) {
-                if($workerDescriptor->availableForRun()) {
+                if($workerDescriptor->shouldBeStarted()) {
                     return;
                 }
             }
@@ -601,13 +601,14 @@ class WorkerPool                    implements WorkerPoolInterface
                 $workerDescriptor->id
             );
             
-            if($exitResult instanceof TerminateWorkerException || $exitResult instanceof WorkerShouldBeStopped) {
+            if($exitResult instanceof TerminateWorkerException) {
                 $workerDescriptor->markAsStoppedForever();
+                $workerProcess->error("Worker {$id} will be stopped forever: {$exitResult->getMessage()}");
                 
-                if($exitResult instanceof TerminateWorkerException) {
-                    $workerProcess->error("Worker {$id} will be stopped forever: {$exitResult->getMessage()}");
-                }
-                
+                return;
+            }
+            
+            if($exitResult instanceof WorkerShouldBeStopped) {
                 return;
             }
             

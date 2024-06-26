@@ -18,7 +18,7 @@ final class WorkerDescriptor
     public function __construct(
         public readonly int $id,
         public readonly WorkerGroup $group,
-        public readonly bool $shouldBeStarted = false
+        private bool $shouldBeStarted = false
     ) {}
     
     public function getWorkerProcess(): ?WorkerProcessContext
@@ -31,7 +31,7 @@ final class WorkerDescriptor
         $this->workerProcess        = $workerProcess;
     }
     
-    public function resetWorkerProcess(): void
+    public function markAsStopped(): void
     {
         $this->workerProcess        = null;
     }
@@ -41,13 +41,14 @@ final class WorkerDescriptor
         return $this->isStoppedForever;
     }
     
-    public function availableForRun(): bool
+    public function shouldBeStarted(): bool
     {
-        return false === $this->isStoppedForever;
+        return true === $this->shouldBeStarted && false === $this->isStoppedForever;
     }
     
     public function markAsStoppedForever(): void
     {
+        $this->workerProcess        = null;
         $this->isStoppedForever     = true;
     }
 }
