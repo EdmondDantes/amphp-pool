@@ -548,22 +548,20 @@ class WorkerPool                    implements WorkerPoolInterface
         
         try {
             $this->workerWatcher($workerDescriptor);
-        } catch (\Throwable $exception) {
-        } finally {
+            
             foreach ($this->workers as $workerDescriptor) {
                 if($workerDescriptor->availableForRun()) {
                     return;
                 }
             }
-
-            $this->stopWorkers($exception);
             
             // When all workers are stopped, complete the future
-            if($exception !== null) {
-                $this->workersFuture->error($exception);
-            } else {
-                $this->workersFuture->complete();
-            }
+            $this->workersFuture->complete();
+            
+        } catch (\Throwable $exception) {
+            $this->workersFuture->error($exception);
+        } finally {
+            $this->stopWorkers($exception);
         }
     }
     
