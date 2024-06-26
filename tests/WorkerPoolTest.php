@@ -7,6 +7,7 @@ use Amp\Parallel\Context\ContextPanicError;
 use Amp\Sync\ChannelException;
 use CT\AmpPool\Exceptions\FatalWorkerException;
 use CT\AmpPool\WorkerPoolMocks\FatalWorkerEntryPoint;
+use CT\AmpPool\WorkerPoolMocks\RestartEntryPoint;
 use CT\AmpPool\WorkerPoolMocks\RestartStrategies\RestartNeverWithLastError;
 use CT\AmpPool\WorkerPoolMocks\RestartStrategies\RestartTwice;
 use CT\AmpPool\WorkerPoolMocks\Runners\RunnerLostChannel;
@@ -59,10 +60,11 @@ class WorkerPoolTest                extends TestCase
     public function testRestart(): void
     {
         $restartStrategy            = new RestartTwice;
+        RestartEntryPoint::removeFile();
         
         $workerPool                 = new WorkerPool;
         $workerPool->describeGroup(new WorkerGroup(
-            TestEntryPoint::class,
+            RestartEntryPoint::class,
             WorkerTypeEnum::SERVICE,
             minWorkers: 1,
             restartStrategy: $restartStrategy
@@ -72,7 +74,9 @@ class WorkerPoolTest                extends TestCase
         
         $workerPool->run();
         
-        $this->assertEquals(2, $restartStrategy->restarts);
+        $this->assertEquals(0, $restartStrategy->restarts);
+        $this->assertFileExists(RestartEntryPoint::getFile());
+        $this->assertEquals(2, (int) file_get_contents(RestartEntryPoint::getFile()));
     }
     
     public function testFatalWorkerException(): void
