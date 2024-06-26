@@ -36,7 +36,8 @@ use Revolt\EventLoop;
  */
 class Worker                        implements WorkerInterface
 {
-    protected readonly DeferredCancellation $loopCancellation;
+    protected readonly DeferredCancellation $mainCancellation;
+    private readonly DeferredFuture $workerFuture;
     
     /** @var Queue<TReceive> */
     protected readonly Queue $queue;
@@ -64,7 +65,8 @@ class Worker                        implements WorkerInterface
     ) {
         $this->queue                = new Queue();
         $this->iterator             = $this->queue->iterate();
-        $this->loopCancellation     = new DeferredCancellation();
+        $this->mainCancellation     = new DeferredCancellation;
+        $this->workerFuture         = new DeferredFuture;
         
         $this->poolState            = new PoolStateStorage;
         $this->workerStateStorage   = new WorkerStateStorage($this->id, $this->group->getWorkerGroupId(), true);
@@ -150,12 +152,12 @@ class Worker                        implements WorkerInterface
     
     public function getAbortCancellation(): Cancellation
     {
-        return $this->loopCancellation->getCancellation();
+        return $this->mainCancellation->getCancellation();
     }
     
     public function mainLoop(): void
     {
-        $abortCancellation          = $this->loopCancellation->getCancellation();
+        $abortCancellation          = $this->mainCancellation->getCancellation();
         
         try {
             while ($message = $this->ipcChannel->receive($abortCancellation)) {
@@ -166,47 +168,25 @@ class Worker                        implements WorkerInterface
                 }
                 
                 if($message instanceof MessageShutdown) {
-                    $this->logger->notice('Worker #'.$this->id.' received shutdown message');
+                    //$this->logger->notice('Worker #'.$this->id.' received shutdown message');
                     break;
                 }
                 
                 $this->eventEmitter->emitWorkerEvent($message, $this->id);
             }
-        } catch (\Throwable) {
+        } catch (\Throwable $exception) {
             // IPC Channel manually closed
+            if(false === $this->workerFuture->isComplete()) {
+                $this->workerFuture->error($exception);
+            }
         } finally {
-            $this->eventEmitter->free();
-            
-            if(false === $this->loopCancellation->isCancelled()) {
-                $this->loopCancellation->cancel();
-            }
-            
-            if(false === $this->queue->isComplete()) {
-                $this->queue->complete();
-            }
+            $this->stop();
         }
     }
     
     public function awaitTermination(?Cancellation $cancellation = null): void
     {
-        $deferredFuture             = new DeferredFuture();
-        $loopCancellation           = $this->loopCancellation->getCancellation();
-        
-        $loopId                     = $loopCancellation->subscribe($deferredFuture->complete(...));
-        $cancellationId             = $cancellation?->subscribe(static fn () => $loopCancellation->unsubscribe($loopId));
-        
-        try {
-            $deferredFuture->getFuture()->await($cancellation);
-        } finally {
-            /** @psalm-suppress PossiblyNullArgument $cancellationId is not null if $cancellation is not null. */
-            $cancellation?->unsubscribe($cancellationId);
-            $loopCancellation->unsubscribe($loopId);
-        }
-    }
-    
-    public function __destruct()
-    {
-        EventLoop::queue($this->stop(...));
+        $this->workerFuture->getFuture()->await($cancellation);
     }
     
     public function stop(): void
@@ -217,11 +197,23 @@ class Worker                        implements WorkerInterface
         
         $this->isStopped            = true;
         
-        if(false === $this->loopCancellation->isCancelled()) {
-            $this->loopCancellation->cancel();
+        if(false === $this->mainCancellation->isCancelled()) {
+            $this->mainCancellation->cancel();
         }
         
-        WorkerGroup::stopStrategies($this->groupsScheme, $this->logger);
+        try {
+            WorkerGroup::stopStrategies($this->groupsScheme, $this->logger);
+        } finally {
+            $this->eventEmitter->free();
+            
+            if(false === $this->workerFuture->isComplete()) {
+                $this->workerFuture->complete();
+            }
+            
+            if(false === $this->queue->isComplete()) {
+                $this->queue->complete();
+            }
+        }
     }
     
     public function isStopped(): bool
@@ -231,7 +223,7 @@ class Worker                        implements WorkerInterface
     
     public function onClose(\Closure $onClose): void
     {
-        $this->loopCancellation->getCancellation()->subscribe(static fn () => $onClose());
+        $this->mainCancellation->getCancellation()->subscribe(static fn () => $onClose());
     }
     
     public function __toString(): string

@@ -35,7 +35,7 @@ class WorkerTest                    extends TestCase
         $this->buildWorkerGroup();
         $this->buildWorker();
         
-        $this->worker->mainLoop();
+        EventLoop::queue($this->worker->mainLoop(...));
         $this->worker->stop();
         
         $this->worker->awaitTermination(new TimeoutCancellation(5));
@@ -49,10 +49,10 @@ class WorkerTest                    extends TestCase
         $this->buildWorkerGroup();
         $this->buildWorker();
         
-        $this->worker->mainLoop();
+        EventLoop::queue($this->worker->mainLoop(...));
         
         EventLoop::queue(function () {
-            $this->channelIn->send(new MessageShutdown());
+            $this->channelIn->send(new MessageShutdown);
         });
         
         $this->worker->awaitTermination(new TimeoutCancellation(5));
