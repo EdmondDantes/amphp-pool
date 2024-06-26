@@ -27,6 +27,7 @@ use Amp\TimeoutCancellation;
 use CT\AmpPool\Exceptions\FatalWorkerException;
 use CT\AmpPool\Exceptions\TerminateWorkerException;
 use CT\AmpPool\Exceptions\WorkerPoolException;
+use CT\AmpPool\Exceptions\WorkerShouldBeStopped;
 use CT\AmpPool\Internal\WorkerProcessContext;
 use CT\AmpPool\PoolState\PoolStateReadableInterface;
 use CT\AmpPool\PoolState\PoolStateStorage;
@@ -47,6 +48,7 @@ use CT\AmpPool\Worker\WorkerState\WorkersInfoInterface;
 use Psr\Log\LoggerInterface as PsrLogger;
 use Revolt\EventLoop;
 use function Amp\async;
+use function Amp\delay;
 use function Amp\trapSignal;
 use const Amp\Process\IS_WINDOWS;
 
@@ -426,12 +428,11 @@ class WorkerPool                    implements WorkerPoolInterface
         $suspension             = EventLoop::getSuspension();
         $cancellation           = new CompositeCancellation($this->mainCancellation->getCancellation(), $this->workerCancellation->getCancellation());
         
-        $mainCancellation       = $this->mainCancellation;
         $id                     = $cancellation->subscribe(static fn (CancelledException $exception) => $suspension->throw($exception));
         
         $handler                = null;
         
-        $handler                = static function () use ($suspension, $cancellation, &$handler, $mainCancellation, $id): void {
+        $handler                = static function () use ($suspension, &$handler, $id): void {
             
             if($handler === null) {
                 return;
@@ -441,12 +442,6 @@ class WorkerPool                    implements WorkerPoolInterface
             $handler            = null;
             
             echo 'The server will attempt to stop gracefully with CTRL-C...'.PHP_EOL;
-            
-            $cancellation->unsubscribe($id);
-            
-            if(false === $mainCancellation->isCancelled()) {
-                $mainCancellation->cancel();
-            }
             
             $suspension->resume();
         };
@@ -465,6 +460,8 @@ class WorkerPool                    implements WorkerPoolInterface
                 \sapi_windows_set_ctrl_handler($handler, false);
                 $handler            = null;
             }
+            
+            $this->stop();
         }
     }
     
@@ -604,9 +601,12 @@ class WorkerPool                    implements WorkerPoolInterface
                 $workerDescriptor->id
             );
             
-            if($exitResult instanceof TerminateWorkerException) {
+            if($exitResult instanceof TerminateWorkerException || $exitResult instanceof WorkerShouldBeStopped) {
                 $workerDescriptor->markAsStoppedForever();
-                $workerProcess->error("Worker {$id} will be stopped forever: {$exitResult->getMessage()}");
+                
+                if($exitResult instanceof TerminateWorkerException) {
+                    $workerProcess->error("Worker {$id} will be stopped forever: {$exitResult->getMessage()}");
+                }
                 
                 return;
             }
@@ -695,7 +695,7 @@ class WorkerPool                    implements WorkerPoolInterface
                 throw $remoteException;
             }
             
-        } catch (TerminateWorkerException $exception) {
+        } catch (TerminateWorkerException|WorkerShouldBeStopped $exception) {
             
             // The worker has terminated itself cleanly.
             $exitResult         = $exception;
@@ -731,10 +731,12 @@ class WorkerPool                    implements WorkerPoolInterface
         $this->defaultWorkerStrategies($group);
         $this->initWorkerStrategies($group);
         
-        foreach (range($baseWorkerId, $baseWorkerId + $group->getMinWorkers() - 1) as $id) {
+        $minWorkers                 = $group->getMinWorkers() - 1;
+        
+        foreach (range($baseWorkerId, $baseWorkerId + $group->getMaxWorkers() - 1) as $id) {
             $this->addWorker(new WorkerDescriptor(
-                $id, $group, $id <= ($baseWorkerId + $group->getMinWorkers() - 1
-            )));
+                $id, $group, $id <= ($baseWorkerId + $minWorkers)
+            ));
         }
     }
     
@@ -795,23 +797,21 @@ class WorkerPool                    implements WorkerPoolInterface
         if(false === $this->mainCancellation?->isCancelled()) {
             $this->mainCancellation->cancel();
         }
-        
-        if(false === $this->workerCancellation?->isCancelled()) {
-            $this->workerCancellation->cancel();
-        }
+
+        $this->stopWorkers();
     }
     
     protected function stopWorkers(\Throwable $throwable = null): void
     {
         if(false === $this->workerCancellation?->isCancelled()) {
-            $this->workerCancellation->cancel($throwable);
+            $this->workerCancellation->cancel($throwable ?? new WorkerShouldBeStopped);
         }
     }
     
     public function restart(): void
     {
         $this->shouldRestart        = true;
-        $this->workerCancellation?->cancel();
+        $this->stopWorkers();
         $this->logger?->info('Server reloaded');
     }
     

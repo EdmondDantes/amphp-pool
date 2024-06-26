@@ -16,6 +16,7 @@ use Amp\Parallel\Context\ProcessContext;
 use Amp\Sync\ChannelException;
 use Amp\TimeoutCancellation;
 use CT\AmpPool\Exceptions\RemoteException;
+use CT\AmpPool\Exceptions\WorkerShouldBeStopped;
 use CT\AmpPool\Internal\Messages\MessageLog;
 use CT\AmpPool\Internal\Messages\MessagePingPong;
 use CT\AmpPool\Internal\Messages\MessageShutdown;
@@ -189,10 +190,10 @@ final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Ps
                     $loopException  = $loopException->getPrevious();
                 }
                 
-                if($loopException instanceof CancelledException) {
-                    $this->logger?->info('Worker process #'.$this->id.' should be stop: '.$loopException->getMessage());
+                if($loopException instanceof WorkerShouldBeStopped) {
+                    $this->logger?->info('Worker #'.$this->id.' should be stopped: '.$loopException->getMessage());
                 } else {
-                    $this->logger?->error('Worker process #'.$this->id.' error: '.$loopException->getMessage());
+                    $this->logger?->error('Worker #'.$this->id.' error: '.$loopException->getMessage());
                 }
                 
             } finally {
@@ -206,7 +207,7 @@ final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Ps
         } finally {
             
             if($loopException === null) {
-                $text               = 'Waiting for the worker process #'.$this->id.' was interrupted due to a timeout ('.$this->processTimeout . '). '
+                $text               = 'Waiting for the worker #'.$this->id.' was interrupted due to a timeout ('.$this->processTimeout . '). '
                                     .'The child process properly closed the IPC connection.';
             } elseif ($loopException instanceof ChannelException) {
                 
@@ -215,7 +216,7 @@ final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Ps
                  * In this case, we wait for its termination and at the same time expect
                  * the result that the process returned.
                  */
-                $text               = 'Waiting for the worker process #'.$this->id
+                $text               = 'Waiting for the worker #'.$this->id
                                     .' to complete was interrupted due to a timeout ('.$this->processTimeout . ').'
                                     .' The connection with the worker process was lost. The state is undefined.';
                 
@@ -225,11 +226,11 @@ final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Ps
                     $loopException  = $loopException->getPrevious();
                 }
                 
-                $text               = 'Waiting for the worker process #'.$this->id.' was interrupted due to a timeout ('.$this->processTimeout . '). '
+                $text               = 'Waiting for the worker #'.$this->id.' was interrupted due to a timeout ('.$this->processTimeout . '). '
                                     .'The child process was cancelled: '.$loopException->getMessage();
             
             } else {
-                $text               = 'Waiting for the worker process #'.$this->id.' was interrupted due to a timeout ('.$this->processTimeout . '). '
+                $text               = 'Waiting for the worker #'.$this->id.' was interrupted due to a timeout ('.$this->processTimeout . '). '
                                     .'Error occurred: '.$loopException->getMessage();
             }
             
