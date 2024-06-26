@@ -312,7 +312,7 @@ class WorkerPool                    implements WorkerPoolInterface
         return $this->mainCancellation?->getCancellation();
     }
     
-    protected function awaitTermination(Cancellation $cancellation = null): void
+    private function awaitTermination(Cancellation $cancellation = null): void
     {
         if(IS_WINDOWS) {
             $this->awaitWindowsEvents();
@@ -392,32 +392,32 @@ class WorkerPool                    implements WorkerPoolInterface
         return $this->eventEmitter;
     }
     
-    protected function awaitUnixEvents(): void
+    private function awaitUnixEvents(): void
     {
-        while ($this->mainCancellation !== null) {
-            
-            try {
-                $signal             = trapSignal(
-                    [\SIGINT, \SIGTERM, \SIGUSR1], true, $this->mainCancellation->getCancellation()
-                );
-            } catch (CancelledException) {
-                break;
-            }
-            
-            if($signal === \SIGINT || $signal === \SIGTERM) {
-                $this->logger?->info('Server will stop due to signal SIGINT or SIGTERM');
-                $this->stop();
-                break;
-            }
-            
-            if($signal === \SIGUSR1) {
-                $this->logger?->info('Server should reload due to signal SIGUSR1');
-                $this->restart();
-            }
+        if($this->mainCancellation === null || $this->workerCancellation === null) {
+            return;
+        }
+        
+        $cancellation           = new CompositeCancellation(
+            $this->mainCancellation->getCancellation(), $this->workerCancellation->getCancellation()
+        );
+        
+        try {
+            $signal             = trapSignal([\SIGINT, \SIGTERM, \SIGUSR1], true, $cancellation);
+        } catch (CancelledException) {
+            return;
+        }
+        
+        if($signal === \SIGINT || $signal === \SIGTERM) {
+            $this->logger?->info('Server will stop due to signal SIGINT or SIGTERM');
+            $this->stop();
+        } elseif($signal === \SIGUSR1) {
+            $this->logger?->info('Server should reload due to signal SIGUSR1');
+            $this->restart();
         }
     }
     
-    protected function awaitWindowsEvents(): void
+    private function awaitWindowsEvents(): void
     {
         if($this->mainCancellation === null || $this->workerCancellation === null) {
             return;
