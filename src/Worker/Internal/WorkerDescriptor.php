@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace CT\AmpPool\Worker\Internal;
 
-use Amp\Future;
 use CT\AmpPool\Internal\WorkerProcessContext;
 use CT\AmpPool\WorkerGroup;
 
@@ -29,6 +28,16 @@ final class WorkerDescriptor
     public function setWorkerProcess(WorkerProcessContext $workerProcess): void
     {
         $this->workerProcess        = $workerProcess;
+    }
+    
+    public function willBeStarted(): void
+    {
+        $this->shouldBeStarted      = true;
+    }
+    
+    public function willBeStopped(): void
+    {
+        $this->shouldBeStarted      = false;
     }
     
     public function markAsStopped(): void
@@ -58,7 +67,6 @@ final class WorkerDescriptor
     
     public function markAsStoppedForever(): void
     {
-        $this->workerProcess        = null;
         $this->isStoppedForever     = true;
     }
 }

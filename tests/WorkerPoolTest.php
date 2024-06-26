@@ -27,7 +27,7 @@ class WorkerPoolTest                extends TestCase
         $workerPool->describeGroup(new WorkerGroup(
             TestEntryPoint::class,
             WorkerTypeEnum::SERVICE,
-            minWorkers: 1,
+            minWorkers: 2,
             restartStrategy: new RestartNever
         ));
         
@@ -46,11 +46,11 @@ class WorkerPoolTest                extends TestCase
         $workerPool->describeGroup(new WorkerGroup(
             TestEntryPointWaitTermination::class,
             WorkerTypeEnum::SERVICE,
-            minWorkers: 1,
+            minWorkers: 2,
             restartStrategy: new RestartNever
         ));
         
-        EventLoop::queue(fn() => $workerPool->stop());
+        EventLoop::delay(1, fn() => $workerPool->stop());
         
         $workerPool->run();
         
@@ -70,7 +70,7 @@ class WorkerPoolTest                extends TestCase
             restartStrategy: $restartStrategy
         ));
         
-        EventLoop::queue(fn() => $workerPool->restart());
+        EventLoop::delay(1, fn() => $workerPool->restart());
         
         $workerPool->run();
         

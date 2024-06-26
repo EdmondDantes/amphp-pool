@@ -42,6 +42,7 @@ use CT\AmpPool\Strategies\SocketStrategy\Windows\SocketWindowsStrategy;
 use CT\AmpPool\Strategies\WorkerStrategyInterface;
 use CT\AmpPool\WatcherEvents\WorkerProcessStarted;
 use CT\AmpPool\WatcherEvents\WorkerProcessTerminating;
+use CT\AmpPool\Worker\Internal\Exceptions\ScalingTrigger;
 use CT\AmpPool\Worker\Internal\WorkerDescriptor;
 use CT\AmpPool\Worker\WorkerState\WorkersInfo;
 use CT\AmpPool\Worker\WorkerState\WorkersInfoInterface;
@@ -94,7 +95,9 @@ class WorkerPool                    implements WorkerPoolInterface
      *
      * @var DeferredCancellation|null
      */
-    private ?DeferredCancellation $workerCancellation = null;
+    private ?DeferredCancellation $workersCancellation = null;
+    
+    private ?DeferredCancellation $scalingTrigger = null;
     
     private ?DeferredFuture $workersFuture = null;
     
@@ -269,43 +272,77 @@ class WorkerPool                    implements WorkerPoolInterface
             throw $exception;
         }
         
+        //
+        // Main watcher loop
+        //
         do {
             
             $this->shouldRestart    = false;
             
-            $this->runWorkers();
-            $this->awaitTermination();
+            if(false === $this->workersCancellation?->isCancelled()) {
+                $this->workersCancellation->cancel();
+            }
+            
+            $this->workersCancellation = new DeferredCancellation;
+            
+            $workersWatcher         = async($this->workersWatcher(...));
+            
+            if(IS_WINDOWS) {
+                $this->awaitWindowsEvents();
+            } else {
+                $this->awaitUnixEvents();
+            }
+            
+            Future\await([$workersWatcher]);
             
         } while($this->shouldRestart);
     }
     
-    private function runWorkers(): void
+    private function workersWatcher(): void
     {
-        $this->stopWorkers();
-        
-        if(false === $this->workersFuture?->isComplete()) {
-            $this->workersFuture->complete();
-        }
-        
-        $this->workerCancellation   = new DeferredCancellation;
-        $this->workersFuture        = null;
-        
         try {
-            foreach ($this->workers as $worker) {
-                if($worker->shouldBeStarted()) {
-                    $this->startWorker($worker);
+            $futures                = [];
+            
+            do {
+                
+                if(false === $this->scalingTrigger?->isCancelled()) {
+                    $this->scalingTrigger->cancel();
                 }
+                
+                $this->scalingTrigger = new DeferredCancellation;
+                
+                // Clear completed futures
+                foreach ($futures as $key => $future) {
+                    if($future->isComplete()) {
+                        unset($futures[$key]);
+                    }
+                }
+                
+                foreach ($this->workers as $worker) {
+                    if($worker->shouldBeStarted() && $worker->isNotRunning()) {
+                        $futures[]  = async($this->runWorkerWatcher(...), $worker);
+                    }
+                }
+                
+                $this->updateGroupsState();
+                
+                try {
+                    Future\await($futures, $this->scalingTrigger->getCancellation());
+                } catch (CancelledException|ScalingTrigger $exception) {
+                    if(false === $exception->getPrevious() instanceof ScalingTrigger) {
+                        throw $exception;
+                    }
+                }
+                
+                // Stop cycle when all workers are stopped
+            } while(count($futures) > 0 && true !== $this->workersCancellation?->isCancelled());
+            
+        } finally {
+            
+            // All workers are stopped here, so triggers cancellation if not already canceled
+            if(false === $this->workersCancellation->isCancelled()) {
+                $this->workersCancellation->cancel();
             }
-            
-            $this->updateGroupsState();
-            
-        } catch (\Throwable $exception) {
-            
-            if(false === $this->workerCancellation->isCancelled()) {
-                $this->workerCancellation->cancel();
-            }
-            
-            throw $exception;
         }
     }
     
@@ -314,25 +351,14 @@ class WorkerPool                    implements WorkerPoolInterface
         return $this->mainCancellation?->getCancellation();
     }
     
-    private function awaitTermination(Cancellation $cancellation = null): void
-    {
-        if(IS_WINDOWS) {
-            $this->awaitWindowsEvents();
-        } else {
-            $this->awaitUnixEvents();
-        }
-
-        if($this->workersFuture === null) {
-            return;
-        }
-        
-        Future\await([$this->workersFuture->getFuture()], $cancellation);
-    }
-    
     public function scaleWorkers(int $groupId, int $count): int
     {
         if($count === 0) {
             return 0;
+        }
+        
+        if($this->scalingTrigger === null) {
+            throw new WorkerPoolException('The scaling trigger is not initialized');
         }
         
         $group                      = $this->groupsScheme[$groupId] ?? null;
@@ -361,11 +387,12 @@ class WorkerPool                    implements WorkerPoolInterface
             }
             
             if($isDecrease && $workerDescriptor->shouldBeStarted() === false && $workerDescriptor->getWorkerProcess() !== null) {
+                $workerDescriptor->willBeStopped();
                 $workerDescriptor->getWorkerProcess()->shutdown();
                 $handled++;
                 $stoppedWorkers[]   = $workerDescriptor->id;
             } elseif(false === $isDecrease && $workerDescriptor->getWorkerProcess() === null) {
-                $this->startWorker($workerDescriptor);
+                $workerDescriptor->willBeStarted();
                 $handled++;
             }
         }
@@ -386,6 +413,8 @@ class WorkerPool                    implements WorkerPoolInterface
         // Update state of the worker group
         $this->poolState->setWorkerGroupState($groupId, $lowestWorkerId, $highestWorkerId);
         
+        $this->scalingTrigger->cancel(new ScalingTrigger);
+        
         return $handled;
     }
     
@@ -396,12 +425,12 @@ class WorkerPool                    implements WorkerPoolInterface
     
     private function awaitUnixEvents(): void
     {
-        if($this->mainCancellation === null || $this->workerCancellation === null) {
+        if($this->mainCancellation === null || $this->workersCancellation === null) {
             return;
         }
         
         $cancellation           = new CompositeCancellation(
-            $this->mainCancellation->getCancellation(), $this->workerCancellation->getCancellation()
+            $this->mainCancellation->getCancellation(), $this->workersCancellation->getCancellation()
         );
         
         try {
@@ -421,12 +450,12 @@ class WorkerPool                    implements WorkerPoolInterface
     
     private function awaitWindowsEvents(): void
     {
-        if($this->mainCancellation === null || $this->workerCancellation === null) {
+        if($this->mainCancellation === null || $this->workersCancellation === null) {
             return;
         }
         
         $suspension             = EventLoop::getSuspension();
-        $cancellation           = new CompositeCancellation($this->mainCancellation->getCancellation(), $this->workerCancellation->getCancellation());
+        $cancellation           = new CompositeCancellation($this->mainCancellation->getCancellation(), $this->workersCancellation->getCancellation());
         
         $id                     = $cancellation->subscribe(static fn (CancelledException $exception) => $suspension->throw($exception));
         
@@ -476,6 +505,14 @@ class WorkerPool                    implements WorkerPoolInterface
         }
     }
     
+    protected function runWorkerWatcher(WorkerDescriptor $workerDescriptor): void
+    {
+        while ($workerDescriptor->shouldBeStarted() && true !== $this->workersCancellation?->isCancelled()) {
+            $this->startWorker($workerDescriptor);
+            $this->workerWatcher($workerDescriptor);
+        }
+    }
+    
     protected function startWorker(WorkerDescriptor $workerDescriptor): void
     {
         $runnerStrategy             = $workerDescriptor->group->getRunnerStrategy();
@@ -498,7 +535,7 @@ class WorkerPool                    implements WorkerPoolInterface
             $workerProcess          = new WorkerProcessContext(
                 $workerDescriptor->id,
                 $context,
-                $this->workerCancellation->getCancellation(),
+                $this->workersCancellation->getCancellation(),
                 $this->eventEmitter,
             );
             
@@ -532,8 +569,6 @@ class WorkerPool                    implements WorkerPoolInterface
                 "Starting the worker '{$workerDescriptor->id}' failed. Sending the pool context failed", previous: $exception
             );
         }
-        
-        EventLoop::queue($this->workerRunner(...), $workerDescriptor);
     }
     
     private function workerRunner(WorkerDescriptor $workerDescriptor): void
@@ -625,10 +660,10 @@ class WorkerPool                    implements WorkerPoolInterface
                 
                 if($restarting > 0) {
                     $workerProcess->info("Worker {$id} will be restarted in {$restarting} seconds");
-                    EventLoop::delay($restarting, fn () => $this->startWorker($workerDescriptor));
-                } else {
-                    $this->startWorker($workerDescriptor);
+                    delay($restarting);
                 }
+                
+                return;
                 
             } else if($restarting < 0) {
                 
@@ -808,8 +843,8 @@ class WorkerPool                    implements WorkerPoolInterface
     
     protected function stopWorkers(\Throwable $throwable = null): void
     {
-        if(false === $this->workerCancellation?->isCancelled()) {
-            $this->workerCancellation->cancel($throwable ?? new WorkerShouldBeStopped);
+        if(false === $this->workersCancellation?->isCancelled()) {
+            $this->workersCancellation->cancel($throwable ?? new WorkerShouldBeStopped);
         }
     }
     
@@ -817,7 +852,7 @@ class WorkerPool                    implements WorkerPoolInterface
     {
         $this->shouldRestart        = true;
         $this->stopWorkers();
-        $this->logger?->info('Server reloaded');
+        $this->logger?->info('Server should be restarted');
     }
     
     public function countWorkers(int $groupId, bool $onlyRunning = false, bool $notRunning = false): int
