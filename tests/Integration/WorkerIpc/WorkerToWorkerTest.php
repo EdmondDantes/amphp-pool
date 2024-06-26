@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace CT\AmpPool\Integration\WorkerIpc;
 
-use Amp\TimeoutCancellation;
 use CT\AmpPool\Strategies\RestartStrategy\RestartNever;
 use CT\AmpPool\WorkerGroup;
 use CT\AmpPool\WorkerPool;
@@ -34,7 +33,6 @@ class WorkerToWorkerTest            extends TestCase
         ));
         
         $workerPool->run();
-        $workerPool->awaitTermination(new TimeoutCancellation(5));
         
         $this->assertFileExists(EntryPoint::getFile());
         
