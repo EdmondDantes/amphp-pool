@@ -33,21 +33,19 @@ class SocketStrategyTest            extends TestCase
         minWorkers:      1,
         restartStrategy: new RestartNever
         ));
-        
-        $workerPool->run();
-        
+
         EventLoop::delay(1, function() {
-            
+
             $contextFactory         = new DefaultContextFactory();
             $context                = $contextFactory->start(__DIR__ . '/connectionTester.php', new TimeoutCancellation(5));
-            
+
             $context->send('http://'.TestHttpReactor::ADDRESS.'/');
             $response               = $context->receive(new TimeoutCancellation(5));
-            
+
             $this->assertEquals(TestHttpReactor::class, $response);
         });
-        
-        $workerPool->awaitTermination();
+
+        $workerPool->run();
         
         $this->assertFileExists(TestHttpReactor::getFile());
         
