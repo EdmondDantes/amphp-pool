@@ -76,7 +76,7 @@ class WorkerPoolTest                extends TestCase
         
         $this->assertEquals(0, $restartStrategy->restarts);
         $this->assertFileExists(RestartEntryPoint::getFile());
-        $this->assertEquals(2, (int) file_get_contents(RestartEntryPoint::getFile()));
+        $this->assertEquals(1, (int) file_get_contents(RestartEntryPoint::getFile()));
     }
     
     public function testFatalWorkerException(): void
@@ -100,6 +100,11 @@ class WorkerPoolTest                extends TestCase
 
         $this->assertInstanceOf(ContextPanicError::class, $exception);
         $this->assertEquals(0, $restartStrategy->restarts, 'Worker should not be restarted');
+    }
+    
+    public function testTerminateWorkerException(): void
+    {
+        $this->markTestIncomplete('Not implemented yet');
     }
     
     public function testChannelLost(): void

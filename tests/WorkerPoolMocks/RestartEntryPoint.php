@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace CT\AmpPool\WorkerPoolMocks;
 
 use Amp\TimeoutCancellation;
+use CT\AmpPool\Exceptions\TerminateWorkerException;
 use CT\AmpPool\Worker\WorkerEntryPointInterface;
 use CT\AmpPool\Worker\WorkerInterface;
 
@@ -36,6 +37,11 @@ final class RestartEntryPoint implements WorkerEntryPointInterface
     
     public function run(): void
     {
+        if(is_file(self::getFile()) && (int)file_get_contents(self::getFile()) >= 1) {
+            // second time terminate worker
+            throw new TerminateWorkerException;
+        }
+        
         $this->worker->awaitTermination(new TimeoutCancellation(5));
         
         if(is_file(self::getFile())) {

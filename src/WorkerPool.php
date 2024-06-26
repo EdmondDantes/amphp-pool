@@ -722,17 +722,21 @@ class WorkerPool                    implements WorkerPoolInterface
             
             $remoteException    = $exception->getPrevious();
             
-            if (($remoteException instanceof TaskFailureThrowable
-                 || $remoteException
-                    instanceof
-                    ContextPanicError)
-                && $remoteException->getOriginalClassName() === FatalWorkerException::class) {
+            if ($remoteException instanceof TaskFailureThrowable || $remoteException instanceof ContextPanicError) {
                 
-                // The Worker died due to a fatal error, so we should stop the server.
-                $workerDescriptor->markAsStoppedForever();
-                $this->logger?->error('Server shutdown due to fatal worker error: '.$remoteException->getMessage());
+                if($remoteException->getOriginalClassName() === FatalWorkerException::class) {
+                    // The Worker died due to a fatal error, so we should stop the server.
+                    $workerDescriptor->markAsStoppedForever();
+                    $this->logger?->error('Server shutdown due to fatal worker error: '.$remoteException->getMessage());
+                    
+                    throw $remoteException;
+                }
                 
-                throw $remoteException;
+                if($remoteException->getOriginalClassName() === TerminateWorkerException::class) {
+                    // The Worker has terminated itself cleanly.
+                    $exitResult     = new TerminateWorkerException;
+                    $workerProcess->info("Worker #{$id} terminated yourself cleanly without restart");
+                }
             }
             
         } catch (TerminateWorkerException|WorkerShouldBeStopped $exception) {
