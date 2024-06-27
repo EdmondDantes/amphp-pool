@@ -43,6 +43,7 @@ class WorkerPoolTest                extends TestCase
         EntryPointHello::removeFile();
     }
     
+    #[RunInSeparateProcess]
     public function testStop(): void
     {
         TestEntryPointWaitTermination::removeFile();
@@ -62,6 +63,7 @@ class WorkerPoolTest                extends TestCase
         $this->assertFileExists(TestEntryPointWaitTermination::getFile());
     }
     
+    #[RunInSeparateProcess]
     public function testRestart(): void
     {
         $restartStrategy            = new RestartTwice;
@@ -84,6 +86,7 @@ class WorkerPoolTest                extends TestCase
         $this->assertEquals(1, (int) file_get_contents(RestartEntryPoint::getFile()));
     }
     
+    #[RunInSeparateProcess]
     public function testFatalWorkerException(): void
     {
         $restartStrategy            = new RestartTwice;
@@ -107,6 +110,7 @@ class WorkerPoolTest                extends TestCase
         $this->assertEquals(0, $restartStrategy->restarts, 'Worker should not be restarted');
     }
     
+    #[RunInSeparateProcess]
     public function testTerminateWorkerException(): void
     {
         $workerPool                 = new WorkerPool;
@@ -127,6 +131,7 @@ class WorkerPoolTest                extends TestCase
      * @return void
      * @throws \Throwable
      */
+    #[RunInSeparateProcess]
     public function testPoolState(): void
     {
         $workerPool                 = new WorkerPool;
@@ -162,6 +167,7 @@ class WorkerPoolTest                extends TestCase
         $this->assertEquals([1 => [0, 0], 2 => [0, 0]], $groups, 'Any group should not have workers');
     }
     
+    #[RunInSeparateProcess]
     public function testChannelLost(): void
     {
         $restartStrategy            = new RestartNeverWithLastError;
