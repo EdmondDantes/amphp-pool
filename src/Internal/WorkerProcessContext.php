@@ -126,8 +126,17 @@ final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Ps
                 
                 throw $exception;
             } finally {
-                if(false === $processCancellation->isCancelled()) {
-                    $processCancellation->cancel();
+
+                try {
+                    // Close the context if it is not closed yet.
+                    if(false === $context->isClosed()) {
+                        $context->close();
+                    }
+                    
+                } finally {
+                    if(false === $processCancellation->isCancelled()) {
+                        $processCancellation->cancel();
+                    }
                 }
             }
         });

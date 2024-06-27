@@ -6,12 +6,15 @@ namespace CT\AmpPool;
 use Amp\Parallel\Context\ContextPanicError;
 use Amp\Sync\ChannelException;
 use CT\AmpPool\Exceptions\FatalWorkerException;
+use CT\AmpPool\PoolState\PoolStateStorage;
+use CT\AmpPool\WorkerPoolMocks\EntryPointWait;
 use CT\AmpPool\WorkerPoolMocks\FatalWorkerEntryPoint;
 use CT\AmpPool\WorkerPoolMocks\RestartEntryPoint;
 use CT\AmpPool\WorkerPoolMocks\RestartStrategies\RestartNeverWithLastError;
 use CT\AmpPool\WorkerPoolMocks\RestartStrategies\RestartTwice;
 use CT\AmpPool\WorkerPoolMocks\Runners\RunnerLostChannel;
-use CT\AmpPool\WorkerPoolMocks\TestEntryPoint;
+use CT\AmpPool\WorkerPoolMocks\EntryPointHello;
+use CT\AmpPool\WorkerPoolMocks\TerminateWorkerEntryPoint;
 use CT\AmpPool\WorkerPoolMocks\TestEntryPointWaitTermination;
 use CT\AmpPool\Strategies\RestartStrategy\RestartNever;
 use PHPUnit\Framework\TestCase;
@@ -21,21 +24,21 @@ class WorkerPoolTest                extends TestCase
 {
     public function testStart(): void
     {
-        TestEntryPoint::removeFile();
+        EntryPointHello::removeFile();
         
         $workerPool                 = new WorkerPool;
         $workerPool->describeGroup(new WorkerGroup(
-            TestEntryPoint::class,
-            WorkerTypeEnum::SERVICE,
-            minWorkers: 2,
-            restartStrategy: new RestartNever
+                                       EntryPointHello::class,
+                                       WorkerTypeEnum::SERVICE,
+            minWorkers:                2,
+            restartStrategy:           new RestartNever
         ));
         
         $workerPool->run();
         
-        $this->assertFileExists(TestEntryPoint::getFile());
+        $this->assertFileExists(EntryPointHello::getFile());
         
-        TestEntryPoint::removeFile();
+        EntryPointHello::removeFile();
     }
     
     public function testStop(): void
@@ -50,7 +53,7 @@ class WorkerPoolTest                extends TestCase
             restartStrategy: new RestartNever
         ));
         
-        EventLoop::delay(1, fn() => $workerPool->stop());
+        EventLoop::delay(0.2, fn() => $workerPool->stop());
         
         $workerPool->run();
         
@@ -70,7 +73,7 @@ class WorkerPoolTest                extends TestCase
             restartStrategy: $restartStrategy
         ));
         
-        EventLoop::delay(1, fn() => $workerPool->restart());
+        EventLoop::delay(0.2, fn() => $workerPool->restart());
         
         $workerPool->run();
         
@@ -104,7 +107,57 @@ class WorkerPoolTest                extends TestCase
     
     public function testTerminateWorkerException(): void
     {
-        $this->markTestIncomplete('Not implemented yet');
+        $workerPool                 = new WorkerPool;
+        $workerPool->describeGroup(new WorkerGroup(
+            TerminateWorkerEntryPoint::class,
+            WorkerTypeEnum::SERVICE,
+            minWorkers:      2,
+            restartStrategy: new RestartNever
+        ));
+        
+        $workerPool->run();
+        $this->assertTrue(true, 'Workers should be terminated without any exception');
+    }
+    
+    /**
+     * Check if pool state is updated after worker started
+     *
+     * @return void
+     * @throws \Throwable
+     */
+    public function testPoolState(): void
+    {
+        $workerPool                 = new WorkerPool;
+        $workerPool->describeGroup(new WorkerGroup(
+            EntryPointWait::class,
+            WorkerTypeEnum::SERVICE,
+            minWorkers:      2,
+            restartStrategy: new RestartNever
+        ));
+
+        $workerPool->describeGroup(new WorkerGroup(
+            EntryPointWait::class,
+            WorkerTypeEnum::SERVICE,
+            minWorkers:      3,
+            restartStrategy: new RestartNever
+        ));
+        
+        $groups                     = null;
+        
+        EventLoop::delay(0.2, function () use ($workerPool, &$groups) {
+            $poolState              = new PoolStateStorage;
+            $groups                 = $poolState->update()->getGroupsState();
+            $workerPool->stop();
+        });
+        
+        $workerPool->run();
+        
+        $this->assertEquals([1 => [1, 2], 2 => [3, 5]], $groups, 'The First group have worker id 1 and 2, the second group have worker id 3, 4 and 5');
+
+        // Check pool state after workers stopped
+        $groups                 = (new PoolStateStorage)->update()->getGroupsState();
+
+        $this->assertEquals([1 => [0, 0], 2 => [0, 0]], $groups, 'Any group should not have workers');
     }
     
     public function testChannelLost(): void
@@ -114,11 +167,11 @@ class WorkerPoolTest                extends TestCase
         $workerPool                 = new WorkerPool;
         
         $workerPool->describeGroup(new WorkerGroup(
-            TestEntryPoint::class,
-            WorkerTypeEnum::SERVICE,
-            minWorkers     : 1,
-            runnerStrategy : new RunnerLostChannel,
-            restartStrategy: $restartStrategy
+           EntryPointHello::class,
+           WorkerTypeEnum::SERVICE,
+            minWorkers     :           1,
+            runnerStrategy :           new RunnerLostChannel,
+            restartStrategy:           $restartStrategy
         ));
 
         $exception                  = null;

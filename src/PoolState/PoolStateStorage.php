@@ -108,7 +108,7 @@ final class PoolStateStorage        implements PoolStateInterface
         return [0, 0];
     }
     
-    public function update(): void
+    public function update(): self
     {
         $data                       = $this->read();
         $data                       = \unpack('L*', $data);
@@ -129,6 +129,8 @@ final class PoolStateStorage        implements PoolStateInterface
             
             $this->groups[$groupId] = [$groupId, $lowestWorkerId, $highestWorkerId, 0];
         }
+        
+        return $this;
     }
     
     private function commit(): void

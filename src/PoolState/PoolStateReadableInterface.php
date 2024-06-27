@@ -9,5 +9,5 @@ interface PoolStateReadableInterface
     
     public function findGroupState(int $groupId): array;
     
-    public function update(): void;
+    public function update(): self;
 }

@@ -6,7 +6,7 @@ namespace CT\AmpPool\WorkerPoolMocks;
 use CT\AmpPool\Worker\WorkerEntryPointInterface;
 use CT\AmpPool\Worker\WorkerInterface;
 
-final class TestEntryPoint implements WorkerEntryPointInterface
+final class EntryPointHello         implements WorkerEntryPointInterface
 {
     public static function getFile(): string
     {
