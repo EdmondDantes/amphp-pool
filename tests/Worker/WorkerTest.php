@@ -8,6 +8,7 @@ use Amp\TimeoutCancellation;
 use CT\AmpPool\Internal\Messages\MessageShutdown;
 use CT\AmpPool\WorkerGroup;
 use CT\AmpPool\WorkerTypeEnum;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use Revolt\EventLoop;
 use function Amp\Sync\createChannelPair;
@@ -43,6 +44,7 @@ class WorkerTest                    extends TestCase
         $this->assertTrue($this->worker->isStopped());
     }
     
+    #[RunInSeparateProcess]
     public function testShutdown(): void
     {
         $this->buildChannel();
