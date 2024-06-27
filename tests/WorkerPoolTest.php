@@ -17,11 +17,13 @@ use CT\AmpPool\WorkerPoolMocks\EntryPointHello;
 use CT\AmpPool\WorkerPoolMocks\TerminateWorkerEntryPoint;
 use CT\AmpPool\WorkerPoolMocks\TestEntryPointWaitTermination;
 use CT\AmpPool\Strategies\RestartStrategy\RestartNever;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use Revolt\EventLoop;
 
 class WorkerPoolTest                extends TestCase
 {
+    #[RunInSeparateProcess]
     public function testStart(): void
     {
         EntryPointHello::removeFile();
