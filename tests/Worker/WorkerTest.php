@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace CT\AmpPool\Worker;
 
+use Amp\DeferredCancellation;
 use Amp\Sync\Channel;
 use Amp\TimeoutCancellation;
 use CT\AmpPool\Internal\Messages\MessageShutdown;
@@ -19,6 +20,7 @@ class WorkerTest                    extends TestCase
     private Channel     $channelIn;
     private Channel     $channelOut;
     private WorkerGroup $workerGroup;
+    private DeferredCancellation $cancellation;
     
     protected function setUp(): void
     {
@@ -64,7 +66,13 @@ class WorkerTest                    extends TestCase
     
     protected function buildChannel(): void
     {
+        $this->cancellation         = new DeferredCancellation;
+        
         [$this->channelIn, $this->channelOut] = createChannelPair();
+        
+        EventLoop::queue(function () {
+            $this->channelIn->receive($this->cancellation->getCancellation());
+        });
     }
     
     protected function buildWorkerGroup(): void
