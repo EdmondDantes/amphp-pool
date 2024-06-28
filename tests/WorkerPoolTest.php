@@ -86,6 +86,41 @@ class WorkerPoolTest                extends TestCase
         $this->assertEquals(1, (int) file_get_contents(RestartEntryPoint::getFile()));
     }
     
+    public function testStartWithMinZero(): void
+    {
+        EntryPointHello::removeFile();
+        
+        $workerPool                 = new WorkerPool;
+        $workerPool->describeGroup(new WorkerGroup(
+                                       EntryPointHello::class,
+                                       WorkerTypeEnum::SERVICE,
+            maxWorkers:                1,
+            restartStrategy:           new RestartNever
+        ));
+        
+        $workerPool->run();
+        
+        $this->assertFileDoesNotExist(EntryPointHello::getFile());
+        
+        EntryPointHello::removeFile();
+    }
+
+    public function testStartWithMaxZero(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Max workers must be a positive integer');
+        
+        $workerPool                 = new WorkerPool;
+        $workerPool->describeGroup(new WorkerGroup(
+                                       EntryPointHello::class,
+                                       WorkerTypeEnum::SERVICE,
+            maxWorkers:                0,
+            restartStrategy:           new RestartNever
+        ));
+        
+        $workerPool->run();
+    }
+    
     #[RunInSeparateProcess]
     public function testFatalWorkerException(): void
     {
