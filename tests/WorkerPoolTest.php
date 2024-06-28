@@ -64,6 +64,7 @@ class WorkerPoolTest                extends TestCase
         $this->assertFileExists(TestEntryPointWaitTermination::getFile());
     }
     
+    #[RunInSeparateProcess]
     public function testAwaitStart(): void
     {
         $workerPool                 = new WorkerPool;
@@ -111,6 +112,7 @@ class WorkerPoolTest                extends TestCase
         $this->assertEquals(1, (int) file_get_contents(RestartEntryPoint::getFile()));
     }
     
+    #[RunInSeparateProcess]
     public function testStartWithMinZero(): void
     {
         EntryPointHello::removeFile();
@@ -129,7 +131,8 @@ class WorkerPoolTest                extends TestCase
         
         EntryPointHello::removeFile();
     }
-
+    
+    #[RunInSeparateProcess]
     public function testStartWithMaxZero(): void
     {
         $this->expectException(\InvalidArgumentException::class);
@@ -258,6 +261,7 @@ class WorkerPoolTest                extends TestCase
         }
     }
     
+    #[RunInSeparateProcess]
     public function testScale(): void
     {
         StartCounterEntryPoint::removeFile();

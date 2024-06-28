@@ -1,4 +1,4 @@
-# Am PHP Pool [![PHP Composer](https://github.com/EdmondDantes/ampCluster/actions/workflows/php-debug.yml/badge.svg)](https://github.com/EdmondDantes/ampCluster/actions/workflows/php.yml)
+# Am PHP Pool [![PHP Composer](https://github.com/EdmondDantes/amphp-pool/actions/workflows/php.yml/badge.svg)](https://github.com/EdmondDantes/amphp-pool/actions/workflows/php.yml)
 
 Implementation of a process pool for handling `TCP/IP` connections similar to `Swoole`, 
 with the ability to create workers of different types and interaction between them.
