@@ -14,6 +14,7 @@ use CT\AmpPool\WorkerPoolMocks\RestartStrategies\RestartNeverWithLastError;
 use CT\AmpPool\WorkerPoolMocks\RestartStrategies\RestartTwice;
 use CT\AmpPool\WorkerPoolMocks\Runners\RunnerLostChannel;
 use CT\AmpPool\WorkerPoolMocks\EntryPointHello;
+use CT\AmpPool\WorkerPoolMocks\StartCounterEntryPoint;
 use CT\AmpPool\WorkerPoolMocks\TerminateWorkerEntryPoint;
 use CT\AmpPool\WorkerPoolMocks\TestEntryPointWaitTermination;
 use CT\AmpPool\Strategies\RestartStrategy\RestartNever;
@@ -61,6 +62,30 @@ class WorkerPoolTest                extends TestCase
         $workerPool->run();
         
         $this->assertFileExists(TestEntryPointWaitTermination::getFile());
+    }
+    
+    public function testAwaitStart(): void
+    {
+        $workerPool                 = new WorkerPool;
+        $workerPool->describeGroup(new WorkerGroup(
+            TestEntryPointWaitTermination::class,
+            WorkerTypeEnum::SERVICE,
+            minWorkers: 2,
+            restartStrategy: new RestartNever
+        ));
+        
+        $awaitDone                  = false;
+        
+        EventLoop::queue(function () use($workerPool, &$awaitDone) {
+            
+            $workerPool->awaitStart();
+            $awaitDone              = true;
+            $workerPool->stop();
+        });
+        
+        $workerPool->run();
+        
+        $this->assertTrue($awaitDone, 'Await start should be done');
     }
     
     #[RunInSeparateProcess]
@@ -232,4 +257,33 @@ class WorkerPoolTest                extends TestCase
             $this->assertInstanceOf(ChannelException::class, $restartStrategy->lastError);
         }
     }
+    
+    public function testScale(): void
+    {
+        StartCounterEntryPoint::removeFile();
+        
+        $workerPool                 = new WorkerPool;
+        $workerPool->describeGroup(new WorkerGroup(
+                                       StartCounterEntryPoint::class,
+                                       WorkerTypeEnum::SERVICE,
+            minWorkers:                1,
+            maxWorkers:                5,
+            restartStrategy:           new RestartNever
+        ));
+        
+        EventLoop::delay(1, function () use($workerPool) {
+            // Scale workers to 3 (1 + 2)
+            $workerPool->scaleWorkers(1, 2);
+            $workerPool->awaitStart();
+            $workerPool->stop();
+        });
+        
+        $workerPool->run();
+        
+        $this->assertFileExists(StartCounterEntryPoint::getFile());
+        $this->assertEquals(3, (int) file_get_contents(StartCounterEntryPoint::getFile()));
+        
+        StartCounterEntryPoint::removeFile();
+    }
+    
 }

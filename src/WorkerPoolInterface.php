@@ -38,6 +38,17 @@ interface WorkerPoolInterface       extends WorkerEventEmitterAwareInterface
     public function run(): void;
     
     /**
+     * The method blocks the current fiber until the worker pool is started.
+     * To consider a worker properly started,
+     * the system not only initiates the process
+     * but also waits for the process to send a message WorkerStarted
+     * confirming that it has started correctly.
+     *
+     * @return void
+     */
+    public function awaitStart(): void;
+    
+    /**
      * The method leads to the termination of the worker pool gracefully.
      *
      * @return void
@@ -72,9 +83,9 @@ interface WorkerPoolInterface       extends WorkerEventEmitterAwareInterface
      * in this case, the method will try to stop the workers.
      *
      * @param       int $groupId
-     * @param       int $count
+     * @param       int $delta
      *
      * @return      int
      */
-    public function scaleWorkers(int $groupId, int $count): int;
+    public function scaleWorkers(int $groupId, int $delta): int;
 }

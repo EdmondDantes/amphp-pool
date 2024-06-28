@@ -7,6 +7,7 @@ use Amp\Cancellation;
 use Amp\CancelledException;
 use Amp\CompositeCancellation;
 use Amp\DeferredCancellation;
+use Amp\DeferredFuture;
 use Amp\ForbidCloning;
 use Amp\ForbidSerialization;
 use Amp\Future;
@@ -20,6 +21,7 @@ use CT\AmpPool\Exceptions\WorkerShouldBeStopped;
 use CT\AmpPool\Internal\Messages\MessageLog;
 use CT\AmpPool\Internal\Messages\MessagePingPong;
 use CT\AmpPool\Internal\Messages\MessageShutdown;
+use CT\AmpPool\Internal\Messages\WorkerStarted;
 use CT\AmpPool\WorkerEventEmitterInterface;
 use Revolt\EventLoop;
 use function Amp\async;
@@ -70,6 +72,7 @@ final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Ps
         private readonly Context                     $context,
         private readonly Cancellation $workerCancellation,
         private readonly WorkerEventEmitterInterface $eventEmitter,
+        private readonly DeferredFuture $startFuture,
         protected readonly int $processTimeout       = 5
     ) {
         $this->lastActivity         = \time();
@@ -198,6 +201,14 @@ final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Ps
                         continue;
                     }
                     
+                    if($message instanceof WorkerStarted) {
+                        if(false === $this->startFuture->isComplete()) {
+                            $this->startFuture->complete($message);
+                        }
+                        
+                        continue;
+                    }
+                    
                     $this->eventEmitter->emitWorkerEvent($message, $this->id);
                 }
                 
@@ -298,6 +309,10 @@ final class WorkerProcessContext        implements \Psr\Log\LoggerInterface, \Ps
     
     private function close(): void
     {
+        if(false === $this->startFuture->isComplete()) {
+            $this->startFuture->complete();
+        }
+        
         if(false === $this->processCancellation->isCancelled()) {
             $this->processCancellation->cancel();
         }

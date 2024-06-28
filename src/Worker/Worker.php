@@ -11,6 +11,7 @@ use Amp\Pipeline\Queue;
 use Amp\Sync\Channel;
 use CT\AmpPool\Internal\Messages\MessagePingPong;
 use CT\AmpPool\Internal\Messages\MessageShutdown;
+use CT\AmpPool\Internal\Messages\WorkerStarted;
 use CT\AmpPool\PoolState\PoolStateReadableInterface;
 use CT\AmpPool\PoolState\PoolStateStorage;
 use CT\AmpPool\Strategies\WorkerStrategyInterface;
@@ -160,6 +161,10 @@ class Worker                        implements WorkerInterface
         $abortCancellation          = $this->mainCancellation->getCancellation();
         
         try {
+            
+            // Confirm that the worker has started
+            $this->ipcChannel->send(new WorkerStarted($this->id));
+            
             while ($message = $this->ipcChannel->receive($abortCancellation)) {
                 
                 if($message instanceof MessagePingPong) {
@@ -168,7 +173,6 @@ class Worker                        implements WorkerInterface
                 }
                 
                 if($message instanceof MessageShutdown) {
-                    //$this->logger->notice('Worker #'.$this->id.' received shutdown message');
                     break;
                 }
                 

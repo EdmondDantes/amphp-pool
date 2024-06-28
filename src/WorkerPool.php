@@ -99,7 +99,7 @@ class WorkerPool                    implements WorkerPoolInterface
     
     private ?DeferredCancellation $scalingTrigger = null;
     
-    private ?DeferredFuture $workersFuture = null;
+    private ?DeferredFuture $scalingFuture = null;
     
     private WorkersInfoInterface $workersInfo;
     
@@ -298,6 +298,33 @@ class WorkerPool                    implements WorkerPoolInterface
         } while($this->shouldRestart);
     }
     
+    public function awaitStart(): void
+    {
+        if($this->mainCancellation === null || false === $this->running) {
+            return;
+        }
+
+        $futures                    = [];
+        
+        if($this->scalingFuture !== null) {
+            $futures[]              = $this->scalingFuture->getFuture();
+        }
+        
+        foreach ($this->workers as $workerDescriptor) {
+            
+            $future                = $workerDescriptor->getStartFuture();
+            
+            if($future !== null) {
+                $futures[]          = $future;
+            }
+        }
+        
+        try {
+            Future\await($futures, $this->mainCancellation?->getCancellation());
+        } catch (CancelledException) {
+        }
+    }
+    
     private function workersWatcher(): void
     {
         try {
@@ -320,9 +347,14 @@ class WorkerPool                    implements WorkerPoolInterface
                 
                 foreach ($this->workers as $worker) {
                     if($worker->shouldBeStarted() && $worker->isNotRunning()) {
+                        
+                        $worker->starting();
+                        
                         $futures[]  = async($this->runWorkerWatcher(...), $worker);
                     }
                 }
+                
+                $this->scalingFuture?->complete();
                 
                 try {
                     Future\await($futures, $this->scalingTrigger->getCancellation());
@@ -349,9 +381,9 @@ class WorkerPool                    implements WorkerPoolInterface
         return $this->mainCancellation?->getCancellation();
     }
     
-    public function scaleWorkers(int $groupId, int $count): int
+    public function scaleWorkers(int $groupId, int $delta): int
     {
-        if($count === 0) {
+        if($delta === 0) {
             return 0;
         }
         
@@ -365,10 +397,9 @@ class WorkerPool                    implements WorkerPoolInterface
             throw new \Error("The worker group with ID '{$groupId}' is not found");
         }
 
-        $isDecrease                 = $count < 0;
-        $count                      = \abs($count);
+        $isDecrease                 = $delta < 0;
+        $delta                      = \abs($delta);
         $handled                    = 0;
-        $stoppedWorkers             = [];
         
         foreach ($this->workers as $workerDescriptor) {
             if($workerDescriptor->group->getWorkerGroupId() !== $groupId) {
@@ -380,7 +411,7 @@ class WorkerPool                    implements WorkerPoolInterface
                 continue;
             }
             
-            if($handled >= $count) {
+            if($handled >= $delta) {
                 break;
             }
             
@@ -393,6 +424,12 @@ class WorkerPool                    implements WorkerPoolInterface
                 $handled++;
             }
         }
+        
+        if(false === $this->scalingFuture?->isComplete()) {
+            $this->scalingFuture->complete();
+        }
+        
+        $this->scalingFuture        = new DeferredFuture;
         
         $this->scalingTrigger->cancel(new ScalingTrigger);
         
@@ -557,6 +594,7 @@ class WorkerPool                    implements WorkerPoolInterface
                 $context,
                 $this->workersCancellation->getCancellation(),
                 $this->eventEmitter,
+                $workerDescriptor->getStartDeferred()
             );
             
             if($this->logger !== null) {
@@ -604,6 +642,8 @@ class WorkerPool                    implements WorkerPoolInterface
     private function workerWatcher(WorkerDescriptor $workerDescriptor): void
     {
         if(false === $this->running) {
+            
+            $workerDescriptor->started();
             
             if($workerDescriptor->getWorkerProcess() !== null) {
                 $this->eventEmitter->emitWorkerEvent(
