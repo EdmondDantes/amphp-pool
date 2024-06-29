@@ -73,6 +73,8 @@ final class WorkersStorageMemory implements WorkersStorageInterface
             throw new \RuntimeException('Invalid worker id provided');
         }
         
-        $this->buffer               = \substr_replace($this->buffer, $data, ($workerId - 1) * $this->structureSize + $offset);
+        $this->buffer               = \substr_replace(
+            $this->buffer, $data, ($workerId - 1) * $this->structureSize + $offset, strlen($data)
+        );
     }
 }

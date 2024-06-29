@@ -163,28 +163,34 @@ class WorkerState                    implements WorkerStateInterface
     {
         return pack(
             'Q*',
+            // offset 0 * 8
             $this->workerId,
             $this->groupId,
             
+            // offset 2 * 8
             $this->shouldBeStarted,
             $this->isReady,
             $this->weight,
             $this->totalReloaded,
             
+            // offset 6 * 8
             $this->firstStartedAt,
             $this->startedAt,
             $this->finishedAt,
             $this->updatedAt,
             
+            // offset 10 * 8
             $this->phpMemoryUsage,
             $this->phpMemoryPeakUsage,
             
+            // offset 12 * 8
             $this->connectionsAccepted,
             $this->connectionsProcessed,
             $this->connectionsErrors,
             $this->connectionsRejected,
             $this->connectionsProcessing,
             
+            // offset 17 * 8
             $this->jobAccepted,
             $this->jobProcessed,
             $this->jobProcessing,
@@ -251,7 +257,7 @@ class WorkerState                    implements WorkerStateInterface
                 $this->finishedAt,
                 $this->updatedAt
             ),
-            5 * 8
+            6 * 8
         ];
     }
     
@@ -263,7 +269,7 @@ class WorkerState                    implements WorkerStateInterface
                 $this->phpMemoryUsage,
                 $this->phpMemoryPeakUsage
             ),
-            9 * 8
+            10 * 8
         ];
     }
     
@@ -278,7 +284,7 @@ class WorkerState                    implements WorkerStateInterface
                 $this->connectionsRejected,
                 $this->connectionsProcessing
             ),
-            11 * 8
+            12 * 8
         ];
     }
     
@@ -293,7 +299,7 @@ class WorkerState                    implements WorkerStateInterface
                 $this->jobErrors,
                 $this->jobRejected
             ),
-            16 * 8
+            17 * 8
         ];
     }
 }
