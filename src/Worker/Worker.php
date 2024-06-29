@@ -12,17 +12,13 @@ use Amp\Sync\Channel;
 use CT\AmpPool\Internal\Messages\MessagePingPong;
 use CT\AmpPool\Internal\Messages\MessageShutdown;
 use CT\AmpPool\Internal\Messages\WorkerStarted;
-use CT\AmpPool\PoolState\PoolStateReadableInterface;
-use CT\AmpPool\PoolState\PoolStateStorage;
 use CT\AmpPool\Strategies\WorkerStrategyInterface;
 use CT\AmpPool\Worker\Internal\WorkerLogHandler;
-use CT\AmpPool\Worker\WorkerState\WorkersInfo;
-use CT\AmpPool\Worker\WorkerState\WorkersInfoInterface;
-use CT\AmpPool\Worker\WorkerState\WorkerStateStorage;
-use CT\AmpPool\Worker\WorkerState\WorkerStateStorageInterface;
 use CT\AmpPool\WorkerEventEmitter;
 use CT\AmpPool\WorkerEventEmitterInterface;
 use CT\AmpPool\WorkerGroup;
+use CT\AmpPool\WorkersStorage\WorkersStorageInterface;
+use CT\AmpPool\WorkersStorage\WorkerStateInterface;
 use CT\AmpPool\WorkerTypeEnum;
 use Psr\Log\LoggerInterface;
 
@@ -46,9 +42,8 @@ class Worker implements WorkerInterface
     protected readonly ConcurrentIterator $iterator;
 
     private LoggerInterface $logger;
-    private PoolStateReadableInterface $poolState;
-    private WorkerStateStorageInterface $workerStateStorage;
-    private WorkersInfoInterface $workersInfo;
+    private WorkersStorageInterface $workersStorage;
+    private WorkerStateInterface $workerState;
     private WorkerEventEmitterInterface $eventEmitter;
 
     private bool $isStopped         = false;
@@ -61,18 +56,22 @@ class Worker implements WorkerInterface
          * @var array<int, WorkerGroup>
          */
         private readonly array $groupsScheme,
-        ?LoggerInterface        $logger = null
+        string $workersStorageClass,
+        ?LoggerInterface        $logger = null,
     ) {
         $this->queue                = new Queue();
         $this->iterator             = $this->queue->iterate();
         $this->mainCancellation     = new DeferredCancellation;
         $this->workerFuture         = new DeferredFuture;
-
-        $this->poolState            = new PoolStateStorage;
-        $this->workerStateStorage   = new WorkerStateStorage($this->id, $this->group->getWorkerGroupId(), true);
-        $this->workersInfo          = new WorkersInfo;
+        
         $this->eventEmitter         = new WorkerEventEmitter;
 
+        if(\class_exists($workersStorageClass) === false) {
+            throw new \RuntimeException('Invalid storage class provided. Expected ' . WorkersStorageInterface::class . ' implementation');
+        }
+        
+        $this->workersStorage       = forward_static_call([$workersStorageClass, 'instanciate']);
+        
         if($logger !== null) {
             $this->logger           = $logger;
         } else {
@@ -81,8 +80,14 @@ class Worker implements WorkerInterface
         }
     }
 
+    public function getWorkersStorage(): WorkersStorageInterface
+    {
+        return $this->workersStorage;
+    }
+    
     public function initWorker(): void
     {
+        $this->workerState         = $this->workersStorage->getWorkerState($this->id);
         $this->initWorkerStrategies();
         WorkerGroup::startStrategies($this->groupsScheme);
     }
@@ -97,27 +102,17 @@ class Worker implements WorkerInterface
         return $this->ipcChannel;
     }
 
+    public function getWorkerState(): WorkerStateInterface
+    {
+        return $this->workerState;
+    }
+    
     /**
      * @return array<int, WorkerGroup>
      */
     public function getGroupsScheme(): array
     {
         return $this->groupsScheme;
-    }
-
-    public function getPoolStateStorage(): PoolStateReadableInterface
-    {
-        return $this->poolState;
-    }
-
-    public function getWorkerStateStorage(): WorkerStateStorageInterface
-    {
-        return $this->workerStateStorage;
-    }
-
-    public function getWorkersInfo(): WorkersInfoInterface
-    {
-        return $this->workersInfo;
     }
 
     public function getLogger(): LoggerInterface
@@ -161,6 +156,14 @@ class Worker implements WorkerInterface
 
         try {
 
+            // Update Worker State
+            $this->workerState
+                ->initDefaults()
+                ->setPid(\getmypid())
+                ->markAsReady()
+                ->setGroupId($this->group->getWorkerGroupId())
+                ->update();
+            
             // Confirm that the worker has started
             $this->ipcChannel->send(new WorkerStarted($this->id));
 
@@ -178,6 +181,9 @@ class Worker implements WorkerInterface
                 $this->eventEmitter->emitWorkerEvent($message, $this->id);
             }
         } catch (\Throwable $exception) {
+            
+            $this->workerState->incrementShutdownErrors();
+            
             // IPC Channel manually closed
             if(false === $this->workerFuture->isComplete()) {
                 $this->workerFuture->error($exception);
@@ -203,7 +209,9 @@ class Worker implements WorkerInterface
         if(false === $this->mainCancellation->isCancelled()) {
             $this->mainCancellation->cancel();
         }
-
+        
+        $this->workerState->markAsShutdown()->update();
+        
         try {
             WorkerGroup::stopStrategies($this->groupsScheme, $this->logger);
         } finally {

@@ -134,6 +134,7 @@ class WorkerStateTest extends TestCase
     private function fillWorkerState(WorkerState $workerState): void
     {
         $workerState->groupId        = 2;
+        $workerState->pid            = 8994445;
         $workerState->shouldBeStarted= true;
         $workerState->isReady        = true;
         $workerState->totalReloaded  = 45;

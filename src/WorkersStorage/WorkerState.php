@@ -28,7 +28,9 @@ class WorkerState                    implements WorkerStateInterface
         
         public bool $shouldBeStarted         = false,
         public bool $isReady                 = false,
+        public int $pid                      = 0,
         public int $totalReloaded            = 0,
+        public int $shutdownErrors           = 0,
         /**
          * Current worker weight.
          */
@@ -54,6 +56,341 @@ class WorkerState                    implements WorkerStateInterface
         public int  $jobErrors               = 0,
         public int  $jobRejected             = 0
     ) {}
+    
+    public function getGroupId(): int
+    {
+        return $this->groupId;
+    }
+    
+    public function setGroupId(int $groupId): static
+    {
+        $this->groupId = $groupId;
+        return $this;
+    }
+    
+    public function isShouldBeStarted(): bool
+    {
+        return $this->shouldBeStarted;
+    }
+    
+    public function markAsShouldBeStarted(): static
+    {
+        $this->shouldBeStarted = true;
+        return $this;
+    }
+    
+    public function isReady(): bool
+    {
+        return $this->isReady;
+    }
+    
+    public function markAsReady(): static
+    {
+        $this->isReady = true;
+        return $this;
+    }
+    
+    public function markAsUnReady(): static
+    {
+        $this->isReady = false;
+        return $this;
+    }
+    
+    public function markAsShutdown(): static
+    {
+        $this->isReady = false;
+        $this->finishedAt = \time();
+        return $this;
+    }
+    
+    public function getPid(): int
+    {
+        return $this->pid;
+    }
+    
+    public function setPid(int $pid): static
+    {
+        $this->pid = $pid;
+        return $this;
+    }
+    
+    public function getTotalReloaded(): int
+    {
+        return $this->totalReloaded;
+    }
+    
+    public function setTotalReloaded(int $totalReloaded): static
+    {
+        $this->totalReloaded = $totalReloaded;
+        return $this;
+    }
+    
+    public function incrementTotalReloaded(): static
+    {
+        $this->totalReloaded++;
+        return $this;
+    }
+    
+    public function getShutdownErrors(): int
+    {
+        return $this->shutdownErrors;
+    }
+    
+    public function setShutdownErrors(int $shutdownErrors): static
+    {
+        $this->shutdownErrors = $shutdownErrors;
+        return $this;
+    }
+    
+    public function incrementShutdownErrors(): static
+    {
+        $this->shutdownErrors++;
+        return $this;
+    }
+    
+    public function getWeight(): int
+    {
+        return $this->weight;
+    }
+    
+    public function setWeight(int $weight): static
+    {
+        $this->weight = $weight;
+        return $this;
+    }
+
+    public function increaseWeight(int $weight): static
+    {
+        $this->weight += $weight;
+        return $this;
+    }
+
+    public function decreaseWeight(int $weight): static
+    {
+        $this->weight -= $weight;
+        return $this;
+    }
+    
+    public function getFirstStartedAt(): int
+    {
+        return $this->firstStartedAt;
+    }
+    
+    public function setFirstStartedAt(int $firstStartedAt): static
+    {
+        $this->firstStartedAt = $firstStartedAt;
+        return $this;
+    }
+    
+    public function getStartedAt(): int
+    {
+        return $this->startedAt;
+    }
+    
+    public function setStartedAt(int $startedAt): static
+    {
+        $this->startedAt = $startedAt;
+        return $this;
+    }
+    
+    public function getFinishedAt(): int
+    {
+        return $this->finishedAt;
+    }
+    
+    public function setFinishedAt(int $finishedAt): static
+    {
+        $this->finishedAt = $finishedAt;
+        return $this;
+    }
+    
+    public function getUpdatedAt(): int
+    {
+        return $this->updatedAt;
+    }
+    
+    public function setUpdatedAt(int $updatedAt): static
+    {
+        $this->updatedAt = $updatedAt;
+        return $this;
+    }
+    
+    public function getPhpMemoryUsage(): int
+    {
+        return $this->phpMemoryUsage;
+    }
+    
+    public function setPhpMemoryUsage(int $phpMemoryUsage): static
+    {
+        $this->phpMemoryUsage = $phpMemoryUsage;
+        return $this;
+    }
+    
+    public function getPhpMemoryPeakUsage(): int
+    {
+        return $this->phpMemoryPeakUsage;
+    }
+    
+    public function setPhpMemoryPeakUsage(int $phpMemoryPeakUsage): static
+    {
+        $this->phpMemoryPeakUsage = $phpMemoryPeakUsage;
+        return $this;
+    }
+    
+    public function getConnectionsAccepted(): int
+    {
+        return $this->connectionsAccepted;
+    }
+    
+    public function setConnectionsAccepted(int $connectionsAccepted): static
+    {
+        $this->connectionsAccepted = $connectionsAccepted;
+        return $this;
+    }
+    
+    public function getConnectionsProcessed(): int
+    {
+        return $this->connectionsProcessed;
+    }
+    
+    public function setConnectionsProcessed(int $connectionsProcessed): static
+    {
+        $this->connectionsProcessed = $connectionsProcessed;
+        return $this;
+    }
+    
+    public function getConnectionsErrors(): int
+    {
+        return $this->connectionsErrors;
+    }
+    
+    public function setConnectionsErrors(int $connectionsErrors): static
+    {
+        $this->connectionsErrors = $connectionsErrors;
+        return $this;
+    }
+    
+    public function getConnectionsRejected(): int
+    {
+        return $this->connectionsRejected;
+    }
+    
+    public function setConnectionsRejected(int $connectionsRejected): static
+    {
+        $this->connectionsRejected = $connectionsRejected;
+        return $this;
+    }
+    
+    public function getConnectionsProcessing(): int
+    {
+        return $this->connectionsProcessing;
+    }
+    
+    public function setConnectionsProcessing(int $connectionsProcessing): static
+    {
+        $this->connectionsProcessing = $connectionsProcessing;
+        return $this;
+    }
+    
+    public function getJobAccepted(): int
+    {
+        return $this->jobAccepted;
+    }
+    
+    public function setJobAccepted(int $jobAccepted): static
+    {
+        $this->jobAccepted = $jobAccepted;
+        return $this;
+    }
+    
+    public function getJobProcessed(): int
+    {
+        return $this->jobProcessed;
+    }
+    
+    public function setJobProcessed(int $jobProcessed): static
+    {
+        $this->jobProcessed = $jobProcessed;
+        return $this;
+    }
+    
+    public function getJobProcessing(): int
+    {
+        return $this->jobProcessing;
+    }
+    
+    public function setJobProcessing(int $jobProcessing): static
+    {
+        $this->jobProcessing = $jobProcessing;
+        return $this;
+    }
+    
+    public function getJobErrors(): int
+    {
+        return $this->jobErrors;
+    }
+    
+    public function setJobErrors(int $jobErrors): static
+    {
+        $this->jobErrors = $jobErrors;
+        return $this;
+    }
+    
+    public function getJobRejected(): int
+    {
+        return $this->jobRejected;
+    }
+    
+    public function setJobRejected(int $jobRejected): static
+    {
+        $this->jobRejected = $jobRejected;
+        return $this;
+    }
+    
+    public function jobEnqueued(int $weight, bool $canAcceptMoreJobs): void
+    {
+        $this->weight               += $weight;
+        $this->isReady              = $canAcceptMoreJobs;
+        
+        $this->update();
+    }
+    
+    public function jobDequeued(int $weight, bool $canAcceptMoreJobs): void
+    {
+        $this->weight               -= $weight;
+        $this->isReady              = $canAcceptMoreJobs;
+        
+        $this->update();
+    }
+    
+    public function initDefaults(): static
+    {
+        $this->read();
+        
+        $now                        = \time();
+        
+        if($this->firstStartedAt === 0) {
+            $this->firstStartedAt   = $now;
+        }
+        
+        if($this->startedAt === 0) {
+            $this->startedAt        = $now;
+        }
+        
+        if($this->updatedAt === 0) {
+            $this->updatedAt        = $now;
+        }
+        
+        $this->phpMemoryUsage       = \memory_get_usage(true);
+        
+        if($this->phpMemoryPeakUsage < \memory_get_peak_usage(true)) {
+            $this->phpMemoryPeakUsage = \memory_get_peak_usage(true);
+        }
+        
+        
+        
+        return $this;
+    }
     
     protected function getStorage(): WorkersStorageInterface|null
     {
@@ -89,7 +426,9 @@ class WorkerState                    implements WorkerStateInterface
             
             $this->shouldBeStarted,
             $this->isReady,
+            $this->pid,
             $this->totalReloaded,
+            $this->shutdownErrors,
             $this->weight,
          
             $this->firstStartedAt,
@@ -190,27 +529,29 @@ class WorkerState                    implements WorkerStateInterface
             // offset 2 * 8
             $this->shouldBeStarted,
             $this->isReady,
+            $this->pid,
             $this->totalReloaded,
+            $this->shutdownErrors,
             $this->weight,
             
-            // offset 6 * 8
+            // offset 8 * 8
             $this->firstStartedAt,
             $this->startedAt,
             $this->finishedAt,
             $this->updatedAt,
             
-            // offset 10 * 8
+            // offset 12 * 8
             $this->phpMemoryUsage,
             $this->phpMemoryPeakUsage,
             
-            // offset 12 * 8
+            // offset 14 * 8
             $this->connectionsAccepted,
             $this->connectionsProcessed,
             $this->connectionsErrors,
             $this->connectionsRejected,
             $this->connectionsProcessing,
             
-            // offset 17 * 8
+            // offset 19 * 8
             $this->jobAccepted,
             $this->jobProcessed,
             $this->jobProcessing,
@@ -250,7 +591,8 @@ class WorkerState                    implements WorkerStateInterface
             $unpackedItem[19] ?? 0,
             $unpackedItem[20] ?? 0,
             $unpackedItem[21] ?? 0,
-            $unpackedItem[22] ?? 0
+            $unpackedItem[22] ?? 0,
+            $unpackedItem[23] ?? 0,
         );
     }
     
@@ -261,7 +603,9 @@ class WorkerState                    implements WorkerStateInterface
                 'Q*',
                 $this->shouldBeStarted,
                 $this->isReady,
+                $this->pid,
                 $this->totalReloaded,
+                $this->shutdownErrors,
                 $this->weight
             ),
             2 * 8
@@ -278,7 +622,7 @@ class WorkerState                    implements WorkerStateInterface
                 $this->finishedAt,
                 $this->updatedAt
             ),
-            6 * 8
+            8 * 8
         ];
     }
     
@@ -290,7 +634,7 @@ class WorkerState                    implements WorkerStateInterface
                 $this->phpMemoryUsage,
                 $this->phpMemoryPeakUsage
             ),
-            10 * 8
+            12 * 8
         ];
     }
     
@@ -305,7 +649,7 @@ class WorkerState                    implements WorkerStateInterface
                 $this->connectionsRejected,
                 $this->connectionsProcessing
             ),
-            12 * 8
+            14 * 8
         ];
     }
     
@@ -320,7 +664,7 @@ class WorkerState                    implements WorkerStateInterface
                 $this->jobErrors,
                 $this->jobRejected
             ),
-            17 * 8
+            19 * 8
         ];
     }
     

@@ -9,8 +9,8 @@ use CT\AmpPool\Exceptions\FatalWorkerException;
 use CT\AmpPool\JobIpc\IpcServerInterface;
 use CT\AmpPool\JobIpc\JobRequestInterface;
 use CT\AmpPool\Strategies\WorkerStrategyAbstract;
-use CT\AmpPool\Worker\WorkerState\WorkerStateStorage;
 use CT\AmpPool\WorkerGroup;
+use CT\AmpPool\WorkersStorage\WorkerStateInterface;
 use Psr\Log\LoggerInterface;
 use Revolt\EventLoop;
 use function Amp\delay;
@@ -20,7 +20,7 @@ abstract class JobExecutorAbstract extends WorkerStrategyAbstract implements Job
     protected JobHandlerInterface|null $handler         = null;
     protected int                     $workerId         = 0;
     protected LoggerInterface|null    $logger           = null;
-    protected WorkerStateStorage|null $workerState      = null;
+    protected WorkerStateInterface|null $workerState    = null;
     protected WorkerGroup|null        $group            = null;
     protected IpcServerInterface|null $jobIpc           = null;
 
@@ -48,7 +48,7 @@ abstract class JobExecutorAbstract extends WorkerStrategyAbstract implements Job
                                            .'Please use $worker->group->getJobExecutor()->defineJobHandler() method before starting the Worker.');
         }
 
-        $this->workerState          = $worker->getWorkerStateStorage();
+        $this->workerState          = $worker->getWorkerState();
         $this->group                = $worker->getWorkerGroup();
         $this->logger               = $worker->getLogger();
         $this->workerId             = $worker->getWorkerId();
@@ -72,7 +72,7 @@ abstract class JobExecutorAbstract extends WorkerStrategyAbstract implements Job
      */
     protected function jobLoop(?Cancellation $cancellation = null): void
     {
-        $this->workerState->workerReady();
+        $this->workerState->markAsReady()->updateStateSegment();
 
         try {
 
@@ -104,6 +104,7 @@ abstract class JobExecutorAbstract extends WorkerStrategyAbstract implements Job
                     try {
                         $result     = $future->await($cancellation);
                     } catch (\Throwable $exception) {
+                        $selfRef->get()?->workerState->incrementJobErrors();
                         $result     = $exception;
                     }
 
@@ -136,15 +137,13 @@ abstract class JobExecutorAbstract extends WorkerStrategyAbstract implements Job
                         delay(0.0, true, $cancellation);
                     } finally {
                         // If we return here, we are ready to accept new jobs
-                        $this->workerState->workerReady();
+                        $this->workerState->markAsReady()->updateStateSegment();
                     }
                 }
             }
         } catch (CancelledException) {
             // Job loop canceled
         } finally {
-            $this->workerState->workerNotReady();
-
             $this->workerState          = null;
             $this->group                = null;
             $this->logger               = null;

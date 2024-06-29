@@ -5,6 +5,11 @@ namespace CT\AmpPool\WorkersStorage;
 
 final class WorkersStorage          implements WorkersStorageInterface
 {
+    public static function instanciate(int $workersCount = 0): static
+    {
+        return new static(WorkerState::class, $workersCount);
+    }
+    
     private int $key;
     private bool $isWrite           = false;
     private int $structureSize;

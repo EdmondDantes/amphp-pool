@@ -42,6 +42,8 @@ use CT\AmpPool\Worker\Internal\Exceptions\ScalingTrigger;
 use CT\AmpPool\Worker\Internal\WorkerDescriptor;
 use CT\AmpPool\Worker\WorkerState\WorkersInfo;
 use CT\AmpPool\Worker\WorkerState\WorkersInfoInterface;
+use CT\AmpPool\WorkersStorage\WorkersStorage;
+use CT\AmpPool\WorkersStorage\WorkersStorageInterface;
 use Psr\Log\LoggerInterface as PsrLogger;
 use Revolt\EventLoop;
 use const Amp\Process\IS_WINDOWS;
@@ -75,6 +77,8 @@ class WorkerPool implements WorkerPoolInterface
     private readonly ConcurrentIterator $iterator;
     private bool $running           = false;
 
+    private WorkersStorageInterface $workersStorage;
+    
     private ?PoolStateStorage $poolState    = null;
 
     /**
@@ -104,6 +108,7 @@ class WorkerPool implements WorkerPoolInterface
 
     public function __construct(
         protected readonly IpcHub $hub      = new LocalIpcHub(),
+        protected readonly string $workersStorageClass = WorkersStorage::class,
         protected ?ContextFactory $contextFactory = null,
         protected ?PsrLogger $logger        = null
     ) {
@@ -111,7 +116,21 @@ class WorkerPool implements WorkerPoolInterface
         $this->workersInfo          = new WorkersInfo;
         $this->eventEmitter         = new WorkerEventEmitter;
     }
-
+    
+    private function initWorkersStorage(): void
+    {
+        if(class_exists($this->workersStorageClass) === false) {
+            throw new \Error("The workers storage class '{$this->workersStorageClass}' does not exist");
+        }
+        
+        $this->workersStorage       = forward_static_call([$this->workersStorageClass, 'instanciate'], \count($this->workers));
+    }
+    
+    public function getWorkersStorage(): WorkersStorageInterface
+    {
+        return $this->workersStorage;
+    }
+    
     public function getIpcHub(): IpcHub
     {
         return $this->hub;
@@ -242,6 +261,8 @@ class WorkerPool implements WorkerPoolInterface
             throw new \Exception('The number of workers must be greater than zero');
         }
 
+        $this->initWorkersStorage();
+        
         if($this->poolState === null) {
             $this->poolState        = new PoolStateStorage(\count($this->groupsScheme));
         }

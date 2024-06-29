@@ -5,15 +5,14 @@ namespace CT\AmpPool\Worker;
 
 use Amp\Cancellation;
 use Amp\Sync\Channel;
-use CT\AmpPool\PoolState\PoolStateReadableInterface;
-use CT\AmpPool\Worker\WorkerState\WorkersInfoInterface;
-use CT\AmpPool\Worker\WorkerState\WorkerStateStorageInterface;
 use CT\AmpPool\WorkerEventEmitterAwareInterface;
 use CT\AmpPool\WorkerGroup;
+use CT\AmpPool\WorkersStorage\WorkersStorageAwareInterface;
+use CT\AmpPool\WorkersStorage\WorkerStateInterface;
 use CT\AmpPool\WorkerTypeEnum;
 use Psr\Log\LoggerInterface;
 
-interface WorkerInterface extends WorkerEventEmitterAwareInterface
+interface WorkerInterface extends WorkerEventEmitterAwareInterface, WorkersStorageAwareInterface
 {
     /**
      * @return array<int, WorkerGroup>
@@ -24,10 +23,8 @@ interface WorkerInterface extends WorkerEventEmitterAwareInterface
 
     public function getWatcherChannel(): Channel;
 
-    public function getPoolStateStorage(): PoolStateReadableInterface;
-    public function getWorkerStateStorage(): WorkerStateStorageInterface;
-    public function getWorkersInfo(): WorkersInfoInterface;
-
+    public function getWorkerState(): WorkerStateInterface;
+    
     public function getWorkerId(): int;
     public function getWorkerGroup(): WorkerGroup;
     public function getWorkerGroupId(): int;

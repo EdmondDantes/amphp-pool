@@ -34,7 +34,7 @@ class DefaultRunner extends WorkerStrategyAbstract implements RunnerStrategyInte
         }
 
         try {
-            ['id' => $id, 'group' => $group, 'groupsScheme' => $groupsScheme] = self::readWorkerMetadata($channel);
+            ['id' => $id, 'group' => $group, 'groupsScheme' => $groupsScheme, 'workersStorage' => $workersStorage] = self::readWorkerMetadata($channel);
 
         } catch (\Throwable $exception) {
             throw new FatalWorkerException('Could not connect to IPC socket', 0, $exception);
@@ -58,7 +58,7 @@ class DefaultRunner extends WorkerStrategyAbstract implements RunnerStrategyInte
                 throw new FatalWorkerException('Entry point class must implement WorkerEntryPointI');
             }
 
-            $worker                 = new Worker((int) $id, $channel, $group, $groupsScheme);
+            $worker                 = new Worker((int) $id, $channel, $group, $groupsScheme, $workersStorage);
 
             $entryPoint->initialize($worker);
             $worker->initWorker();
@@ -142,7 +142,7 @@ class DefaultRunner extends WorkerStrategyAbstract implements RunnerStrategyInte
             throw new FatalWorkerException('Worker <== Watcher: Could not read IPC data from channel');
         }
 
-        foreach (['id', 'group', 'groupsScheme'] as $key) {
+        foreach (['id', 'group', 'groupsScheme', 'workersStorage'] as $key) {
             if (false === \array_key_exists($key, $data)) {
                 throw new FatalWorkerException('Worker <== Watcher: Invalid IPC data received. Expected key: '.$key);
             }

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Worker\WorkerState\Exceptions;
+namespace CT\AmpPool\WorkersStorage\Exceptions;
 
 final class WorkerStateNotAvailable extends \RuntimeException
 {
