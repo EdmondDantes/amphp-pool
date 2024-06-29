@@ -54,6 +54,24 @@ final class WorkersStorageMemory implements WorkersStorageInterface
         return \forward_static_call([$this->storageClass, 'instanciateFromStorage'], $this, $workerId);
     }
     
+    public function reviewWorkerState(int $workerId): WorkerStateInterface
+    {
+        return \forward_static_call([$this->storageClass, 'unpackItem'], $this->readWorkerState($workerId));
+    }
+    
+    public function foreachWorkers(): array
+    {
+        $this->open();
+        
+        $workers                    = [];
+        
+        for($i = 0; $i < $this->workersCount; $i++) {
+            $workers[]              = $this->readWorkerState($i + 1);
+        }
+        
+        return $workers;
+    }
+    
     public function readWorkerState(int $workerId, int $offset = 0): string
     {
         $this->open();
@@ -76,5 +94,10 @@ final class WorkersStorageMemory implements WorkersStorageInterface
         $this->buffer               = \substr_replace(
             $this->buffer, $data, ($workerId - 1) * $this->structureSize + $offset, strlen($data)
         );
+    }
+    
+    public function close(): void
+    {
+        $this->buffer               = '';
     }
 }

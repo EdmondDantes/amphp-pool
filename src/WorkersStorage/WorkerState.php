@@ -5,13 +5,17 @@ namespace CT\AmpPool\WorkersStorage;
 
 class WorkerState                    implements WorkerStateInterface
 {
+    private bool $reviewOnly        = false;
+    
     public static function instanciateFromStorage(
-        WorkersStorageInterface $storage,
-        int $workerId
+        WorkersStorageInterface|null $storage,
+        int $workerId,
+        bool $reviewOnly            = false
     ): WorkerStateInterface
     {
         $workerState                = new static($workerId);
-        $workerState->storage       = \WeakReference::create($storage);
+        $workerState->storage       = false === $reviewOnly ? \WeakReference::create($storage) : null;
+        $workerState->reviewOnly    = $reviewOnly;
         
         return $workerState;
     }
@@ -51,9 +55,9 @@ class WorkerState                    implements WorkerStateInterface
         public int  $jobRejected             = 0
     ) {}
     
-    protected function getStorage(): WorkersStorageInterface
+    protected function getStorage(): WorkersStorageInterface|null
     {
-        return $this->storage->get();
+        return $this->storage?->get();
     }
     
     public static function getItemSize(): int
@@ -65,7 +69,12 @@ class WorkerState                    implements WorkerStateInterface
     
     public function read(): static
     {
-        $data                       = $this->getStorage()->readWorkerState($this->workerId);
+        $data                       = $this->getStorage()?->readWorkerState($this->workerId);
+        
+        if($data === null) {
+            return $this;
+        }
+        
         $data                       = unpack('Q*', $data);
         
         if(false === $data) {
@@ -80,8 +89,8 @@ class WorkerState                    implements WorkerStateInterface
             
             $this->shouldBeStarted,
             $this->isReady,
-            $this->weight,
             $this->totalReloaded,
+            $this->weight,
          
             $this->firstStartedAt,
             $this->startedAt,
@@ -109,52 +118,63 @@ class WorkerState                    implements WorkerStateInterface
     
     public function update(): static
     {
-        $this->getStorage()->updateWorkerState($this->workerId, $this->packItem());
+        $this->checkReviewOnly();
+        $this->getStorage()?->updateWorkerState($this->workerId, $this->packItem());
         
         return $this;
     }
     
     public function updateStateSegment(): static
     {
+        $this->checkReviewOnly();
+        
         [$data, $offset]            = $this->packStateSegment();
         
-        $this->getStorage()->updateWorkerState($this->workerId, $data, $offset);
+        $this->getStorage()?->updateWorkerState($this->workerId, $data, $offset);
         
         return $this;
     }
     
     public function updateTimeSegment(): static
     {
+        $this->checkReviewOnly();
+        
         [$data, $offset]            = $this->packTimeSegment();
         
-        $this->getStorage()->updateWorkerState($this->workerId, $data, $offset);
+        $this->getStorage()?->updateWorkerState($this->workerId, $data, $offset);
         
         return $this;
     }
     
     public function updateMemorySegment(): static
     {
+        $this->checkReviewOnly();
+        
         [$data, $offset]            = $this->packMemorySegment();
         
-        $this->getStorage()->updateWorkerState($this->workerId, $data, $offset);
+        $this->getStorage()?->updateWorkerState($this->workerId, $data, $offset);
         
         return $this;
     }
     
     public function updateConnectionsSegment(): static
     {
+        $this->checkReviewOnly();
+        
         [$data, $offset]            = $this->packConnectionSegment();
         
-        $this->getStorage()->updateWorkerState($this->workerId, $data, $offset);
+        $this->getStorage()?->updateWorkerState($this->workerId, $data, $offset);
         
         return $this;
     }
     
     public function updateJobSegment(): static
     {
+        $this->checkReviewOnly();
+        
         [$data, $offset]            = $this->packJobSegment();
         
-        $this->getStorage()->updateWorkerState($this->workerId, $data, $offset);
+        $this->getStorage()?->updateWorkerState($this->workerId, $data, $offset);
         
         return $this;
     }
@@ -170,8 +190,8 @@ class WorkerState                    implements WorkerStateInterface
             // offset 2 * 8
             $this->shouldBeStarted,
             $this->isReady,
-            $this->weight,
             $this->totalReloaded,
+            $this->weight,
             
             // offset 6 * 8
             $this->firstStartedAt,
@@ -199,7 +219,7 @@ class WorkerState                    implements WorkerStateInterface
         );
     }
     
-    protected static function unpackItem(string $packedItem): WorkerStateInterface
+    public static function unpackItem(string $packedItem): WorkerStateInterface
     {
         $unpackedItem               = unpack('Q*', $packedItem);
         
@@ -229,7 +249,8 @@ class WorkerState                    implements WorkerStateInterface
             $unpackedItem[18] ?? 0,
             $unpackedItem[19] ?? 0,
             $unpackedItem[20] ?? 0,
-            $unpackedItem[21] ?? 0
+            $unpackedItem[21] ?? 0,
+            $unpackedItem[22] ?? 0
         );
     }
     
@@ -240,8 +261,8 @@ class WorkerState                    implements WorkerStateInterface
                 'Q*',
                 $this->shouldBeStarted,
                 $this->isReady,
-                $this->weight,
-                $this->totalReloaded
+                $this->totalReloaded,
+                $this->weight
             ),
             2 * 8
             ];
@@ -301,5 +322,12 @@ class WorkerState                    implements WorkerStateInterface
             ),
             17 * 8
         ];
+    }
+    
+    protected function checkReviewOnly(): void
+    {
+        if($this->reviewOnly) {
+            throw new \RuntimeException('Worker state review only is enabled');
+        }
     }
 }

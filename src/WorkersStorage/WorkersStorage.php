@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace CT\AmpPool\WorkersStorage;
 
-final class WorkersStorage implements WorkersStorageInterface
+final class WorkersStorage          implements WorkersStorageInterface
 {
     private int $key;
     private bool $isWrite           = false;
@@ -13,7 +13,7 @@ final class WorkersStorage implements WorkersStorageInterface
     
     public function __construct(
         private readonly string $storageClass,
-        private readonly int $workersCount = 0
+        private int $workersCount   = 0
     ) {
         $this->structureSize        = $this->getStructureSize();
         $this->totalSize            = $this->structureSize * $this->workersCount;
@@ -69,14 +69,59 @@ final class WorkersStorage implements WorkersStorageInterface
     
     public function getWorkerState(int $workerId): WorkerStateInterface
     {
+        $this->validateWorkerId($workerId);
+        
         return \forward_static_call([$this->storageClass, 'instanciateFromStorage'], $this, $workerId);
+    }
+    
+    public function reviewWorkerState(int $workerId): WorkerStateInterface
+    {
+        $this->validateWorkerId($workerId);
+        
+        return \forward_static_call([$this->storageClass, 'unpackItem'], $this->readWorkerState($workerId));
+    }
+    
+    public function foreachWorkers(): array
+    {
+        $this->open();
+    
+        // get all data from shared memory
+        \set_error_handler(static function ($number, $error, $file = null, $line = null) {
+            throw new \ErrorException($error, 0, $number, $file, $line);
+        });
+        
+        try {
+            $data                   = \shmop_read($this->handler, 0, \shmop_size($this->handler));
+        } finally {
+            \restore_error_handler();
+        }
+        
+        if($data === false) {
+            throw new \RuntimeException('Failed to read Workers data from shared memory');
+        }
+        
+        $workersCount               = (int)(\strlen($data) / $this->structureSize);
+        
+        if($this->workersCount === 0) {
+            $this->workersCount     = $workersCount;
+        } elseif($this->workersCount !== $workersCount) {
+            throw new \RuntimeException('Invalid workers count in shared memory');
+        }
+        
+        $workers                    = [];
+        
+        for($i = 0; $i < $workersCount; $i++) {
+            $workers[]              = forward_static_call(
+                [$this->storageClass, 'unpackItem'], \substr($data, $i * $this->structureSize, $this->structureSize)
+            );
+        }
+        
+        return $workers;
     }
     
     public function readWorkerState(int $workerId, int $offset = 0): string
     {
-        if($workerId < 0) {
-            throw new \InvalidArgumentException('Invalid worker id provided');
-        }
+        $this->validateWorkerId($workerId);
         
         if($this->handler === null) {
             $this->open();
@@ -89,7 +134,7 @@ final class WorkersStorage implements WorkersStorageInterface
         });
         
         try {
-            $data                   = \shmop_read($this->handler, $offset, $this->structureSize);
+            $data                   = \shmop_read($this->handler, $offset + $workerOffset, $this->structureSize);
         } finally {
             \restore_error_handler();
         }
@@ -103,9 +148,7 @@ final class WorkersStorage implements WorkersStorageInterface
     
     public function updateWorkerState(int $workerId, string $data, int $offset = 0): void
     {
-        if($workerId < 0) {
-            throw new \InvalidArgumentException('Invalid worker id provided');
-        }
+        $this->validateWorkerId($workerId);
         
         if(false === $this->isWrite) {
             throw new \RuntimeException('This instance WorkersStorage is read-only');
@@ -122,7 +165,7 @@ final class WorkersStorage implements WorkersStorageInterface
         });
         
         try {
-            $count                  = \shmop_write($this->handler, $data, $offset);
+            $count                  = \shmop_write($this->handler, $data, $offset + $workerOffset);
         } finally {
             \restore_error_handler();
         }
@@ -132,10 +175,26 @@ final class WorkersStorage implements WorkersStorageInterface
         }
     }
     
-    public function __destruct()
+    public function close(): void
     {
         if($this->handler !== null && $this->isWrite) {
             \shmop_delete($this->handler);
+        }
+    }
+    
+    public function __destruct()
+    {
+        $this->close();
+    }
+    
+    private function validateWorkerId(int $workerId): void
+    {
+        if($workerId <= 0) {
+            throw new \InvalidArgumentException('Invalid worker id provided');
+        }
+        
+        if($this->workersCount !== 0 && $workerId > $this->workersCount) {
+            throw new \InvalidArgumentException('Worker id is out of range');
         }
     }
 }

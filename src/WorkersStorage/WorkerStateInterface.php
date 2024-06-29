@@ -5,7 +5,9 @@ namespace CT\AmpPool\WorkersStorage;
 
 interface WorkerStateInterface
 {
-    public static function instanciateFromStorage(WorkersStorageInterface $storage, int $workerId): WorkerStateInterface;
+    public static function instanciateFromStorage(WorkersStorageInterface $storage, int $workerId, bool $reviewOnly = false): WorkerStateInterface;
+    
+    public static function unpackItem(string $packedItem): WorkerStateInterface;
     
     /**
      * Returns the size of the item.
@@ -23,6 +25,4 @@ interface WorkerStateInterface
     public function updateConnectionsSegment(): static;
     
     public function updateJobSegment(): static;
-    
-    
 }
