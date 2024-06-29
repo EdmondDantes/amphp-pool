@@ -9,10 +9,22 @@
     ],
     "license": "MIT",
     "require": {
-        "amphp/cluster": "v2.0.0-beta.1",
-        "amphp/http-server": "^3.3",
+        "php": ">=8.3",
         "ext-sockets": "*",
-        "ext-shmop": "*"
+        "ext-shmop": "*",
+        "amphp/amp": "^3",
+        "amphp/byte-stream": "^2",
+        "amphp/log": "^2",
+        "amphp/parallel": "^2.2",
+        "amphp/pipeline": "^1.1",
+        "amphp/process": "^2",
+        "amphp/serialization": "^1",
+        "amphp/socket": "^2",
+        "amphp/sync": "^2",
+        "monolog/monolog": "^3|^2|^1.23",
+        "psr/log": "^3|^2|^1",
+        "revolt/event-loop": "^1",
+        "amphp/http-server": "^3.3"
     },
     "autoload": {
         "psr-4": {"CT\\AmpPool\\": ["./src"]}

@@ -5,15 +5,11 @@ namespace CT\AmpPool;
 
 use Amp\Cancellation;
 use Amp\CancelledException;
-use Amp\Cluster\ClusterException;
-use Amp\Cluster\ClusterWorkerMessage;
 use Amp\CompositeCancellation;
-use Amp\CompositeException;
 use Amp\DeferredCancellation;
 use Amp\DeferredFuture;
 use Amp\Future;
 use Amp\Parallel\Context\Context;
-use Amp\Parallel\Context\ContextException;
 use Amp\Parallel\Context\ContextFactory;
 use Amp\Parallel\Context\ContextPanicError;
 use Amp\Parallel\Context\DefaultContextFactory;
@@ -75,9 +71,9 @@ class WorkerPool                    implements WorkerPoolInterface
      */
     protected array $workers        = [];
     
-    /** @var Queue<ClusterWorkerMessage<TReceive, TSend>> */
+    /** @var Queue */
     protected readonly Queue $queue;
-    /** @var ConcurrentIterator<ClusterWorkerMessage<TReceive, TSend>> */
+    /** @var ConcurrentIterator */
     private readonly ConcurrentIterator $iterator;
     private bool $running           = false;
     
@@ -635,7 +631,6 @@ class WorkerPool                    implements WorkerPoolInterface
      * @param WorkerDescriptor     $workerDescriptor
      *
      * @return void
-     * @throws ClusterException
      * @throws TaskFailureThrowable
      * @throws \Throwable
      */

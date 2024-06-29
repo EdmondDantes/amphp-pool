@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace CT\AmpPool\Strategies\SocketStrategy\Unix;
 
-use Amp\Cluster\ServerSocketPipeFactory;
 use Amp\DeferredFuture;
 use Amp\Socket\ResourceSocket;
 use Amp\Socket\ServerSocketFactory;
@@ -14,7 +13,6 @@ use CT\AmpPool\Strategies\SocketStrategy\Unix\Messages\InitiateSocketTransfer;
 use CT\AmpPool\Strategies\SocketStrategy\Unix\Messages\SocketTransferInfo;
 use CT\AmpPool\Strategies\WorkerStrategyAbstract;
 use Amp\Parallel\Ipc;
-use CT\AmpPool\WatcherEvents\WorkerProcessStarted;
 use function Amp\Future\await;
 
 final class SocketUnixStrategy      extends WorkerStrategyAbstract

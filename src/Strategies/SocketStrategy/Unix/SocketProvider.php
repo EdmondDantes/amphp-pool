@@ -6,7 +6,6 @@ namespace CT\AmpPool\Strategies\SocketStrategy\Unix;
 use Amp\ByteStream\ResourceStream;
 use Amp\Cancellation;
 use Amp\CancelledException;
-use Amp\Cluster\ServerSocketPipeProvider;
 use Amp\CompositeCancellation;
 use Amp\DeferredCancellation;
 use Amp\Parallel\Ipc\IpcHub;

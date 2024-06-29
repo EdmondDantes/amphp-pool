@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d53f53088808493e1b27f83af13f9ea7",
+    "content-hash": "3328d421e9e0881dd1c2f510570f49b3",
     "packages": [
         {
             "name": "amphp/amp",
@@ -226,108 +226,6 @@
                 }
             ],
             "time": "2024-04-19T03:38:06+00:00"
-        },
-        {
-            "name": "amphp/cluster",
-            "version": "v2.0.0-beta.1",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/amphp/cluster.git",
-                "reference": "5db4718bb42e8be7214ed58413ebf2097e7bba45"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/amphp/cluster/zipball/5db4718bb42e8be7214ed58413ebf2097e7bba45",
-                "reference": "5db4718bb42e8be7214ed58413ebf2097e7bba45",
-                "shasum": ""
-            },
-            "require": {
-                "amphp/amp": "^3",
-                "amphp/byte-stream": "^2",
-                "amphp/log": "^2",
-                "amphp/parallel": "^2.2",
-                "amphp/pipeline": "^1.1",
-                "amphp/process": "^2",
-                "amphp/serialization": "^1",
-                "amphp/socket": "^2",
-                "amphp/sync": "^2",
-                "ext-sockets": "*",
-                "league/climate": "^3",
-                "monolog/monolog": "^3|^2|^1.23",
-                "php": ">=8.1",
-                "psr/log": "^3|^2|^1",
-                "revolt/event-loop": "^1"
-            },
-            "conflict": {
-                "amphp/file": "<3 || >=4"
-            },
-            "require-dev": {
-                "amphp/file": "^3",
-                "amphp/http-server": "^3",
-                "amphp/php-cs-fixer-config": "^2",
-                "amphp/phpunit-util": "^3",
-                "ext-pcntl": "*",
-                "phpunit/phpunit": "^9",
-                "psalm/phar": "^5.11"
-            },
-            "suggest": {
-                "amphp/file": "Required for logging to a file",
-                "ext-sockets": "Required for socket transfer on systems that do not support SO_REUSEPORT"
-            },
-            "bin": [
-                "bin/cluster"
-            ],
-            "type": "library",
-            "autoload": {
-                "files": [
-                    "src/functions.php"
-                ],
-                "psr-4": {
-                    "Amp\\Cluster\\": "src"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Aaron Piotrowski",
-                    "email": "aaron@trowski.com"
-                },
-                {
-                    "name": "Niklas Keller",
-                    "email": "me@kelunik.com"
-                },
-                {
-                    "name": "Bob Weinand"
-                }
-            ],
-            "description": "Building multi-core network applications with PHP.",
-            "homepage": "https://github.com/amphp/cluster",
-            "keywords": [
-                "amp",
-                "amphp",
-                "async",
-                "cluster",
-                "multi-core",
-                "multi-process",
-                "non-blocking",
-                "parallel",
-                "sockets",
-                "watcher"
-            ],
-            "support": {
-                "issues": "https://github.com/amphp/cluster/issues",
-                "source": "https://github.com/amphp/cluster/tree/v2.0.0-beta.1"
-            },
-            "funding": [
-                {
-                    "url": "https://github.com/amphp",
-                    "type": "github"
-                }
-            ],
-            "time": "2023-12-30T00:35:27+00:00"
         },
         {
             "name": "amphp/dns",
@@ -1379,71 +1277,6 @@
             "time": "2023-02-03T21:26:53+00:00"
         },
         {
-            "name": "league/climate",
-            "version": "3.8.2",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/thephpleague/climate.git",
-                "reference": "a785a3ac8f584eed4abd45e4e16fe64c46659a28"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/thephpleague/climate/zipball/a785a3ac8f584eed4abd45e4e16fe64c46659a28",
-                "reference": "a785a3ac8f584eed4abd45e4e16fe64c46659a28",
-                "shasum": ""
-            },
-            "require": {
-                "php": "^7.3 || ^8.0",
-                "psr/log": "^1.0 || ^2.0 || ^3.0",
-                "seld/cli-prompt": "^1.0"
-            },
-            "require-dev": {
-                "mikey179/vfsstream": "^1.6.10",
-                "mockery/mockery": "^1.4.2",
-                "phpunit/phpunit": "^9.5.10"
-            },
-            "suggest": {
-                "ext-mbstring": "If ext-mbstring is not available you MUST install symfony/polyfill-mbstring"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "League\\CLImate\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Joe Tannenbaum",
-                    "email": "hey@joe.codes",
-                    "homepage": "http://joe.codes/",
-                    "role": "Developer"
-                },
-                {
-                    "name": "Craig Duncan",
-                    "email": "git@duncanc.co.uk",
-                    "homepage": "https://github.com/duncan3dc",
-                    "role": "Developer"
-                }
-            ],
-            "description": "PHP's best friend for the terminal. CLImate allows you to easily output colored text, special formats, and more.",
-            "keywords": [
-                "cli",
-                "colors",
-                "command",
-                "php",
-                "terminal"
-            ],
-            "support": {
-                "issues": "https://github.com/thephpleague/climate/issues",
-                "source": "https://github.com/thephpleague/climate/tree/3.8.2"
-            },
-            "time": "2022-06-18T14:42:08+00:00"
-        },
-        {
             "name": "league/uri",
             "version": "7.4.1",
             "source": {
@@ -1701,16 +1534,16 @@
         },
         {
             "name": "monolog/monolog",
-            "version": "3.6.0",
+            "version": "3.7.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/Seldaek/monolog.git",
-                "reference": "4b18b21a5527a3d5ffdac2fd35d3ab25a9597654"
+                "reference": "f4393b648b78a5408747de94fca38beb5f7e9ef8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/4b18b21a5527a3d5ffdac2fd35d3ab25a9597654",
-                "reference": "4b18b21a5527a3d5ffdac2fd35d3ab25a9597654",
+                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/f4393b648b78a5408747de94fca38beb5f7e9ef8",
+                "reference": "f4393b648b78a5408747de94fca38beb5f7e9ef8",
                 "shasum": ""
             },
             "require": {
@@ -1786,7 +1619,7 @@
             ],
             "support": {
                 "issues": "https://github.com/Seldaek/monolog/issues",
-                "source": "https://github.com/Seldaek/monolog/tree/3.6.0"
+                "source": "https://github.com/Seldaek/monolog/tree/3.7.0"
             },
             "funding": [
                 {
@@ -1798,7 +1631,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2024-04-12T21:02:21+00:00"
+            "time": "2024-06-28T09:40:51+00:00"
         },
         {
             "name": "psr/http-factory",
@@ -2029,61 +1862,6 @@
                 "source": "https://github.com/revoltphp/event-loop/tree/v1.0.6"
             },
             "time": "2023-11-30T05:34:44+00:00"
-        },
-        {
-            "name": "seld/cli-prompt",
-            "version": "1.0.4",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/Seldaek/cli-prompt.git",
-                "reference": "b8dfcf02094b8c03b40322c229493bb2884423c5"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/Seldaek/cli-prompt/zipball/b8dfcf02094b8c03b40322c229493bb2884423c5",
-                "reference": "b8dfcf02094b8c03b40322c229493bb2884423c5",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=5.3"
-            },
-            "require-dev": {
-                "phpstan/phpstan": "^0.12.63"
-            },
-            "type": "library",
-            "extra": {
-                "branch-alias": {
-                    "dev-master": "1.x-dev"
-                }
-            },
-            "autoload": {
-                "psr-4": {
-                    "Seld\\CliPrompt\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Jordi Boggiano",
-                    "email": "j.boggiano@seld.be"
-                }
-            ],
-            "description": "Allows you to prompt for user input on the command line, and optionally hide the characters they type",
-            "keywords": [
-                "cli",
-                "console",
-                "hidden",
-                "input",
-                "prompt"
-            ],
-            "support": {
-                "issues": "https://github.com/Seldaek/cli-prompt/issues",
-                "source": "https://github.com/Seldaek/cli-prompt/tree/1.0.4"
-            },
-            "time": "2020-12-15T21:32:01+00:00"
         }
     ],
     "packages-dev": [
@@ -3722,15 +3500,14 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {
-        "amphp/cluster": 10
-    },
+    "stability-flags": [],
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
+        "php": ">=8.3",
         "ext-sockets": "*",
         "ext-shmop": "*"
     },
     "platform-dev": [],
-    "plugin-api-version": "2.2.0"
+    "plugin-api-version": "2.3.0"
 }
