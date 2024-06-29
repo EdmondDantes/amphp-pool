@@ -51,79 +51,78 @@ final class SocketClientListenerProvider
      */
     private array                   $requestsByWorker   = [];
     private Cancellation|null       $cancellation       = null;
-    
+
     public function __construct(
         private readonly SocketAddress $address,
         private readonly WorkerPoolInterface $workerPool,
         private readonly WorkerGroupInterface $workerGroup
-    )
-    {
+    ) {
         $this->cancellation         = $this->workerPool->getMainCancellation();
-        
+
         $self                       = \WeakReference::create($this);
-        
+
         $this->workerPool->getWorkerEventEmitter()->addWorkerEventListener(new EventWeakHandler(
             $this,
-            static function (mixed $event, int $workerId = 0) use($self) {
+            static function (mixed $event, int $workerId = 0) use ($self) {
                 $self->get()?->eventListener($event, $workerId);
             }
         ));
     }
-    
+
     public function getSocketAddress(): SocketAddress
     {
         return $this->address;
     }
-    
+
     public function getWorkers(): array
     {
         return $this->workers;
     }
-    
+
     public function addWorker(int $workerId): self
     {
-        if(in_array($workerId, $this->workers)) {
+        if(\in_array($workerId, $this->workers)) {
             return $this;
         }
-        
+
         $this->workers[]            = $workerId;
         return $this;
     }
-    
+
     public function startListen(): void
     {
         EventLoop::queue($this->receiveLoop(...), $this->listenAddress($this->address));
     }
-    
+
     private function receiveLoop(ServerSocket $server): void
     {
         try {
             while (($socket = $server->accept($this->cancellation)) !== null) {
-                
+
                 // Select free worker
                 $foundedWorkerId    = $this->pickupWorker();
-                
+
                 if ($foundedWorkerId === null) {
                     $socket->close();
                     return;
                 }
-                
+
                 $foundedWorker      = $this->workerPool->findWorkerContext($foundedWorkerId);
-                
+
                 if($foundedWorker === null) {
                     $socket->close();
                     return;
                 }
-                
+
                 $pid                = $foundedWorker->getPid();
-                
+
                 $socketId           = \socket_wsaprotocol_info_export(\socket_import_stream($socket->getResource()), $pid);
-                
+
                 if(false === $socketId) {
                     $socket->close();
                     throw new \Exception('Failed to export socket information');
                 }
-                
+
                 try {
                     $foundedWorker->send(new MessageSocketTransfer($socketId));
                     $this->addTransferredSocket($foundedWorkerId, $socketId, $socket);
@@ -140,134 +139,135 @@ final class SocketClientListenerProvider
             }
         }
     }
-    
+
     private function listenAddress(SocketAddress $address, ?BindContext $bindContext = null): ServerSocket
     {
         $bindContext                = $bindContext ?? new BindContext();
-        
+
         return new ResourceServerSocket(
-            $this->bind((string) $address, $bindContext), $bindContext
+            $this->bind((string) $address, $bindContext),
+            $bindContext
         );
     }
-    
+
     private function bind(string $uri, BindContext $bindContext)
     {
         static $errorHandler;
-        
+
         $context                    = \stream_context_create(\array_merge(
-             $bindContext->toStreamContextArray(),
-             [
+            $bindContext->toStreamContextArray(),
+            [
                  'socket'           => [
                      'so_reuseaddr' => \PHP_OS_FAMILY === 'Windows',
                      'ipv6_v6only'  => true,
                  ],
              ],
-         ));
-        
+        ));
+
         // Error reporting suppressed as stream_socket_server() error is immediately checked and
         // reported with an exception.
         \set_error_handler($errorHandler ??= static fn () => true);
-        
+
         try {
             // Do NOT use STREAM_SERVER_LISTEN here - we explicitly invoke \socket_listen() in our worker processes
             if (!$server = \stream_socket_server($uri, $errno, $errstr, STREAM_SERVER_BIND | STREAM_SERVER_LISTEN, $context)) {
                 throw new \RuntimeException(\sprintf(
-                                                'Failed binding socket on %s: [Err# %s] %s',
-                                                $uri,
-                                                $errno,
-                                                $errstr,
-                                            ));
+                    'Failed binding socket on %s: [Err# %s] %s',
+                    $uri,
+                    $errno,
+                    $errstr,
+                ));
             }
         } finally {
             \restore_error_handler();
         }
-        
+
         return $server;
     }
-    
+
     private function pickupWorker(): int|null
     {
         if(empty($this->workers)) {
             return null;
         }
-        
+
         $workerId                   = $this->pickupWorkerByRequests();
-        
+
         if($workerId !== null) {
             return $workerId;
         }
-        
+
         // Try to scale a worker group
         $this->workerGroup->getScalingStrategy()?->requestScaling();
-        
+
         // Select random worker
         return $this->workers[\array_rand($this->workers)];
     }
-    
+
     private function pickupWorkerByRequests(): int|null
     {
         $minRequests                = 0;
         $selectedWorkerId           = null;
-        
+
         foreach ($this->workers as $workerId) {
-            
+
             if(empty($this->workerStatus[$workerId])) {
                 continue;
             }
-            
-            if(false === array_key_exists($workerId, $this->requestsByWorker) || $this->requestsByWorker[$workerId] === 0) {
+
+            if(false === \array_key_exists($workerId, $this->requestsByWorker) || $this->requestsByWorker[$workerId] === 0) {
                 return $workerId;
             }
-            
+
             if($minRequests === 0 || $this->requestsByWorker[$workerId] < $minRequests) {
                 $minRequests        = $this->requestsByWorker[$workerId];
                 $selectedWorkerId   = $workerId;
             }
         }
-        
+
         return $selectedWorkerId;
     }
-    
+
     private function eventListener(mixed $event, int $workerId = 0): void
     {
         if($event instanceof MessageReady || $event instanceof MessageSocketTransfer) {
             $this->workerStatus[$workerId] = true;
             return;
         }
-        
+
         if($event instanceof MessageSocketFree) {
             $this->freeTransferredSocket($workerId, $event->socketId);
         }
     }
-    
+
     private function addTransferredSocket(int $workerId, string $socketId, ResourceSocket|Socket $socket): void
     {
         $this->transferredSockets[$socketId] = $socket;
         $this->requestsByWorker[$workerId]   = ($this->requestsByWorker[$workerId] ?? 0) + 1;
-        
+
         $this->workerStatus[$workerId]       = false;
     }
-    
-    private function freeTransferredSocket(int $workerId, string $socketId = null): void
+
+    private function freeTransferredSocket(int $workerId, ?string $socketId = null): void
     {
         if($socketId === null) {
             return;
         }
-        
+
         $this->workerStatus[$workerId]      = true;
-        
-        if(array_key_exists($socketId, $this->transferredSockets)) {
+
+        if(\array_key_exists($socketId, $this->transferredSockets)) {
             $this->transferredSockets[$socketId]->close();
             unset($this->transferredSockets[$socketId]);
         }
 
-        if(array_key_exists($workerId, $this->requestsByWorker)) {
+        if(\array_key_exists($workerId, $this->requestsByWorker)) {
             $this->requestsByWorker[$workerId]--;
-            
+
             if($this->requestsByWorker[$workerId] < 0) {
                 $this->requestsByWorker[$workerId] = 0;
             }
         }
     }
-    
+
 }

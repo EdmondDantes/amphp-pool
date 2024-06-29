@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace CT\AmpPool\JobIpc;
 
 /**
- * Interface JobTransportI
+ * Interface JobTransportI.
  *
  * The interface is responsible for serializing and deserializing JOBs.
  */

@@ -12,7 +12,7 @@ final class TerminateWorkerEntryPoint implements WorkerEntryPointInterface
     public function initialize(WorkerInterface $worker): void
     {
     }
-    
+
     public function run(): void
     {
         throw new TerminateWorkerException();

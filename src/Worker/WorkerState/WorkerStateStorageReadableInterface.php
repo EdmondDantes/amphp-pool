@@ -6,7 +6,7 @@ namespace CT\AmpPool\Worker\WorkerState;
 interface WorkerStateStorageReadableInterface
 {
     public function getWorkerId(): int;
-    
+
     public function update(): void;
 
     public function isWorkerReady(): bool;
@@ -14,6 +14,6 @@ interface WorkerStateStorageReadableInterface
     public function getJobCount(): int;
 
     public function getWorkerGroupId(): int;
-    
+
     public function getJobWeight(): int;
 }

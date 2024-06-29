@@ -3,12 +3,12 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 
+use CT\AmpPool\WorkerGroup;
 use CT\AmpPool\WorkerPool;
+use CT\AmpPool\WorkerTypeEnum;
+use Examples\HttpServer\HttpReactor;
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
-use Examples\HttpServer\HttpReactor;
-use CT\AmpPool\WorkerGroup;
-use CT\AmpPool\WorkerTypeEnum;
 
 $logger = new Logger('server');
 $logger->pushHandler(new StreamHandler('php://stdout'));

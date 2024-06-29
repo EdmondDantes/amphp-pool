@@ -11,8 +11,7 @@ use CT\AmpPool\JobIpc\IpcClientInterface;
 use CT\AmpPool\JobIpc\JobClientInterface;
 use CT\AmpPool\Strategies\WorkerStrategyAbstract;
 
-final class JobClientDefault        extends WorkerStrategyAbstract
-                                    implements JobClientInterface
+final class JobClientDefault extends WorkerStrategyAbstract implements JobClientInterface
 {
     private IpcClientInterface|null $ipcClient = null;
 
@@ -23,11 +22,10 @@ final class JobClientDefault        extends WorkerStrategyAbstract
         bool   $awaitResult         = false,
         int    $priority            = 0,
         int    $weight              = 0
-    ): Future|null
-    {
+    ): Future|null {
         return $this->ipcClient?->sendJob($data, $allowedGroups, $allowedWorkers, $awaitResult, $priority, $weight);
     }
-    
+
     public function sendJobImmediately(
         string $data,
         array $allowedGroups        = [],
@@ -35,11 +33,10 @@ final class JobClientDefault        extends WorkerStrategyAbstract
         bool|DeferredFuture $awaitResult = false,
         int $priority               = 0,
         int $weight                 = 0
-    ): Future|null
-    {
+    ): Future|null {
         return $this->ipcClient?->sendJobImmediately($data, $allowedGroups, $allowedWorkers, $awaitResult, $priority, $weight);
     }
-    
+
     public function onStarted(): void
     {
         if($this->getWorkerGroup() !== null && $this->getWorkerGroup()->getJobGroups() === []) {
@@ -48,13 +45,13 @@ final class JobClientDefault        extends WorkerStrategyAbstract
                 .'Please define jobGroups before starting the WorkerPool.'
             );
         }
-        
+
         $worker                     = $this->getWorker();
-        
+
         if($worker === null) {
             return;
         }
-        
+
         $this->ipcClient            = new IpcClient(
             $worker->getWorkerId(),
             $worker->getWorkerGroup(),
@@ -62,18 +59,18 @@ final class JobClientDefault        extends WorkerStrategyAbstract
             $worker->getWorkersInfo(),
             $worker->getPoolStateStorage()
         );
-        
+
         $this->ipcClient->mainLoop();
     }
-    
+
     public function onStopped(): void
     {
         $worker                     = $this->getWorker();
-        
+
         if($worker === null) {
             return;
         }
-        
+
         $this->ipcClient?->close();
         $this->ipcClient            = null;
     }

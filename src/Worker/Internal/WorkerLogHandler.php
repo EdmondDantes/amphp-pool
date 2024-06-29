@@ -17,11 +17,11 @@ use Psr\Log\LogLevel;
  * The log handler sends log messages to the worker channel.
  * @internal
  */
-final class WorkerLogHandler        extends AbstractProcessingHandler
+final class WorkerLogHandler extends AbstractProcessingHandler
 {
     use ForbidCloning;
     use ForbidSerialization;
-    
+
     /**
      * @param value-of<Level::NAMES>|value-of<Level::VALUES>|Level|LogLevel::* $level
      *
@@ -34,7 +34,7 @@ final class WorkerLogHandler        extends AbstractProcessingHandler
     ) {
         parent::__construct($level, $bubble);
     }
-    
+
     /**
      * @param array|LogRecord $record Array for Monolog v1.x or 2.x and {@see LogRecord} for v3.x.
      */

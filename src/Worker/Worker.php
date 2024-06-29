@@ -25,7 +25,6 @@ use CT\AmpPool\WorkerEventEmitterInterface;
 use CT\AmpPool\WorkerGroup;
 use CT\AmpPool\WorkerTypeEnum;
 use Psr\Log\LoggerInterface;
-use Revolt\EventLoop;
 
 /**
  * Abstraction of Worker Representation within the worker process.
@@ -35,25 +34,25 @@ use Revolt\EventLoop;
  * @template TSend
  * @implements Channel<TReceive, TSend>
  */
-class Worker                        implements WorkerInterface
+class Worker implements WorkerInterface
 {
     protected readonly DeferredCancellation $mainCancellation;
     private readonly DeferredFuture $workerFuture;
-    
+
     /** @var Queue<TReceive> */
     protected readonly Queue $queue;
-    
+
     /** @var ConcurrentIterator<TReceive> */
     protected readonly ConcurrentIterator $iterator;
-    
+
     private LoggerInterface $logger;
     private PoolStateReadableInterface $poolState;
     private WorkerStateStorageInterface $workerStateStorage;
     private WorkersInfoInterface $workersInfo;
     private WorkerEventEmitterInterface $eventEmitter;
-    
+
     private bool $isStopped         = false;
-    
+
     public function __construct(
         private readonly int     $id,
         private readonly Channel $ipcChannel,
@@ -62,18 +61,18 @@ class Worker                        implements WorkerInterface
          * @var array<int, WorkerGroup>
          */
         private readonly array $groupsScheme,
-        LoggerInterface        $logger = null
+        ?LoggerInterface        $logger = null
     ) {
         $this->queue                = new Queue();
         $this->iterator             = $this->queue->iterate();
         $this->mainCancellation     = new DeferredCancellation;
         $this->workerFuture         = new DeferredFuture;
-        
+
         $this->poolState            = new PoolStateStorage;
         $this->workerStateStorage   = new WorkerStateStorage($this->id, $this->group->getWorkerGroupId(), true);
         $this->workersInfo          = new WorkersInfo;
         $this->eventEmitter         = new WorkerEventEmitter;
-        
+
         if($logger !== null) {
             $this->logger           = $logger;
         } else {
@@ -81,7 +80,7 @@ class Worker                        implements WorkerInterface
             $this->logger->pushHandler(new WorkerLogHandler($this->ipcChannel));
         }
     }
-    
+
     public function initWorker(): void
     {
         $this->initWorkerStrategies();
@@ -92,12 +91,12 @@ class Worker                        implements WorkerInterface
     {
         $this->ipcChannel->send($message);
     }
-    
+
     public function getWatcherChannel(): Channel
     {
         return $this->ipcChannel;
     }
-    
+
     /**
      * @return array<int, WorkerGroup>
      */
@@ -105,77 +104,77 @@ class Worker                        implements WorkerInterface
     {
         return $this->groupsScheme;
     }
-    
+
     public function getPoolStateStorage(): PoolStateReadableInterface
     {
         return $this->poolState;
     }
-    
+
     public function getWorkerStateStorage(): WorkerStateStorageInterface
     {
         return $this->workerStateStorage;
     }
-    
+
     public function getWorkersInfo(): WorkersInfoInterface
     {
         return $this->workersInfo;
     }
-    
+
     public function getLogger(): LoggerInterface
     {
         return $this->logger;
     }
-    
+
     public function getWorkerId(): int
     {
         return $this->id;
     }
-    
+
     public function getWorkerGroup(): WorkerGroup
     {
         return $this->group;
     }
-    
+
     public function getWorkerGroupId(): int
     {
         return $this->group->getWorkerGroupId();
     }
-    
+
     public function getWorkerType(): WorkerTypeEnum
     {
         return $this->group->getWorkerType();
     }
-    
+
     public function getWorkerEventEmitter(): WorkerEventEmitterInterface
     {
         return $this->eventEmitter;
     }
-    
+
     public function getAbortCancellation(): Cancellation
     {
         return $this->mainCancellation->getCancellation();
     }
-    
+
     public function mainLoop(): void
     {
         $abortCancellation          = $this->mainCancellation->getCancellation();
-        
+
         try {
-            
+
             // Confirm that the worker has started
             $this->ipcChannel->send(new WorkerStarted($this->id));
-            
+
             while ($message = $this->ipcChannel->receive($abortCancellation)) {
-                
+
                 if($message instanceof MessagePingPong) {
                     $this->ipcChannel->send(new MessagePingPong);
                     continue;
                 }
-                
+
                 if($message instanceof MessageShutdown) {
                     break;
                 }
-                
+
                 $this->eventEmitter->emitWorkerEvent($message, $this->id);
             }
         } catch (\Throwable $exception) {
@@ -187,54 +186,54 @@ class Worker                        implements WorkerInterface
             $this->stop();
         }
     }
-    
+
     public function awaitTermination(?Cancellation $cancellation = null): void
     {
         $this->workerFuture->getFuture()->await($cancellation);
     }
-    
+
     public function stop(): void
     {
         if($this->isStopped) {
             return;
         }
-        
+
         $this->isStopped            = true;
-        
+
         if(false === $this->mainCancellation->isCancelled()) {
             $this->mainCancellation->cancel();
         }
-        
+
         try {
             WorkerGroup::stopStrategies($this->groupsScheme, $this->logger);
         } finally {
             $this->eventEmitter->free();
-            
+
             if(false === $this->workerFuture->isComplete()) {
                 $this->workerFuture->complete();
             }
-            
+
             if(false === $this->queue->isComplete()) {
                 $this->queue->complete();
             }
         }
     }
-    
+
     public function isStopped(): bool
     {
         return $this->isStopped;
     }
-    
+
     public function onClose(\Closure $onClose): void
     {
         $this->mainCancellation->getCancellation()->subscribe(static fn () => $onClose());
     }
-    
+
     public function __toString(): string
     {
         return $this->group->getGroupName().'-'.$this->id;
     }
-    
+
     protected function initWorkerStrategies(): void
     {
         foreach ($this->group->getWorkerStrategies() as $strategy) {

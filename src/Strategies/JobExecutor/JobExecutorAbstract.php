@@ -15,8 +15,7 @@ use Psr\Log\LoggerInterface;
 use Revolt\EventLoop;
 use function Amp\delay;
 
-abstract class JobExecutorAbstract  extends WorkerStrategyAbstract
-                                    implements JobExecutorInterface
+abstract class JobExecutorAbstract extends WorkerStrategyAbstract implements JobExecutorInterface
 {
     protected JobHandlerInterface|null $handler         = null;
     protected int                     $workerId         = 0;
@@ -24,95 +23,96 @@ abstract class JobExecutorAbstract  extends WorkerStrategyAbstract
     protected WorkerStateStorage|null $workerState      = null;
     protected WorkerGroup|null        $group            = null;
     protected IpcServerInterface|null $jobIpc           = null;
-    
+
     abstract protected function initIpcServer(): void;
-    
+
     public function defineJobHandler(JobHandlerInterface $handler): void
     {
         if($this->handler !== null) {
             throw new FatalWorkerException('Job handler is already defined');
         }
-        
+
         $this->handler              = $handler;
     }
-    
+
     public function onStarted(): void
     {
         $worker                     = $this->getWorker();
-        
+
         if(null === $worker) {
             return;
         }
-        
+
         if($this->handler === null) {
             throw new FatalWorkerException('Job handler is not defined before starting the Worker. '
                                            .'Please use $worker->group->getJobExecutor()->defineJobHandler() method before starting the Worker.');
         }
-        
+
         $this->workerState          = $worker->getWorkerStateStorage();
         $this->group                = $worker->getWorkerGroup();
         $this->logger               = $worker->getLogger();
         $this->workerId             = $worker->getWorkerId();
-        
+
         $this->initIpcServer();
-        
+
         if($this->jobIpc === null) {
             throw new FatalWorkerException('IPC Server is not initialized');
         }
-        
+
         $abortCancellation           = $worker->getAbortCancellation();
-        
+
         EventLoop::queue($this->jobIpc->receiveLoop(...), $abortCancellation);
         EventLoop::queue($this->jobLoop(...), $abortCancellation);
     }
-    
+
     /**
      * Fiber loop for processing the request queue to create Jobs.
      *
-     * @param Cancellation|null $cancellation
      *
-     * @return void
      */
-    protected function jobLoop(Cancellation $cancellation = null): void
+    protected function jobLoop(?Cancellation $cancellation = null): void
     {
         $this->workerState->workerReady();
-        
+
         try {
-            
+
             $jobQueueIterator       = $this->jobIpc->getJobQueue()->iterate();
             $selfRef                = \WeakReference::create($this);
-            
+
             while ($jobQueueIterator->continue($cancellation)) {
-                
+
                 [$channel, $jobRequest] = $jobQueueIterator->getValue();
-                
+
                 if($jobRequest === null) {
                     continue;
                 }
-                
+
                 if(false === $jobRequest instanceof JobRequestInterface) {
-                    $this->logger?->error('Invalid job request object', ['jobRequestType' => get_debug_type($jobRequest)]);
+                    $this->logger?->error('Invalid job request object', ['jobRequestType' => \get_debug_type($jobRequest)]);
                     continue;
                 }
-                
+
                 $future             = $this->runJob(
-                    $jobRequest->getData(), $jobRequest->getPriority(), $jobRequest->getWeight(), $cancellation
+                    $jobRequest->getData(),
+                    $jobRequest->getPriority(),
+                    $jobRequest->getWeight(),
+                    $cancellation
                 );
-                
+
                 EventLoop::queue(static function () use ($channel, $future, $jobRequest, $selfRef, $cancellation) {
-                    
+
                     try {
                         $result     = $future->await($cancellation);
                     } catch (\Throwable $exception) {
                         $result     = $exception;
                     }
-                    
+
                     $selfRef->get()?->workerState->jobDequeued($jobRequest->getWeight(), $selfRef->get()->canAcceptMoreJobs());
                     $selfRef->get()?->jobIpc?->sendJobResult($result, $channel, $jobRequest, $cancellation);
                 });
-                
+
                 if(false === $this->canAcceptMoreJobs()) {
-                    
+
                     // If the Worker is busy, we will wait for the job to complete
                     $this->workerState->jobEnqueued($jobRequest->getWeight(), false);
                     $this->awaitAll($cancellation);
@@ -129,7 +129,7 @@ abstract class JobExecutorAbstract  extends WorkerStrategyAbstract
                      * we deliberately yield control to the EventLoop to allow the already accepted job to start executing.
                      * If the job works correctly and yields control back to the current Fiber, then everything is fine.
                      */
-                    
+
                     try {
                         // Pass control to other workers
                         $this->workerState->jobEnqueued($jobRequest->getWeight(), false);
@@ -144,11 +144,11 @@ abstract class JobExecutorAbstract  extends WorkerStrategyAbstract
             // Job loop canceled
         } finally {
             $this->workerState->workerNotReady();
-            
+
             $this->workerState          = null;
             $this->group                = null;
             $this->logger               = null;
-            
+
             $this->jobIpc?->close();
             $this->jobIpc               = null;
         }

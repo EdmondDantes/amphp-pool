@@ -11,5 +11,7 @@ namespace CT\AmpPool\Internal\Messages;
  */
 final readonly class MessageShutdown
 {
-    public function __construct(public bool $afterLastJob = true) {}
+    public function __construct(public bool $afterLastJob = true)
+    {
+    }
 }

@@ -20,26 +20,26 @@ final class StreamResourceSendPipe implements Closable
 {
     use ForbidCloning;
     use ForbidSerialization;
-    
+
     private readonly TransferSocket $transferSocket;
-    
+
     /** @var \SplQueue<array{Suspension<null|\Closure():never>, resource, string}> */
     private readonly \SplQueue $transferQueue;
-    
+
     private readonly string $onWritable;
-    
+
     public function __construct(
         ResourceStream $resourceStream,
         private readonly Serializer $serializer,
     ) {
         $this->transferSocket = $transferSocket = new TransferSocket($resourceStream);
         $this->transferQueue = $transferQueue = new \SplQueue();
-        
+
         $streamResource = $resourceStream->getResource();
         if (!\is_resource($streamResource)) {
             throw new SocketException('The provided socket has already been closed');
         }
-        
+
         $this->onWritable = $onWritable = EventLoop::disable(EventLoop::onWritable(
             $streamResource,
             static function (string $callbackId, $stream) use (
@@ -50,7 +50,7 @@ final class StreamResourceSendPipe implements Closable
                     $transferSocket->close();
                     return;
                 }
-                
+
                 while (!$transferQueue->isEmpty()) {
                     /**
                      * @var Suspension<null|\Closure():never> $suspension
@@ -58,7 +58,7 @@ final class StreamResourceSendPipe implements Closable
                      * @var string $data
                      */
                     [$suspension, $export, $data] = $transferQueue->shift();
-                    
+
                     try {
                         if (!$transferSocket->sendSocket($export, $data)) {
                             $transferQueue->unshift([$suspension, $export, $data]);
@@ -66,19 +66,19 @@ final class StreamResourceSendPipe implements Closable
                         }
                     } catch (\Throwable $exception) {
                         $suspension->resume(static fn () => throw new SocketException(
-                                      'Failed to send socket: ' . $exception->getMessage(),
+                            'Failed to send socket: ' . $exception->getMessage(),
                             previous: $exception,
                         ));
                     }
                 }
-                
+
                 EventLoop::disable($callbackId);
             },
         ));
-        
+
         $this->transferSocket->onClose(static function () use ($transferQueue, $onWritable): void {
             EventLoop::cancel($onWritable);
-            
+
             while (!$transferQueue->isEmpty()) {
                 /** @var Suspension<null|\Closure():never> $suspension */
                 [$suspension] = $transferQueue->dequeue();
@@ -88,22 +88,22 @@ final class StreamResourceSendPipe implements Closable
             }
         });
     }
-    
+
     public function close(): void
     {
         $this->transferSocket->close();
     }
-    
+
     public function isClosed(): bool
     {
         return $this->transferSocket->isClosed();
     }
-    
+
     public function onClose(\Closure $onClose): void
     {
         $this->transferSocket->onClose($onClose);
     }
-    
+
     /**
      * @param resource $stream
      * @param T $data
@@ -114,7 +114,7 @@ final class StreamResourceSendPipe implements Closable
     public function send($stream, mixed $data = null): void
     {
         $serialized = $this->serializer->serialize($data);
-        
+
         if (!$this->transferQueue->isEmpty() || !$this->transferSocket->sendSocket($stream, $serialized)) {
             /** @var Suspension<null|\Closure():never> $suspension */
             $suspension = EventLoop::getSuspension();

@@ -9,7 +9,7 @@ final class RestartNever implements RestartStrategyInterface
     {
         return RestartStrategyInterface::RESTART_NEVER;
     }
-    
+
     public function getFailReason(): string
     {
         return 'Worker should never be restarted';

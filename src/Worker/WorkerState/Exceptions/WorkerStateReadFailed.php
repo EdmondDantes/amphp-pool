@@ -5,5 +5,5 @@ namespace CT\AmpPool\Worker\WorkerState\Exceptions;
 
 final class WorkerStateReadFailed extends \RuntimeException
 {
-    
+
 }

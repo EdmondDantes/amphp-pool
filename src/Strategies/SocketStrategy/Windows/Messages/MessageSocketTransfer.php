@@ -8,5 +8,7 @@ namespace CT\AmpPool\Strategies\SocketStrategy\Windows\Messages;
  */
 final readonly class MessageSocketTransfer
 {
-    public function __construct(public string $socketId) {}
+    public function __construct(public string $socketId)
+    {
+    }
 }

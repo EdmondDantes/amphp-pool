@@ -4,11 +4,11 @@ declare(strict_types=1);
 namespace CT\AmpPool\Strategies\PickupStrategy;
 
 /**
- * Class PickupRandom
+ * Class PickupRandom.
  *
  * @package CT\AmpPool\Worker\PickupStrategy
  */
-final class PickupRandom            extends PickupStrategyAbstract
+final class PickupRandom extends PickupStrategyAbstract
 {
     public function pickupWorker(
         array $possibleGroups = [],
@@ -17,14 +17,13 @@ final class PickupRandom            extends PickupStrategyAbstract
         int   $priority = 0,
         int   $weight = 0,
         int   $tryCount = 0
-    ): ?int
-    {
-        $pool                       = iterator_to_array($this->iterate($possibleGroups, $possibleWorkers, $ignoredWorkers));
-        
+    ): ?int {
+        $pool                       = \iterator_to_array($this->iterate($possibleGroups, $possibleWorkers, $ignoredWorkers));
+
         if($pool === []) {
             return null;
         }
-        
-        return $pool[array_rand($pool)];
+
+        return $pool[\array_rand($pool)];
     }
 }

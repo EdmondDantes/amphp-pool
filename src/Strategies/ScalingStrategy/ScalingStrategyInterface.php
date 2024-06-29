@@ -11,9 +11,7 @@ interface ScalingStrategyInterface
     /**
      * Returns whether the worker group can be scaled.
      *
-     * @param int $fromWorkerId
      *
-     * @return  bool
      */
     public function requestScaling(int $fromWorkerId = 0): bool;
 }

@@ -20,14 +20,7 @@ interface JobClientInterface
      * Every time the job should be sent maxTryCount times with a retryInterval between attempts.
      * If retryInterval equals 0, the method will throw an exception if it cannot send the job.
      *
-     * @param string   $data
-     * @param array    $allowedGroups
-     * @param array    $allowedWorkers
-     * @param bool     $awaitResult
-     * @param int      $priority
-     * @param int      $weight
      *
-     * @return Future|null
      */
     public function sendJob(
         string $data,
@@ -37,25 +30,19 @@ interface JobClientInterface
         int    $priority = 0,
         int    $weight = 0
     ): Future|null;
-    
+
     /**
      * Try to send a job to the worker immediately in the current fiber.
      *
-     * @param string              $data
-     * @param array               $allowedGroups
-     * @param array               $allowedWorkers
-     * @param bool|DeferredFuture $awaitResult
-     * @param int                 $priority
-     * @param int                 $weight
      *
-     * @return Future|null
      * @throws \Throwable
      */
-    public function sendJobImmediately(string              $data,
-                                       array               $allowedGroups = [],
-                                       array               $allowedWorkers = [],
-                                       bool|DeferredFuture $awaitResult = false,
-                                       int                 $priority = 0,
-                                       int                 $weight = 0
+    public function sendJobImmediately(
+        string              $data,
+        array               $allowedGroups = [],
+        array               $allowedWorkers = [],
+        bool|DeferredFuture $awaitResult = false,
+        int                 $priority = 0,
+        int                 $weight = 0
     ): Future|null;
 }

@@ -6,8 +6,8 @@ namespace CT\AmpPool\PoolState;
 interface PoolStateReadableInterface
 {
     public function getGroupsState(): array;
-    
+
     public function findGroupState(int $groupId): array;
-    
+
     public function update(): self;
 }

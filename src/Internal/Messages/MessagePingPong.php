@@ -6,4 +6,6 @@ namespace CT\AmpPool\Internal\Messages;
 /**
  * @internal
  */
-final class MessagePingPong {}
+final class MessagePingPong
+{
+}

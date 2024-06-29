@@ -23,22 +23,22 @@ final class ServerSocketPipeProvider
 {
     use ForbidCloning;
     use ForbidSerialization;
-    
+
     private readonly BindContext $bindContext;
     private readonly Serializer $serializer;
-    
+
     private array $servers = [];
-    
+
     public function __construct(BindContext $bindContext = new BindContext())
     {
         if (System::canReusePort()) {
             $bindContext = $bindContext->withReusePort();
         }
-        
+
         $this->bindContext = $bindContext;
         $this->serializer = new NativeSerializer();
     }
-    
+
     /**
      * @throws SocketException
      */
@@ -48,7 +48,7 @@ final class ServerSocketPipeProvider
         $channel = new StreamChannel($stream, new WritableBuffer(), $this->serializer);
         /** @var StreamResourceSendPipe<SocketAddress> $pipe */
         $pipe = new StreamResourceSendPipe($stream, $this->serializer);
-        
+
         try {
             while ($address = $channel->receive($cancellation)) {
                 /** @psalm-suppress DocblockTypeContradiction Extra manual check to enforce docblock types. */
@@ -61,10 +61,10 @@ final class ServerSocketPipeProvider
                         )
                     );
                 }
-                
+
                 $uri = (string) $address;
                 $server = $this->servers[$uri] ??= self::bind($uri, $this->bindContext);
-                
+
                 $pipe->send($server, $address);
             }
         } catch (ChannelException $exception) {
@@ -73,42 +73,42 @@ final class ServerSocketPipeProvider
             $pipe->close();
         }
     }
-    
+
     /**
      * @return resource
      */
     private static function bind(string $uri, BindContext $bindContext)
     {
         static $errorHandler;
-        
+
         $context = \stream_context_create(\array_merge(
-                                              $bindContext->toStreamContextArray(),
-                                              [
+            $bindContext->toStreamContextArray(),
+            [
                                                   'socket' => [
                                                       'so_reuseaddr' => IS_WINDOWS, // SO_REUSEADDR has SO_REUSEPORT semantics on Windows
                                                       'ipv6_v6only' => true,
                                                   ],
                                               ],
-                                          ));
-        
+        ));
+
         // Error reporting suppressed as stream_socket_server() error is immediately checked and
         // reported with an exception.
         \set_error_handler($errorHandler ??= static fn () => true);
-        
+
         try {
             // Do NOT use STREAM_SERVER_LISTEN here - we explicitly invoke \socket_listen() in our worker processes
             if (!$server = \stream_socket_server($uri, $errno, $errstr, \STREAM_SERVER_BIND, $context)) {
                 throw new \RuntimeException(\sprintf(
-                                                'Failed binding socket on %s: [Err# %s] %s',
-                                                $uri,
-                                                $errno,
-                                                $errstr,
-                                            ));
+                    'Failed binding socket on %s: [Err# %s] %s',
+                    $uri,
+                    $errno,
+                    $errstr,
+                ));
             }
         } finally {
             \restore_error_handler();
         }
-        
+
         return $server;
     }
 }

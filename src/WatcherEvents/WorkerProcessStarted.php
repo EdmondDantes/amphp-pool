@@ -8,5 +8,7 @@ use CT\AmpPool\WorkerGroupInterface;
 
 final readonly class WorkerProcessStarted
 {
-    public function __construct(public int $workerId, public WorkerGroupInterface $workerGroup, public Context $context) {}
+    public function __construct(public int $workerId, public WorkerGroupInterface $workerGroup, public Context $context)
+    {
+    }
 }

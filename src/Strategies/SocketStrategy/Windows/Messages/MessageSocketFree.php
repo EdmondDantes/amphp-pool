@@ -8,5 +8,7 @@ namespace CT\AmpPool\Strategies\SocketStrategy\Windows\Messages;
  */
 final readonly class MessageSocketFree
 {
-    public function __construct(public string|null $socketId = null) {}
+    public function __construct(public string|null $socketId = null)
+    {
+    }
 }

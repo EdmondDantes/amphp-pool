@@ -36,7 +36,9 @@
         }
     },
     "require-dev": {
-        "phpunit/phpunit": "^11.2"
+        "phpunit/phpunit": "^11.2",
+        "friendsofphp/php-cs-fixer": "^3.59",
+        "amphp/php-cs-fixer-config": "^2.1"
     },
     "scripts": {
         "test": "vendor/bin/phpunit ./tests"

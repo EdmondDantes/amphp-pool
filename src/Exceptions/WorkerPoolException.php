@@ -5,5 +5,5 @@ namespace CT\AmpPool\Exceptions;
 
 class WorkerPoolException extends \RuntimeException
 {
-    
+
 }

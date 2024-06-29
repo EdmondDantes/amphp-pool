@@ -15,12 +15,12 @@ interface IpcServerInterface
     public function isClosed(): bool;
     public function close(): void;
     public function onClose(\Closure $onClose): void;
-    public function receiveLoop(Cancellation $cancellation = null): void;
+    public function receiveLoop(?Cancellation $cancellation = null): void;
     /**
      * @return Queue<array{0: StreamChannel, 1: mixed}>
      */
     public function getJobQueue(): Queue;
     public function getAddress(): SocketAddress;
-    
-    public function sendJobResult(mixed $result, Channel $channel, JobRequest $jobRequest, Cancellation $cancellation = null): void;
+
+    public function sendJobResult(mixed $result, Channel $channel, JobRequest $jobRequest, ?Cancellation $cancellation = null): void;
 }

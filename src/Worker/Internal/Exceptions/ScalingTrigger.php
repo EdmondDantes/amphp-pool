@@ -3,6 +3,6 @@ declare(strict_types=1);
 
 namespace CT\AmpPool\Worker\Internal\Exceptions;
 
-final class ScalingTrigger                extends \LogicException
+final class ScalingTrigger extends \LogicException
 {
 }

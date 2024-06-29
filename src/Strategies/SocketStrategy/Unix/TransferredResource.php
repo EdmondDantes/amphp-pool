@@ -13,7 +13,7 @@ final class TransferredResource
 {
     use ForbidCloning;
     use ForbidSerialization;
-    
+
     /**
      * @param resource $resource Stream-socket resource.
      * @param T $data
@@ -23,7 +23,7 @@ final class TransferredResource
         private readonly mixed $data,
     ) {
     }
-    
+
     /**
      * @return resource Stream-socket resource.
      */
@@ -31,7 +31,7 @@ final class TransferredResource
     {
         return $this->resource;
     }
-    
+
     /**
      * @return T
      */

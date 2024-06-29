@@ -10,5 +10,7 @@ use Amp\Socket\SocketAddress;
  */
 final readonly class MessageSocketListen
 {
-    public function __construct(public SocketAddress $address) {}
+    public function __construct(public SocketAddress $address)
+    {
+    }
 }

@@ -17,32 +17,35 @@ use CT\AmpPool\Worker\WorkerInterface;
 final readonly class SocketPipeFactoryWindows implements ServerSocketFactory
 {
     private \WeakReference $worker;
-    
+
     public function __construct(private Channel $channel, WorkerInterface $worker)
     {
         $this->worker                = \WeakReference::create($worker);
     }
-    
+
     public function listen(SocketAddress|string $address, ?BindContext $bindContext = null): ServerSocket
     {
         $bindContext                ??= new BindContext();
-        
+
         if (false === $address instanceof SocketAddress) {
             // Normalize to SocketAddress here to avoid throwing exception for invalid strings at a receiving end.
             $address                = SocketAddress\fromString($address);
         }
-        
+
         try {
             $this->channel->send(new MessageSocketListen($address));
         } catch (ChannelException|SerializationException $exception) {
             throw new SocketException(
-                          'Failed sending request to bind server socket: ' . $exception->getMessage(),
+                'Failed sending request to bind server socket: ' . $exception->getMessage(),
                 previous: $exception,
             );
         }
-        
+
         return new ServerSocketFactoryWindows(
-            $this->channel, $address, $bindContext, $this->worker->get()?->getWorkerEventEmitter()
+            $this->channel,
+            $address,
+            $bindContext,
+            $this->worker->get()?->getWorkerEventEmitter()
         );
     }
 }

@@ -8,5 +8,5 @@ use CT\AmpPool\Coroutine\CoroutineInterface;
 
 interface JobHandlerInterface
 {
-    public function handleJob(string $data, CoroutineInterface $coroutine = null, Cancellation $cancellation = null): mixed;
+    public function handleJob(string $data, ?CoroutineInterface $coroutine = null, ?Cancellation $cancellation = null): mixed;
 }

@@ -10,7 +10,7 @@ namespace CT\AmpPool\Strategies\PickupStrategy;
  * and use the one that is currently handling the minimum number of tasks.
  *
  */
-final class PickupLeastJobs         extends PickupStrategyAbstract
+final class PickupLeastJobs extends PickupStrategyAbstract
 {
     public function pickupWorker(
         array $possibleGroups = [],
@@ -19,39 +19,38 @@ final class PickupLeastJobs         extends PickupStrategyAbstract
         int   $priority = 0,
         int   $weight = 0,
         int   $tryCount = 0
-    ): ?int
-    {
+    ): ?int {
         $workersInfo                = $this->getWorkersInfo();
-        
+
         if($workersInfo === null) {
             return null;
         }
-        
+
         $foundWorkerId              = null;
         $bestJobCount               = 0;
-        
+
         foreach ($this->iterate($possibleGroups, $possibleWorkers, $ignoredWorkers) as $workerId) {
-            
+
             $workerState            = $workersInfo->getWorkerState($workerId);
-            
+
             if($workerState === null) {
                 continue;
             }
-            
+
             if($workerState->isReady() === false) {
                 continue;
             }
-            
+
             if($workerState->getJobCount() === 0) {
                 return $workerId;
             }
-            
+
             if($workerState->getJobCount() < $bestJobCount) {
                 $bestJobCount       = $workerState->getJobCount();
                 $foundWorkerId      = $workerId;
             }
         }
-        
+
         return $foundWorkerId;
     }
 }

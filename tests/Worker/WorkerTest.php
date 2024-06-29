@@ -14,67 +14,67 @@ use PHPUnit\Framework\TestCase;
 use Revolt\EventLoop;
 use function Amp\Sync\createChannelPair;
 
-class WorkerTest                    extends TestCase
+class WorkerTest extends TestCase
 {
     private Worker      $worker;
     private Channel     $channelIn;
     private Channel     $channelOut;
     private WorkerGroup $workerGroup;
     private DeferredCancellation $cancellation;
-    
+
     protected function setUp(): void
     {
-    
+
     }
-    
+
     protected function tearDown(): void
     {
-    
+
     }
-    
+
     public function testStop(): void
     {
         $this->buildChannel();
         $this->buildWorkerGroup();
         $this->buildWorker();
-        
+
         EventLoop::queue($this->worker->mainLoop(...));
         $this->worker->stop();
-        
+
         $this->worker->awaitTermination(new TimeoutCancellation(5));
-        
+
         $this->assertTrue($this->worker->isStopped());
     }
-    
+
     #[RunInSeparateProcess]
     public function testShutdown(): void
     {
         $this->buildChannel();
         $this->buildWorkerGroup();
         $this->buildWorker();
-        
+
         EventLoop::queue($this->worker->mainLoop(...));
-        
+
         EventLoop::queue(function () {
             $this->channelIn->send(new MessageShutdown);
         });
-        
+
         $this->worker->awaitTermination(new TimeoutCancellation(5));
-        
+
         $this->assertTrue($this->worker->isStopped());
     }
-    
+
     protected function buildChannel(): void
     {
         $this->cancellation         = new DeferredCancellation;
-        
+
         [$this->channelIn, $this->channelOut] = createChannelPair();
-        
+
         EventLoop::queue(function () {
             $this->channelIn->receive($this->cancellation->getCancellation());
         });
     }
-    
+
     protected function buildWorkerGroup(): void
     {
         $this->workerGroup          = new WorkerGroup(
@@ -83,7 +83,7 @@ class WorkerTest                    extends TestCase
             1,
         );
     }
-    
+
     protected function buildWorker(): void
     {
         $this->worker              = new Worker(

@@ -6,4 +6,6 @@ namespace CT\AmpPool\Strategies\SocketStrategy\Windows\Messages;
 /**
  * @internal
  */
-final class MessageReady {}
+final class MessageReady
+{
+}
