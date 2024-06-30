@@ -601,8 +601,8 @@ class WorkerState                    implements WorkerStateInterface
             $unpackedItem[2] ?? 0,
                 
                 (bool)($unpackedItem[3] ?? false),
-            $unpackedItem[5] ?? 0,
-            (bool)($unpackedItem[4] ?? false),
+            $unpackedItem[4] ?? 0,
+            (bool)($unpackedItem[5] ?? false),
             
             $unpackedItem[6] ?? 0,
             $unpackedItem[7] ?? 0,
@@ -625,6 +625,7 @@ class WorkerState                    implements WorkerStateInterface
             $unpackedItem[21] ?? 0,
             $unpackedItem[22] ?? 0,
             $unpackedItem[23] ?? 0,
+            $unpackedItem[24] ?? 0
         );
     }
     

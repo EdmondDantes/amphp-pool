@@ -21,6 +21,7 @@ use Amp\Pipeline\Queue;
 use Amp\Sync\ChannelException;
 use Amp\TimeoutCancellation;
 use CT\AmpPool\Exceptions\FatalWorkerException;
+use CT\AmpPool\Exceptions\StopException;
 use CT\AmpPool\Exceptions\TerminateWorkerException;
 use CT\AmpPool\Exceptions\WorkerPoolException;
 use CT\AmpPool\Exceptions\WorkerShouldBeStopped;
@@ -258,7 +259,7 @@ final class WorkerPool implements WorkerPoolInterface
             $this->running          = false;
 
             if($this->mainCancellation->isCancelled() === false) {
-                $this->mainCancellation->cancel();
+                $this->mainCancellation->cancel($exception);
             }
 
             $this->mainCancellation = null;
@@ -327,8 +328,10 @@ final class WorkerPool implements WorkerPoolInterface
 
         try {
             Future\await($futures, $this->mainCancellation?->getCancellation());
-        } catch (CancelledException) {
+        } catch (CancelledException $exception) {
         }
+        
+        $x = 0;
     }
 
     private function workersWatcher(): void
@@ -360,7 +363,9 @@ final class WorkerPool implements WorkerPoolInterface
                     }
                 }
 
-                $this->scalingFuture?->complete();
+                if(false === $this->scalingFuture?->isComplete()) {
+                    $this->scalingFuture->complete();
+                }
 
                 try {
                     Future\await($futures, $this->scalingTrigger->getCancellation());
@@ -379,7 +384,9 @@ final class WorkerPool implements WorkerPoolInterface
                 $this->workersCancellation->cancel();
             }
             
-            $this->scalingFuture?->complete();
+            if(false === $this->scalingFuture?->isComplete()) {
+                $this->scalingFuture->complete();
+            }
         }
     }
 
@@ -564,7 +571,8 @@ final class WorkerPool implements WorkerPoolInterface
                 $context,
                 $this->workersCancellation->getCancellation(),
                 $this->eventEmitter,
-                $workerDescriptor->getStartDeferred()
+                $workerDescriptor->getStartDeferred(),
+                $this->workerStopTimeout
             );
 
             if($this->logger !== null) {
@@ -844,7 +852,7 @@ final class WorkerPool implements WorkerPoolInterface
     public function stop(): void
     {
         if(false === $this->mainCancellation?->isCancelled()) {
-            $this->mainCancellation->cancel();
+            $this->mainCancellation->cancel(new StopException('The worker pool was stopped'));
         }
 
         $this->stopWorkers();

@@ -193,7 +193,7 @@ class WorkerPoolTest extends TestCase
      *
      * @throws \Throwable
      */
-    //#[RunInSeparateProcess]
+    #[RunInSeparateProcess]
     public function testWorkerState(): void
     {
         $workerPool                 = new WorkerPool;

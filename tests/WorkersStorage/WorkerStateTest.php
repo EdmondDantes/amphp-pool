@@ -169,6 +169,41 @@ class WorkerStateTest extends TestCase
         $this->assertEquals($workerState->getShutdownErrors(), $workerState2->getShutdownErrors());
     }
     
+    public function testUnpackItem(): void
+    {
+        $workerStorage              = new WorkersStorageMemory(WorkerState::class, 5);
+        $workerState                = $workerStorage->getWorkerState(1);
+        
+        $this->fillWorkerState($workerState);
+        $workerState->update();
+        
+        $workerState2               = WorkerState::unpackItem($workerStorage->readWorkerState(1));
+        
+        $this->assertEquals($workerState->getWorkerId(), $workerState2->getWorkerId());
+        $this->assertEquals($workerState->getGroupId(), $workerState2->getGroupId());
+        $this->assertEquals($workerState->isShouldBeStarted(), $workerState2->isShouldBeStarted());
+        $this->assertEquals($workerState->isReady(), $workerState2->isReady());
+        $this->assertEquals($workerState->getPid(), $workerState2->getPid());
+        $this->assertEquals($workerState->getTotalReloaded(), $workerState2->getTotalReloaded());
+        $this->assertEquals($workerState->getShutdownErrors(), $workerState2->getShutdownErrors());
+        $this->assertEquals($workerState->getWeight(), $workerState2->getWeight());
+        $this->assertEquals($workerState->getStartedAt(), $workerState2->getStartedAt());
+        $this->assertEquals($workerState->getFinishedAt(), $workerState2->getFinishedAt());
+        $this->assertEquals($workerState->getUpdatedAt(), $workerState2->getUpdatedAt());
+        $this->assertEquals($workerState->getPhpMemoryUsage(), $workerState2->getPhpMemoryUsage());
+        $this->assertEquals($workerState->getPhpMemoryPeakUsage(), $workerState2->getPhpMemoryPeakUsage());
+        $this->assertEquals($workerState->getConnectionsAccepted(), $workerState2->getConnectionsAccepted());
+        $this->assertEquals($workerState->getConnectionsProcessed(), $workerState2->getConnectionsProcessed());
+        $this->assertEquals($workerState->getConnectionsErrors(), $workerState2->getConnectionsErrors());
+        $this->assertEquals($workerState->getConnectionsRejected(), $workerState2->getConnectionsRejected());
+        $this->assertEquals($workerState->getConnectionsProcessing(), $workerState2->getConnectionsProcessing());
+        $this->assertEquals($workerState->getJobAccepted(), $workerState2->getJobAccepted());
+        $this->assertEquals($workerState->getJobProcessed(), $workerState2->getJobProcessed());
+        $this->assertEquals($workerState->getJobProcessing(), $workerState2->getJobProcessing());
+        $this->assertEquals($workerState->getJobErrors(), $workerState2->getJobErrors());
+        $this->assertEquals($workerState->getJobRejected(), $workerState2->getJobRejected());
+    }
+    
     private function fillWorkerState(WorkerState $workerState): void
     {
         $workerState->groupId        = 2;
