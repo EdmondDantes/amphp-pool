@@ -278,6 +278,10 @@ final class WorkerPool implements WorkerPoolInterface
             }
 
             $this->workersCancellation = new DeferredCancellation;
+            
+            if(true === $this->scalingFuture?->isComplete() || $this->scalingFuture === null) {
+                $this->scalingFuture = new DeferredFuture;
+            }
 
             $workersWatcher         = async($this->workersWatcher(...));
 
@@ -290,6 +294,8 @@ final class WorkerPool implements WorkerPoolInterface
             Future\await([$workersWatcher]);
 
         } while($this->shouldRestart);
+        
+        $this->running              = false;
     }
 
     public function awaitStart(): void
@@ -297,12 +303,18 @@ final class WorkerPool implements WorkerPoolInterface
         if($this->mainCancellation === null || false === $this->running) {
             return;
         }
-
-        $futures                    = [];
-
+        
+        // await scaling first
         if($this->scalingFuture !== null) {
-            $futures[]              = $this->scalingFuture->getFuture();
+            try {
+                Future\await([$this->scalingFuture->getFuture()], $this->mainCancellation?->getCancellation());
+            } catch (CancelledException) {
+                return;
+            }
         }
+        
+        // and await workers
+        $futures                    = [];
 
         foreach ($this->workers as $workerDescriptor) {
 
@@ -362,11 +374,12 @@ final class WorkerPool implements WorkerPoolInterface
             } while(\count($futures) > 0 && true !== $this->workersCancellation?->isCancelled());
 
         } finally {
-
             // All workers are stopped here, so triggers cancellation if not already canceled
             if(false === $this->workersCancellation->isCancelled()) {
                 $this->workersCancellation->cancel();
             }
+            
+            $this->scalingFuture?->complete();
         }
     }
 
