@@ -7,8 +7,9 @@ use CT\AmpPool\WorkerGroup;
 use CT\AmpPool\WorkerTypeEnum;
 
 final class PrometheusGroup         extends WorkerGroup
+                                    implements PrometheusGroupInterface
 {
-    public function __construct()
+    public function __construct(private readonly string $address = '0.0.0.0:9091')
     {
         parent::__construct(
             PrometheusService::class,
@@ -17,5 +18,10 @@ final class PrometheusGroup         extends WorkerGroup
             1,
             'Prometheus'
         );
+    }
+    
+    public function getPrometheusAddress(): string
+    {
+        return $this->address;
     }
 }

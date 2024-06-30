@@ -8,8 +8,10 @@ use Amp\Http\Server\DefaultErrorHandler;
 use Amp\Http\Server\RequestHandler\ClosureRequestHandler;
 use Amp\Http\Server\Response;
 use Amp\Http\Server\SocketHttpServer;
+use CT\AmpPool\Exceptions\FatalWorkerException;
 use CT\AmpPool\Worker\WorkerEntryPointInterface;
 use CT\AmpPool\Worker\WorkerInterface;
+use Monolog\Logger;
 
 class PrometheusService implements WorkerEntryPointInterface
 {
@@ -36,10 +38,20 @@ class PrometheusService implements WorkerEntryPointInterface
         }
 
         $prometheusProvider         = new PrometheusProvider($worker->getWorkersStorage());
-        $httpServer                 = SocketHttpServer::createForDirectAccess($worker->getLogger());
+        $httpServer                 = SocketHttpServer::createForDirectAccess(new Logger('prometheus'));
+        
+        $workerGroup                = $worker->getWorkerGroup();
+        
+        if($workerGroup instanceof PrometheusGroup === false) {
+            throw new FatalWorkerException('The worker group must be an instance of PrometheusGroup');
+        }
+        
+        $address                    = $workerGroup->getPrometheusAddress();
         
         // 2. Expose the server to the network
-        $httpServer->expose('0.0.0.0:9090');
+        $httpServer->expose($address);
+        
+        $worker->getLogger()->info('Prometheus service is running on '.$address);
         
         // 3. Handle incoming connections and start the server
         $httpServer->start(
