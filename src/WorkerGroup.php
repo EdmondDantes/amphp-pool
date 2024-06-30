@@ -16,7 +16,7 @@ use Psr\Log\LoggerInterface;
 /**
  * Data structure for describing a group of workers.
  */
-final class WorkerGroup implements WorkerGroupInterface
+class WorkerGroup implements WorkerGroupInterface
 {
     public static function startStrategies(array $groupsScheme): void
     {
