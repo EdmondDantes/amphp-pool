@@ -427,6 +427,11 @@ class WorkerState                    implements WorkerStateInterface
             throw new \RuntimeException('Failed to read worker state');
         }
         
+        // Ignore empty data
+        if(count($data) === 0) {
+            return $this;
+        }
+        
         $data[3]                    = (bool)$data[3];
         $data[5]                    = (bool)$data[5];
         

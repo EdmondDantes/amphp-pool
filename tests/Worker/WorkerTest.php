@@ -8,6 +8,7 @@ use Amp\Sync\Channel;
 use Amp\TimeoutCancellation;
 use CT\AmpPool\Internal\Messages\MessageShutdown;
 use CT\AmpPool\WorkerGroup;
+use CT\AmpPool\WorkersStorage\WorkersStorageMemory;
 use CT\AmpPool\WorkerTypeEnum;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
@@ -90,7 +91,10 @@ class WorkerTest extends TestCase
             1,
             $this->channelOut,
             $this->workerGroup,
-            [$this->workerGroup]
+            [$this->workerGroup],
+            WorkersStorageMemory::class
         );
+        
+        $this->worker->initWorker();
     }
 }

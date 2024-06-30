@@ -7,7 +7,7 @@ final class WorkersStorageMemory implements WorkersStorageInterface
 {
     public static function instanciate(int $workersCount = 0): static
     {
-        return new static('', $workersCount);
+        return new static(WorkerState::class, $workersCount);
     }
     
     private int $key;
