@@ -76,32 +76,6 @@ abstract class WorkerStrategyAbstract implements WorkerStrategyInterface
         return null;
     }
 
-    protected function getPoolStateStorage(): ?PoolStateReadableInterface
-    {
-        if($this->workerPool?->get() !== null) {
-            return $this->workerPool->get()->getPoolStateStorage();
-        }
-
-        if($this->worker?->get() !== null) {
-            return $this->worker->get()->getPoolStateStorage();
-        }
-
-        return null;
-    }
-
-    protected function getWorkersInfo(): ?WorkersInfoInterface
-    {
-        if($this->workerPool?->get() !== null) {
-            return $this->workerPool->get()->getWorkersInfo();
-        }
-
-        if($this->worker?->get() !== null) {
-            return $this->worker->get()->getWorkersInfo();
-        }
-
-        return null;
-    }
-
     protected function getCurrentWorkerId(): ?int
     {
         if($this->worker?->get() !== null) {

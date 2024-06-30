@@ -26,7 +26,7 @@ final class ScalingByRequest extends WorkerStrategyAbstract implements ScalingSt
             return false;
         }
 
-        [$lowestWorkerId, $highestWorkerId] = $this->getPoolStateStorage()?->findGroupState($workerGroup->getWorkerGroupId());
+        [$lowestWorkerId, $highestWorkerId] = $this->getMinMaxWorkers($workerGroup->getWorkerGroupId());
 
         if(($highestWorkerId - $lowestWorkerId) >= $workerGroup->getMaxWorkers()) {
             return false;
@@ -77,6 +77,26 @@ final class ScalingByRequest extends WorkerStrategyAbstract implements ScalingSt
         }
     }
 
+    private function getMinMaxWorkers(int $groupId): array
+    {
+        $minWorkerId                = 0;
+        $maxWorkerId                = 0;
+        
+        foreach ($this->getWorkersStorage()->foreachWorkers() as $workerState) {
+            if($workerState->getGroupId() === $groupId && $workerState->isShouldBeStarted()) {
+                if($minWorkerId === 0) {
+                    $minWorkerId = $workerState->getWorkerId();
+                } elseif($maxWorkerId === 0) {
+                    $maxWorkerId = $workerState->getWorkerId();
+                } elseif ($maxWorkerId < $workerState->getWorkerId()) {
+                    $maxWorkerId = $workerState->getWorkerId();
+                }
+            }
+        }
+        
+        return [$minWorkerId, $maxWorkerId];
+    }
+    
     private function handleScalingRequest(mixed $message, int $workerId = 0): void
     {
         if($message instanceof ScalingRequest === false) {

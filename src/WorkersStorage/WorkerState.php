@@ -341,6 +341,12 @@ class WorkerState                    implements WorkerStateInterface
         return $this;
     }
     
+    public function incrementJobErrors(): static
+    {
+        $this->jobErrors++;
+        return $this;
+    }
+    
     public function getJobRejected(): int
     {
         return $this->jobRejected;
@@ -520,6 +526,18 @@ class WorkerState                    implements WorkerStateInterface
         
         $this->getStorage()?->updateWorkerState($this->workerId, $data, $offset);
         
+        return $this;
+    }
+    
+    function updateShouldBeStarted(bool $shouldBeStarted): static
+    {
+        if($this->shouldBeStarted === $shouldBeStarted) {
+            return $this;
+        }
+        
+        $this->shouldBeStarted       = $shouldBeStarted;
+        
+        $this->getStorage()?->updateWorkerState($this->workerId, pack('Q', (int)$shouldBeStarted), 2 * 8);
         return $this;
     }
     

@@ -100,7 +100,7 @@ final class WorkersStorageMemory implements WorkersStorageInterface
             $this->buffer, $data, ($workerId - 1) * $this->structureSize + $offset, strlen($data)
         );
     }
-    
+
     public function close(): void
     {
         $this->buffer               = '';

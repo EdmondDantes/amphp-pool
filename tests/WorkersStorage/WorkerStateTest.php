@@ -120,15 +120,34 @@ class WorkerStateTest extends TestCase
         $workerState2->read();
         $this->assertEquals($workerState, $workerState2);
         
-        $workerState->jobAccepted += 100;
-        $workerState->jobProcessed += 50;
+        $workerState->jobAccepted   += 100;
+        $workerState->jobProcessed  += 50;
         $workerState->jobProcessing += 5;
-        $workerState->jobErrors += 10;
-        $workerState->jobRejected += 5;
+        $workerState->jobErrors     += 10;
+        $workerState->jobRejected   += 5;
+        
         $workerState->updateJobSegment();
         $workerState2->read();
         
         $this->assertEquals($workerState, $workerState2);
+    }
+    
+    public function testUpdateShouldBeStarted(): void
+    {
+        $workerStorage              = new WorkersStorageMemory(WorkerState::class, 5);
+        $workerState                = $workerStorage->getWorkerState(2);
+        
+        $this->fillWorkerState($workerState);
+        $isShouldBeStarted          = $workerState->isShouldBeStarted();
+        $workerState->update();
+        
+        $isShouldBeStarted          = !$isShouldBeStarted;
+        
+        $workerState->updateShouldBeStarted($isShouldBeStarted);
+        
+        $workerState2               = $workerStorage->getWorkerState(2);
+        $workerState2->read();
+        $this->assertEquals($workerState2->isShouldBeStarted(), $isShouldBeStarted);
     }
     
     private function fillWorkerState(WorkerState $workerState): void

@@ -516,45 +516,8 @@ final class WorkerPool implements WorkerPoolInterface
     private function runWorkerWatcher(WorkerDescriptor $workerDescriptor): void
     {
         while ($workerDescriptor->shouldBeStarted() && true !== $this->workersCancellation?->isCancelled()) {
-
             $this->startWorker($workerDescriptor);
-
-            // We use updateGroupsState only in this method when the worker is running
-            try {
-                $this->updatePoolState();
-                $this->workerWatcher($workerDescriptor);
-            } finally {
-                // and the worker is stopped
-                $this->updatePoolState();
-            }
-        }
-    }
-
-    private function updatePoolState(): void
-    {
-        $groupsState                = [];
-
-        foreach ($this->workers as $workerDescriptor) {
-
-            $group                  = $workerDescriptor->group;
-            $groupId                = $group->getWorkerGroupId();
-
-            if(false === \array_key_exists($groupId, $groupsState)) {
-                $groupsState[$groupId] = [0, 0];
-            }
-
-            // Only running workers are considered and workers that are not stopped forever
-            if($workerDescriptor->isNotRunning() || $workerDescriptor->isStoppedForever()) {
-                continue;
-            }
-
-            if($groupsState[$groupId][0] === 0) {
-                $groupsState[$groupId][0] = $workerDescriptor->id;
-            }
-
-            if ($groupsState[$groupId][1] < $workerDescriptor->id) {
-                $groupsState[$groupId][1] = $workerDescriptor->id;
-            }
+            $this->workerWatcher($workerDescriptor);
         }
     }
 
