@@ -62,17 +62,17 @@ abstract class WorkerStrategyAbstract implements WorkerStrategyInterface
 
         return [];
     }
-    
+
     protected function getWorkersStorage(): ?WorkersStorageInterface
     {
         if($this->workerPool?->get() !== null) {
             return $this->workerPool->get()->getWorkersStorage();
         }
-        
+
         if($this->worker?->get() !== null) {
             return $this->worker->get()->getWorkersStorage();
         }
-        
+
         return null;
     }
 

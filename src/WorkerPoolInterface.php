@@ -6,8 +6,6 @@ namespace CT\AmpPool;
 use Amp\Cancellation;
 use Amp\Parallel\Context\Context;
 use Amp\Parallel\Ipc\IpcHub;
-use CT\AmpPool\PoolState\PoolStateReadableInterface;
-use CT\AmpPool\Worker\WorkerState\WorkersInfoInterface;
 use CT\AmpPool\WorkersStorage\WorkersStorageAwareInterface;
 use Psr\Log\LoggerInterface as PsrLogger;
 

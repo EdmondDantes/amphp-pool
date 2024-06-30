@@ -24,7 +24,7 @@ interface WorkerInterface extends WorkerEventEmitterAwareInterface, WorkersStora
     public function getWatcherChannel(): Channel;
 
     public function getWorkerState(): WorkerStateInterface;
-    
+
     public function getWorkerId(): int;
     public function getWorkerGroup(): WorkerGroup;
     public function getWorkerGroupId(): int;

@@ -94,7 +94,7 @@ class WorkerTest extends TestCase
             [$this->workerGroup],
             WorkersStorageMemory::class
         );
-        
+
         $this->worker->initWorker();
     }
 }

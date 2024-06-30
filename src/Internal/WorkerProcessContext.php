@@ -229,7 +229,7 @@ final class WorkerProcessContext implements \Psr\Log\LoggerInterface, \Psr\Log\L
                 if(false === $this->processCancellation->isCancelled()) {
                     $this->processCancellation->cancel();
                 }
-                
+
                 if(false === $this->startFuture->isComplete()) {
                     $this->startFuture->complete();
                 }

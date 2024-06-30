@@ -63,15 +63,15 @@ class Worker implements WorkerInterface
         $this->iterator             = $this->queue->iterate();
         $this->mainCancellation     = new DeferredCancellation;
         $this->workerFuture         = new DeferredFuture;
-        
+
         $this->eventEmitter         = new WorkerEventEmitter;
 
         if(\class_exists($workersStorageClass) === false) {
             throw new \RuntimeException('Invalid storage class provided. Expected ' . WorkersStorageInterface::class . ' implementation');
         }
-        
-        $this->workersStorage       = forward_static_call([$workersStorageClass, 'instanciate'], $this->getTotalWorkersCount());
-        
+
+        $this->workersStorage       = \forward_static_call([$workersStorageClass, 'instanciate'], $this->getTotalWorkersCount());
+
         if($logger !== null) {
             $this->logger           = $logger;
         } else {
@@ -90,12 +90,12 @@ class Worker implements WorkerInterface
 
         return $totalWorkersCount;
     }
-    
+
     public function getWorkersStorage(): WorkersStorageInterface
     {
         return $this->workersStorage;
     }
-    
+
     public function initWorker(): void
     {
         $this->workerState         = $this->workersStorage->getWorkerState($this->id);
@@ -117,7 +117,7 @@ class Worker implements WorkerInterface
     {
         return $this->workerState;
     }
-    
+
     /**
      * @return array<int, WorkerGroup>
      */
@@ -174,7 +174,7 @@ class Worker implements WorkerInterface
                 ->markAsReady()
                 ->setGroupId($this->group->getWorkerGroupId())
                 ->update();
-            
+
             // Confirm that the worker has started
             $this->ipcChannel->send(new WorkerStarted($this->id));
 
@@ -192,9 +192,9 @@ class Worker implements WorkerInterface
                 $this->eventEmitter->emitWorkerEvent($message, $this->id);
             }
         } catch (\Throwable $exception) {
-            
+
             $this->workerState->incrementShutdownErrors();
-            
+
             // IPC Channel manually closed
             if(false === $this->workerFuture->isComplete()) {
                 $this->workerFuture->error($exception);
@@ -220,9 +220,9 @@ class Worker implements WorkerInterface
         if(false === $this->mainCancellation->isCancelled()) {
             $this->mainCancellation->cancel();
         }
-        
+
         $this->workerState->markAsShutdown()->update();
-        
+
         try {
             WorkerGroup::stopStrategies($this->groupsScheme, $this->logger);
         } finally {

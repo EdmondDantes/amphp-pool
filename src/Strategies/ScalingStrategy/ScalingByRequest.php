@@ -81,7 +81,7 @@ final class ScalingByRequest extends WorkerStrategyAbstract implements ScalingSt
     {
         $minWorkerId                = 0;
         $maxWorkerId                = 0;
-        
+
         foreach ($this->getWorkersStorage()->foreachWorkers() as $workerState) {
             if($workerState->getGroupId() === $groupId && $workerState->isShouldBeStarted()) {
                 if($minWorkerId === 0) {
@@ -93,10 +93,10 @@ final class ScalingByRequest extends WorkerStrategyAbstract implements ScalingSt
                 }
             }
         }
-        
+
         return [$minWorkerId, $maxWorkerId];
     }
-    
+
     private function handleScalingRequest(mixed $message, int $workerId = 0): void
     {
         if($message instanceof ScalingRequest === false) {

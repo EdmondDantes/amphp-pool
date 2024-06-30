@@ -8,9 +8,6 @@ use CT\AmpPool\Strategies\WorkerStrategyAbstract;
 abstract class PickupStrategyAbstract extends WorkerStrategyAbstract implements PickupStrategyInterface
 {
     /**
-     * @param array $possibleGroups
-     * @param array $possibleWorkers
-     * @param array $ignoredWorkers
      *
      * @return iterable<\CT\AmpPool\WorkersStorage\WorkerStateInterface>
      */

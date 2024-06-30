@@ -27,7 +27,7 @@ class PickupByWeight extends PickupStrategyAbstract
         int   $weight               = 0,
         int   $tryCount             = 0
     ): ?int {
-        
+
         $foundWorkerId              = null;
         $minimalWeight              = 0;
 

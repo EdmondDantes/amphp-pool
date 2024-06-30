@@ -108,26 +108,26 @@ final class WorkerPool implements WorkerPoolInterface
         $this->contextFactory       ??= new DefaultContextFactory(ipcHub: $this->hub);
         $this->eventEmitter         = new WorkerEventEmitter;
     }
-    
+
     private function initWorkersStorage(): void
     {
-        if(class_exists($this->workersStorageClass) === false) {
+        if(\class_exists($this->workersStorageClass) === false) {
             throw new \Error("The workers storage class '{$this->workersStorageClass}' does not exist");
         }
-        
-        $this->workersStorage       = forward_static_call([$this->workersStorageClass, 'instanciate'], \count($this->workers));
-        
+
+        $this->workersStorage       = \forward_static_call([$this->workersStorageClass, 'instanciate'], \count($this->workers));
+
         // Assign worker states to workers
         foreach ($this->workers as $workerDescriptor) {
             $workerDescriptor->workerState = $this->workersStorage->getWorkerState($workerDescriptor->id);
         }
     }
-    
+
     public function getWorkersStorage(): WorkersStorageInterface
     {
         return $this->workersStorage;
     }
-    
+
     public function getIpcHub(): IpcHub
     {
         return $this->hub;
@@ -249,7 +249,7 @@ final class WorkerPool implements WorkerPoolInterface
         }
 
         $this->initWorkersStorage();
-        
+
         $this->running              = true;
         $this->mainCancellation     = new DeferredCancellation;
 
@@ -279,7 +279,7 @@ final class WorkerPool implements WorkerPoolInterface
             }
 
             $this->workersCancellation = new DeferredCancellation;
-            
+
             if(true === $this->scalingFuture?->isComplete() || $this->scalingFuture === null) {
                 $this->scalingFuture = new DeferredFuture;
             }
@@ -295,7 +295,7 @@ final class WorkerPool implements WorkerPoolInterface
             Future\await([$workersWatcher]);
 
         } while($this->shouldRestart);
-        
+
         $this->running              = false;
     }
 
@@ -304,7 +304,7 @@ final class WorkerPool implements WorkerPoolInterface
         if($this->mainCancellation === null || false === $this->running) {
             return;
         }
-        
+
         // await scaling first
         if($this->scalingFuture !== null) {
             try {
@@ -313,7 +313,7 @@ final class WorkerPool implements WorkerPoolInterface
                 return;
             }
         }
-        
+
         // and await workers
         $futures                    = [];
 
@@ -330,7 +330,7 @@ final class WorkerPool implements WorkerPoolInterface
             Future\await($futures, $this->mainCancellation?->getCancellation());
         } catch (CancelledException $exception) {
         }
-        
+
         $x = 0;
     }
 
@@ -383,7 +383,7 @@ final class WorkerPool implements WorkerPoolInterface
             if(false === $this->workersCancellation->isCancelled()) {
                 $this->workersCancellation->cancel();
             }
-            
+
             if(false === $this->scalingFuture?->isComplete()) {
                 $this->scalingFuture->complete();
             }

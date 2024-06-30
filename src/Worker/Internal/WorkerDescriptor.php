@@ -25,13 +25,13 @@ final class WorkerDescriptor
         private bool $shouldBeStarted = false,
     ) {
     }
-    
+
     public function starting(): void
     {
         if($this->startFuture === null || $this->startFuture->isComplete()) {
             $this->startFuture      = new DeferredFuture;
         }
-        
+
         $this->workerState?->read()->updateShouldBeStarted($this->shouldBeStarted);
     }
 

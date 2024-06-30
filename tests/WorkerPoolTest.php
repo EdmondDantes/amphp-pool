@@ -215,13 +215,13 @@ class WorkerPoolTest extends TestCase
         $expectedWorkers             = [1 => true, 2 => true, 3 => true, 4 => true, 5 => true];
 
         EventLoop::queue(function () use ($workerPool, &$workers) {
-            
+
             $workerPool->awaitStart();
-            
+
             foreach (WorkersStorage::instanciate()->foreachWorkers() as $workerState) {
                 $workers[$workerState->getWorkerId()] = $workerState->isReady();
             }
-            
+
             $workerPool->stop();
         });
 
@@ -230,7 +230,7 @@ class WorkerPoolTest extends TestCase
         $this->assertEquals($expectedWorkers, $workers, 'The First group have worker id 1 and 2, the second group have worker id 3, 4 and 5');
 
         // Check pool state after workers stopped
-        
+
         foreach (WorkersStorage::instanciate() as $workerState) {
             $this->assertFalse($workerState->isReady(), 'All workers should be unready');
         }
