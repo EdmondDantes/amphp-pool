@@ -17,22 +17,22 @@ final class WorkerDescriptor
     private ?DeferredFuture       $startFuture      = null;
     private ?WorkerProcessContext $workerProcess    = null;
     private bool                  $isStoppedForever = false;
+    public ?WorkerStateInterface  $workerState      = null;
 
     public function __construct(
         public readonly int $id,
         public readonly WorkerGroup $group,
-        public readonly WorkerStateInterface $workerState,
         private bool $shouldBeStarted = false,
     ) {
     }
-
+    
     public function starting(): void
     {
         if($this->startFuture === null || $this->startFuture->isComplete()) {
             $this->startFuture      = new DeferredFuture;
         }
         
-        $this->workerState->read()->updateShouldBeStarted($this->shouldBeStarted);
+        $this->workerState?->read()->updateShouldBeStarted($this->shouldBeStarted);
     }
 
     public function started(): void
@@ -73,7 +73,7 @@ final class WorkerDescriptor
     public function willBeStopped(): void
     {
         $this->shouldBeStarted      = false;
-        $this->workerState->updateShouldBeStarted(false);
+        $this->workerState?->updateShouldBeStarted(false);
     }
 
     public function markAsStopped(): void
@@ -104,6 +104,6 @@ final class WorkerDescriptor
     public function markAsStoppedForever(): void
     {
         $this->isStoppedForever     = true;
-        $this->workerState->read()->updateShouldBeStarted(false);
+        $this->workerState?->read()->updateShouldBeStarted(false);
     }
 }

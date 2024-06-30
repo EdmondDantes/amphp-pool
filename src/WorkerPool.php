@@ -115,6 +115,11 @@ final class WorkerPool implements WorkerPoolInterface
         }
         
         $this->workersStorage       = forward_static_call([$this->workersStorageClass, 'instanciate'], \count($this->workers));
+        
+        // Assign worker states to workers
+        foreach ($this->workers as $workerDescriptor) {
+            $workerDescriptor->workerState = $this->workersStorage->getWorkerState($workerDescriptor->id);
+        }
     }
     
     public function getWorkersStorage(): WorkersStorageInterface
@@ -732,7 +737,7 @@ final class WorkerPool implements WorkerPoolInterface
 
         } catch (\Throwable $exception) {
 
-            $workerDescriptor->workerState->increaseAndUpdateShutdownErrors();
+            $workerDescriptor->workerState?->increaseAndUpdateShutdownErrors();
             $workerProcess->error("Worker #{$id} failed: " . $exception->getMessage(), ['exception' => $exception]);
             throw $exception;
 
@@ -767,7 +772,6 @@ final class WorkerPool implements WorkerPoolInterface
             $this->addWorker(new WorkerDescriptor(
                 $id,
                 $group,
-                $this->workersStorage->getWorkerState($id),
                 $id <= ($baseWorkerId + $minWorkers)
             ));
         }

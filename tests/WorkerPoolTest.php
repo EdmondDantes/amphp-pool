@@ -6,7 +6,6 @@ namespace CT\AmpPool;
 use Amp\Parallel\Context\ContextPanicError;
 use Amp\Sync\ChannelException;
 use CT\AmpPool\Exceptions\FatalWorkerException;
-use CT\AmpPool\PoolState\PoolStateStorage;
 use CT\AmpPool\Strategies\RestartStrategy\RestartNever;
 use CT\AmpPool\WorkerPoolMocks\EntryPointHello;
 use CT\AmpPool\WorkerPoolMocks\EntryPointWait;
@@ -18,6 +17,7 @@ use CT\AmpPool\WorkerPoolMocks\Runners\RunnerLostChannel;
 use CT\AmpPool\WorkerPoolMocks\StartCounterEntryPoint;
 use CT\AmpPool\WorkerPoolMocks\TerminateWorkerEntryPoint;
 use CT\AmpPool\WorkerPoolMocks\TestEntryPointWaitTermination;
+use CT\AmpPool\WorkersStorage\WorkersStorage;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use Revolt\EventLoop;
@@ -193,8 +193,8 @@ class WorkerPoolTest extends TestCase
      *
      * @throws \Throwable
      */
-    #[RunInSeparateProcess]
-    public function testPoolState(): void
+    //#[RunInSeparateProcess]
+    public function testWorkerState(): void
     {
         $workerPool                 = new WorkerPool;
         $workerPool->describeGroup(new WorkerGroup(
@@ -211,22 +211,29 @@ class WorkerPoolTest extends TestCase
             restartStrategy: new RestartNever
         ));
 
-        $groups                     = null;
+        $workers                     = null;
+        $expectedWorkers             = [1 => true, 2 => true, 3 => true, 4 => true, 5 => true];
 
-        EventLoop::delay(0.2, function () use ($workerPool, &$groups) {
-            $poolState              = new PoolStateStorage;
-            $groups                 = $poolState->update()->getGroupsState();
+        EventLoop::queue(function () use ($workerPool, &$workers) {
+            
+            $workerPool->awaitStart();
+            
+            foreach (WorkersStorage::instanciate()->foreachWorkers() as $workerState) {
+                $workers[$workerState->getWorkerId()] = $workerState->isReady();
+            }
+            
             $workerPool->stop();
         });
 
         $workerPool->run();
 
-        $this->assertEquals([1 => [1, 2], 2 => [3, 5]], $groups, 'The First group have worker id 1 and 2, the second group have worker id 3, 4 and 5');
+        $this->assertEquals($expectedWorkers, $workers, 'The First group have worker id 1 and 2, the second group have worker id 3, 4 and 5');
 
         // Check pool state after workers stopped
-        $groups                 = (new PoolStateStorage)->update()->getGroupsState();
-
-        $this->assertEquals([1 => [0, 0], 2 => [0, 0]], $groups, 'Any group should not have workers');
+        
+        foreach (WorkersStorage::instanciate() as $workerState) {
+            $this->assertFalse($workerState->isReady(), 'All workers should be unready');
+        }
     }
 
     #[RunInSeparateProcess]

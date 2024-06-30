@@ -128,6 +128,7 @@ class DefaultRunner extends WorkerStrategyAbstract implements RunnerStrategyInte
             'id'                    => $workerId,
             'group'                 => $group,
             'groupsScheme'          => $workerPool->getGroupsScheme(),
+            'workersStorage'        => $workerPool->getWorkersStorage()::class
         ]);
     }
 
