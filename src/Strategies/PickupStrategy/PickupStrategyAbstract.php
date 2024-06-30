@@ -7,33 +7,24 @@ use CT\AmpPool\Strategies\WorkerStrategyAbstract;
 
 abstract class PickupStrategyAbstract extends WorkerStrategyAbstract implements PickupStrategyInterface
 {
+    /**
+     * @param array $possibleGroups
+     * @param array $possibleWorkers
+     * @param array $ignoredWorkers
+     *
+     * @return iterable<\CT\AmpPool\WorkersStorage\WorkerStateInterface>
+     */
     protected function iterate(array $possibleGroups = [], array $possibleWorkers = [], array $ignoredWorkers = []): iterable
     {
-        $groupsState                = $this->getPoolStateStorage()->getGroupsState();
-        $currentWorkerId            = $this->getCurrentWorkerId();
+        foreach ($this->getWorkersStorage()->foreachWorkers() as $workerState) {
 
-        foreach ($groupsState as $groupId => [$lowestWorkerId, $highestWorkerId]) {
-
-            if($possibleGroups !== [] && false === \in_array($groupId, $possibleGroups)) {
+            if($possibleWorkers !== [] && false === \in_array($workerState->getWorkerId(), $possibleWorkers, true)
+            || $ignoredWorkers !== [] && \in_array($workerState->getWorkerId(), $ignoredWorkers, true)
+            || $possibleGroups !== [] && false === \in_array($workerState->getGroupId(), $possibleGroups)) {
                 continue;
             }
 
-            foreach (\range($lowestWorkerId, $highestWorkerId) as $workerId) {
-
-                if($workerId === $currentWorkerId) {
-                    continue;
-                }
-
-                if($possibleWorkers !== [] && false === \in_array($workerId, $possibleWorkers, true)) {
-                    continue;
-                }
-
-                if($ignoredWorkers !== [] && \in_array($workerId, $ignoredWorkers, true)) {
-                    continue;
-                }
-
-                yield $workerId;
-            }
+            yield $workerState;
         }
     }
 }

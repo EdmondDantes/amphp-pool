@@ -25,8 +25,6 @@ use CT\AmpPool\Exceptions\TerminateWorkerException;
 use CT\AmpPool\Exceptions\WorkerPoolException;
 use CT\AmpPool\Exceptions\WorkerShouldBeStopped;
 use CT\AmpPool\Internal\WorkerProcessContext;
-use CT\AmpPool\PoolState\PoolStateReadableInterface;
-use CT\AmpPool\PoolState\PoolStateStorage;
 use CT\AmpPool\Strategies\JobClient\JobClientDefault;
 use CT\AmpPool\Strategies\JobExecutor\JobExecutorScheduler;
 use CT\AmpPool\Strategies\PickupStrategy\PickupLeastJobs;
@@ -40,8 +38,6 @@ use CT\AmpPool\WatcherEvents\WorkerProcessStarted;
 use CT\AmpPool\WatcherEvents\WorkerProcessTerminating;
 use CT\AmpPool\Worker\Internal\Exceptions\ScalingTrigger;
 use CT\AmpPool\Worker\Internal\WorkerDescriptor;
-use CT\AmpPool\Worker\WorkerState\WorkersInfo;
-use CT\AmpPool\Worker\WorkerState\WorkersInfoInterface;
 use CT\AmpPool\WorkersStorage\WorkersStorage;
 use CT\AmpPool\WorkersStorage\WorkersStorageInterface;
 use Psr\Log\LoggerInterface as PsrLogger;
@@ -60,7 +56,7 @@ use function Amp\trapSignal;
  * @template-covariant TReceive
  * @template TSend
  */
-class WorkerPool implements WorkerPoolInterface
+final class WorkerPool implements WorkerPoolInterface
 {
     protected int $workerStartTimeout = 5;
     protected int $workerStopTimeout  = 5;
@@ -78,8 +74,6 @@ class WorkerPool implements WorkerPoolInterface
     private bool $running           = false;
 
     private WorkersStorageInterface $workersStorage;
-    
-    private ?PoolStateStorage $poolState    = null;
 
     /**
      * Cancellation token for the main process watcher.
@@ -97,8 +91,6 @@ class WorkerPool implements WorkerPoolInterface
 
     private ?DeferredFuture $scalingFuture = null;
 
-    private WorkersInfoInterface $workersInfo;
-
     /**
      * @var WorkerGroupInterface[]
      */
@@ -113,7 +105,6 @@ class WorkerPool implements WorkerPoolInterface
         protected ?PsrLogger $logger        = null
     ) {
         $this->contextFactory       ??= new DefaultContextFactory(ipcHub: $this->hub);
-        $this->workersInfo          = new WorkersInfo;
         $this->eventEmitter         = new WorkerEventEmitter;
     }
     
@@ -139,16 +130,6 @@ class WorkerPool implements WorkerPoolInterface
     public function getLogger(): PsrLogger|null
     {
         return $this->logger;
-    }
-
-    public function getPoolStateStorage(): PoolStateReadableInterface
-    {
-        return $this->poolState;
-    }
-
-    public function getWorkersInfo(): WorkersInfoInterface
-    {
-        return $this->workersInfo;
     }
 
     public function describeGroup(WorkerGroupInterface $group): self
@@ -263,10 +244,6 @@ class WorkerPool implements WorkerPoolInterface
 
         $this->initWorkersStorage();
         
-        if($this->poolState === null) {
-            $this->poolState        = new PoolStateStorage(\count($this->groupsScheme));
-        }
-
         $this->running              = true;
         $this->mainCancellation     = new DeferredCancellation;
 
@@ -579,8 +556,6 @@ class WorkerPool implements WorkerPoolInterface
                 $groupsState[$groupId][1] = $workerDescriptor->id;
             }
         }
-
-        $this->poolState->setGroupsState($groupsState);
     }
 
     private function startWorker(WorkerDescriptor $workerDescriptor): void

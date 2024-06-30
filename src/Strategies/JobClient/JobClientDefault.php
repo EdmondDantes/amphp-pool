@@ -55,9 +55,7 @@ final class JobClientDefault extends WorkerStrategyAbstract implements JobClient
         $this->ipcClient            = new IpcClient(
             $worker->getWorkerId(),
             $worker->getWorkerGroup(),
-            $worker->getGroupsScheme(),
-            $worker->getWorkersInfo(),
-            $worker->getPoolStateStorage()
+            $worker->getGroupsScheme()
         );
 
         $this->ipcClient->mainLoop();

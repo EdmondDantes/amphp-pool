@@ -6,9 +6,6 @@ namespace CT\AmpPool\JobIpc;
 use Amp\CancelledException;
 use Amp\DeferredCancellation;
 use Amp\TimeoutCancellation;
-use CT\AmpPool\PoolState\PoolStateStorage;
-use CT\AmpPool\Worker\WorkerState\WorkersInfo;
-use CT\AmpPool\Worker\WorkerState\WorkerStateStorage;
 use CT\AmpPool\WorkerGroup;
 use CT\AmpPool\WorkerTypeEnum;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
@@ -19,8 +16,6 @@ class IpcClientTest extends TestCase
 {
     private IpcClient $ipcClient;
     private IpcServer $ipcServer;
-    private PoolStateStorage $poolState;
-    private WorkerStateStorage $workerState;
     private DeferredCancellation   $jobsLoopCancellation;
     private JobSerializerInterface $jobSerializer;
     private mixed                  $jobHandler = null;
@@ -29,12 +24,6 @@ class IpcClientTest extends TestCase
     {
         $workerId                   = 1;
         $groupId                    = 1;
-
-        $this->poolState            = new PoolStateStorage($groupId);
-        $this->poolState->setWorkerGroupState($groupId, $workerId, $workerId);
-
-        $this->workerState          = new WorkerStateStorage($workerId, $groupId, true);
-        $this->workerState->workerReady();
 
         $this->jobSerializer        = new JobSerializer;
 
@@ -46,16 +35,12 @@ class IpcClientTest extends TestCase
             pickupStrategy: new PickupStrategyDummy($workerId)
         );
 
-        $workersInfo                = new WorkersInfo;
-
         $this->ipcServer            = new IpcServer($workerId);
 
         $this->ipcClient            = new IpcClient(
             $workerId,
             $workerGroup,
             [$workerGroup],
-            $workersInfo,
-            $this->poolState,
             $this->jobSerializer,
             $this->jobsLoopCancellation->getCancellation()
         );
@@ -71,7 +56,6 @@ class IpcClientTest extends TestCase
         $this->jobsLoopCancellation->cancel();
         $this->ipcClient->close();
         $this->ipcServer->close();
-        $this->poolState->close();
         $this->jobHandler           = null;
     }
 

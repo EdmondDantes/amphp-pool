@@ -21,13 +21,13 @@ final class PickupRoundRobin extends PickupStrategyAbstract
         $anyFound                   = false;
 
         // Try to return a worker that has not been used yet
-        foreach ($this->iterate($possibleGroups, $possibleWorkers, $ignoredWorkers) as $workerId) {
+        foreach ($this->iterate($possibleGroups, $possibleWorkers, $ignoredWorkers) as $workerState) {
 
             $anyFound               = true;
 
-            if(false === \in_array($workerId, $this->usedWorkers, true)) {
-                $this->usedWorkers[] = $workerId;
-                return $workerId;
+            if(false === \in_array($workerState->getWorkerId(), $this->usedWorkers, true)) {
+                $this->usedWorkers[] = $workerState->getWorkerId();
+                return $workerState->getWorkerId();
             }
         }
 
@@ -38,9 +38,9 @@ final class PickupRoundRobin extends PickupStrategyAbstract
         $this->usedWorkers          = [];
 
         // Returns first available worker
-        foreach ($this->iterate($possibleGroups, $possibleWorkers, $ignoredWorkers) as $workerId) {
-            $this->usedWorkers[]     = $workerId;
-            return $workerId;
+        foreach ($this->iterate($possibleGroups, $possibleWorkers, $ignoredWorkers) as $workerState) {
+            $this->usedWorkers[]     = $workerState->getWorkerId();
+            return $workerState->getWorkerId();
         }
 
         return null;

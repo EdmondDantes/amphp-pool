@@ -3,11 +3,10 @@ declare(strict_types=1);
 
 namespace CT\AmpPool\Strategies;
 
-use CT\AmpPool\PoolState\PoolStateReadableInterface;
 use CT\AmpPool\Worker\WorkerInterface;
-use CT\AmpPool\Worker\WorkerState\WorkersInfoInterface;
 use CT\AmpPool\WorkerGroupInterface;
 use CT\AmpPool\WorkerPoolInterface;
+use CT\AmpPool\WorkersStorage\WorkersStorageInterface;
 
 abstract class WorkerStrategyAbstract implements WorkerStrategyInterface
 {
@@ -62,6 +61,19 @@ abstract class WorkerStrategyAbstract implements WorkerStrategyInterface
         }
 
         return [];
+    }
+    
+    protected function getWorkersStorage(): ?WorkersStorageInterface
+    {
+        if($this->workerPool?->get() !== null) {
+            return $this->workerPool->get()->getWorkersStorage();
+        }
+        
+        if($this->worker?->get() !== null) {
+            return $this->worker->get()->getWorkersStorage();
+        }
+        
+        return null;
     }
 
     protected function getPoolStateStorage(): ?PoolStateReadableInterface

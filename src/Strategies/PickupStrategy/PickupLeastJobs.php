@@ -20,34 +20,23 @@ final class PickupLeastJobs extends PickupStrategyAbstract
         int   $weight = 0,
         int   $tryCount = 0
     ): ?int {
-        $workersInfo                = $this->getWorkersInfo();
-
-        if($workersInfo === null) {
-            return null;
-        }
 
         $foundWorkerId              = null;
         $bestJobCount               = 0;
 
-        foreach ($this->iterate($possibleGroups, $possibleWorkers, $ignoredWorkers) as $workerId) {
-
-            $workerState            = $workersInfo->getWorkerState($workerId);
-
-            if($workerState === null) {
-                continue;
-            }
+        foreach ($this->iterate($possibleGroups, $possibleWorkers, $ignoredWorkers) as $workerState) {
 
             if($workerState->isReady() === false) {
                 continue;
             }
 
-            if($workerState->getJobCount() === 0) {
-                return $workerId;
+            if($workerState->getJobProcessing() === 0) {
+                return $workerState->getWorkerId();
             }
 
-            if($workerState->getJobCount() < $bestJobCount) {
-                $bestJobCount       = $workerState->getJobCount();
-                $foundWorkerId      = $workerId;
+            if($workerState->getJobProcessing() < $bestJobCount) {
+                $bestJobCount       = $workerState->getJobProcessing();
+                $foundWorkerId      = $workerState->getWorkerId();
             }
         }
 

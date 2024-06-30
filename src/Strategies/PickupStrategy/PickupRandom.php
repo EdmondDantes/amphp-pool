@@ -24,6 +24,6 @@ final class PickupRandom extends PickupStrategyAbstract
             return null;
         }
 
-        return $pool[\array_rand($pool)];
+        return $pool[\array_rand($pool)]->getWorkerId();
     }
 }

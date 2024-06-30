@@ -19,10 +19,6 @@ interface WorkerPoolInterface extends WorkerEventEmitterAwareInterface, WorkersS
 
     public function getLogger(): PsrLogger|null;
 
-    public function getPoolStateStorage(): PoolStateReadableInterface;
-
-    public function getWorkersInfo(): WorkersInfoInterface;
-
     /**
      * @return WorkerGroup[]
      */

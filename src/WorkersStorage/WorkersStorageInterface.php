@@ -11,6 +11,9 @@ interface WorkersStorageInterface
     
     public function reviewWorkerState(int $workerId): WorkerStateInterface;
     
+    /**
+     * @return WorkerStateInterface[]
+     */
     public function foreachWorkers(): array;
     
     public function readWorkerState(int $workerId, int $offset = 0): string;

@@ -16,8 +16,6 @@ use Amp\TimeoutCancellation;
 use Amp\TimeoutException;
 use CT\AmpPool\Exceptions\NoWorkersAvailable;
 use CT\AmpPool\Exceptions\SendJobException;
-use CT\AmpPool\PoolState\PoolStateStorage;
-use CT\AmpPool\Worker\WorkerState\WorkersInfoInterface;
 use CT\AmpPool\WorkerGroupInterface;
 use Revolt\EventLoop;
 use function Amp\delay;
@@ -56,8 +54,6 @@ final class IpcClient implements IpcClientInterface
         private readonly int $workerId,
         private readonly WorkerGroupInterface $workerGroup,
         private readonly array $groupsScheme,
-        private readonly WorkersInfoInterface $workersInfo,
-        private readonly PoolStateStorage $poolState,
         ?JobSerializerInterface                $jobSerializer = null,
         private readonly Cancellation|null    $cancellation = null,
         private readonly int                  $retryInterval = 1,
@@ -123,8 +119,6 @@ final class IpcClient implements IpcClientInterface
             $ignoreWorkers[]        = $this->workerId;
         }
 
-        $this->poolState->update();
-
         while($tryCount < $this->maxTryCount) {
 
             $tryCount++;
@@ -156,11 +150,9 @@ final class IpcClient implements IpcClientInterface
                 if($isScalingPossible && $this->scalingTimeout > 0) {
                     // suspend the current task for a while
                     delay($this->scalingTimeout, true, $this->cancellation);
-                    $this->poolState->update();
                 } elseif($this->retryInterval > 0) {
                     // suspend the current task for a while
                     delay((float) $this->retryInterval, true, $this->cancellation);
-                    $this->poolState->update();
                 } else {
                     $deferred?->complete($exception);
                     throw $exception;

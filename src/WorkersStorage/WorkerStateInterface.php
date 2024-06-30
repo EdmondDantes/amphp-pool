@@ -26,6 +26,8 @@ interface WorkerStateInterface
     
     public function updateJobSegment(): static;
     
+    public function getWorkerId(): int;
+    
     public function getGroupId(): int;
     
     public function setGroupId(int $groupId): static;

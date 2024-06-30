@@ -57,6 +57,11 @@ class WorkerState                    implements WorkerStateInterface
         public int  $jobRejected             = 0
     ) {}
     
+    public function getWorkerId(): int
+    {
+        return $this->workerId;
+    }
+    
     public function getGroupId(): int
     {
         return $this->groupId;
