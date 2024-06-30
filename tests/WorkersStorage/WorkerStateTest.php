@@ -150,6 +150,25 @@ class WorkerStateTest extends TestCase
         $this->assertEquals($workerState2->isShouldBeStarted(), $isShouldBeStarted);
     }
     
+    public function testUpdateShutdownErrors(): void
+    {
+        $workerStorage              = new WorkersStorageMemory(WorkerState::class, 5);
+        $workerState                = $workerStorage->getWorkerState(2);
+        
+        $this->fillWorkerState($workerState);
+        $workerState->update();
+        
+        $workerState2               = $workerStorage->getWorkerState(2);
+        $workerState2->read();
+        $this->assertEquals($workerState, $workerState2);
+        
+        $workerState->shutdownErrors++;
+        $workerState->increaseAndUpdateShutdownErrors();
+        $workerState2->read();
+        
+        $this->assertEquals($workerState->getShutdownErrors(), $workerState2->getShutdownErrors());
+    }
+    
     private function fillWorkerState(WorkerState $workerState): void
     {
         $workerState->groupId        = 2;

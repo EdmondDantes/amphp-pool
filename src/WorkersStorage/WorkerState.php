@@ -27,13 +27,11 @@ class WorkerState                    implements WorkerStateInterface
         public int  $groupId                = 0,
         
         public bool $shouldBeStarted         = false,
+        public int  $shutdownErrors          = 0,
+        
         public bool $isReady                 = false,
-        public int $pid                      = 0,
-        public int $totalReloaded            = 0,
-        public int $shutdownErrors           = 0,
-        /**
-         * Current worker weight.
-         */
+        public int  $pid                     = 0,
+        public int  $totalReloaded           = 0,
         public int  $weight                  = 0,
         
         public int  $firstStartedAt          = 0,
@@ -430,16 +428,17 @@ class WorkerState                    implements WorkerStateInterface
         }
         
         $data[3]                    = (bool)$data[3];
-        $data[4]                    = (bool)$data[4];
+        $data[5]                    = (bool)$data[5];
         
         [,
             $this->groupId,
             
             $this->shouldBeStarted,
+            $this->shutdownErrors,
+         
             $this->isReady,
             $this->pid,
             $this->totalReloaded,
-            $this->shutdownErrors,
             $this->weight,
          
             $this->firstStartedAt,
@@ -541,6 +540,14 @@ class WorkerState                    implements WorkerStateInterface
         return $this;
     }
     
+    function increaseAndUpdateShutdownErrors(int $count = 1): static
+    {
+        $this->shutdownErrors       += $count;
+        
+        $this->getStorage()?->updateWorkerState($this->workerId, pack('Q', $this->shutdownErrors), 3 * 8);
+        return $this;
+    }
+    
     protected function packItem(): string
     {
         return pack(
@@ -551,10 +558,12 @@ class WorkerState                    implements WorkerStateInterface
             
             // offset 2 * 8
             $this->shouldBeStarted,
+            $this->shutdownErrors,
+            
+            // offset 4 * 8
             $this->isReady,
             $this->pid,
             $this->totalReloaded,
-            $this->shutdownErrors,
             $this->weight,
             
             // offset 8 * 8
@@ -624,14 +633,12 @@ class WorkerState                    implements WorkerStateInterface
         return [
             pack(
                 'Q*',
-                $this->shouldBeStarted,
                 $this->isReady,
                 $this->pid,
                 $this->totalReloaded,
-                $this->shutdownErrors,
                 $this->weight
             ),
-            2 * 8
+            4 * 8
             ];
     }
     

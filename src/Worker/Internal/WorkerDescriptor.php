@@ -7,6 +7,7 @@ use Amp\DeferredFuture;
 use Amp\Future;
 use CT\AmpPool\Internal\WorkerProcessContext;
 use CT\AmpPool\WorkerGroup;
+use CT\AmpPool\WorkersStorage\WorkerStateInterface;
 
 /**
  * @internal
@@ -20,14 +21,18 @@ final class WorkerDescriptor
     public function __construct(
         public readonly int $id,
         public readonly WorkerGroup $group,
-        private bool $shouldBeStarted = false
+        public readonly WorkerStateInterface $workerState,
+        private bool $shouldBeStarted = false,
     ) {
     }
 
     public function starting(): void
     {
-        $this->started();
-        $this->startFuture          = new DeferredFuture;
+        if($this->startFuture === null || $this->startFuture->isComplete()) {
+            $this->startFuture      = new DeferredFuture;
+        }
+        
+        $this->workerState->read()->updateShouldBeStarted($this->shouldBeStarted);
     }
 
     public function started(): void
@@ -61,16 +66,14 @@ final class WorkerDescriptor
     {
         $this->shouldBeStarted      = true;
 
-        if($this->startFuture?->isComplete() === false) {
-            $this->startFuture->complete();
-        }
-
+        $this->started();
         $this->startFuture          = new DeferredFuture;
     }
 
     public function willBeStopped(): void
     {
         $this->shouldBeStarted      = false;
+        $this->workerState->updateShouldBeStarted(false);
     }
 
     public function markAsStopped(): void
@@ -101,5 +104,6 @@ final class WorkerDescriptor
     public function markAsStoppedForever(): void
     {
         $this->isStoppedForever     = true;
+        $this->workerState->read()->updateShouldBeStarted(false);
     }
 }

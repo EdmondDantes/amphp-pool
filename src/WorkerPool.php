@@ -732,6 +732,7 @@ final class WorkerPool implements WorkerPoolInterface
 
         } catch (\Throwable $exception) {
 
+            $workerDescriptor->workerState->increaseAndUpdateShutdownErrors();
             $workerProcess->error("Worker #{$id} failed: " . $exception->getMessage(), ['exception' => $exception]);
             throw $exception;
 
@@ -766,6 +767,7 @@ final class WorkerPool implements WorkerPoolInterface
             $this->addWorker(new WorkerDescriptor(
                 $id,
                 $group,
+                $this->workersStorage->getWorkerState($id),
                 $id <= ($baseWorkerId + $minWorkers)
             ));
         }

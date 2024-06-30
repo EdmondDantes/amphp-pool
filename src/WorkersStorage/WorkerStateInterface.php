@@ -28,6 +28,8 @@ interface WorkerStateInterface
     
     function updateShouldBeStarted(bool $shouldBeStarted): static;
     
+    function increaseAndUpdateShutdownErrors(int $count = 1): static;
+    
     public function getWorkerId(): int;
     
     public function getGroupId(): int;
