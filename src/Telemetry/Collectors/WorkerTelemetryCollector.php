@@ -13,7 +13,11 @@ class WorkerTelemetryCollector implements ConnectionCollectorInterface, JobColle
 
     public function flushTelemetry(): void
     {
-        $this->workerState->updateConnectionsSegment()->updateJobSegment();
+        try {
+            $this->workerState->updateConnectionsSegment()->updateJobSegment();
+        } catch (\Throwable) {
+            // ignore
+        }
     }
 
     public function connectionAccepted(): void

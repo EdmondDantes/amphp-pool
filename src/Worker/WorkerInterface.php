@@ -37,6 +37,8 @@ interface WorkerInterface extends WorkerEventEmitterAwareInterface, WorkersStora
     public function getLogger(): LoggerInterface;
 
     public function awaitTermination(?Cancellation $cancellation = null): void;
+    
+    public function initiateTermination(\Throwable $throwable = null): void;
 
     public function stop(): void;
 

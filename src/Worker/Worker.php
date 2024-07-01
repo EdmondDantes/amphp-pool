@@ -4,11 +4,14 @@ declare(strict_types=1);
 namespace CT\AmpPool\Worker;
 
 use Amp\Cancellation;
+use Amp\CancelledException;
 use Amp\DeferredCancellation;
 use Amp\DeferredFuture;
 use Amp\Pipeline\ConcurrentIterator;
 use Amp\Pipeline\Queue;
 use Amp\Sync\Channel;
+use CT\AmpPool\Exceptions\FatalWorkerException;
+use CT\AmpPool\Exceptions\RemoteException;
 use CT\AmpPool\Internal\Messages\MessagePingPong;
 use CT\AmpPool\Internal\Messages\MessageShutdown;
 use CT\AmpPool\Internal\Messages\WorkerStarted;
@@ -22,6 +25,7 @@ use CT\AmpPool\WorkersStorage\WorkersStorageInterface;
 use CT\AmpPool\WorkersStorage\WorkerStateInterface;
 use CT\AmpPool\WorkerTypeEnum;
 use Psr\Log\LoggerInterface;
+use Revolt\EventLoop;
 
 /**
  * Abstraction of Worker Representation within the worker process.
@@ -196,7 +200,16 @@ class Worker implements WorkerInterface
             }
         } catch (\Throwable $exception) {
 
-            $this->workerState->incrementShutdownErrors();
+            // Extract the original exception
+            if($exception instanceof CancelledException && $exception->getPrevious() !== null) {
+                $exception          = $exception->getPrevious();
+            }
+            
+            try {
+                $this->workerState->increaseAndUpdateShutdownErrors();
+            } catch (\Throwable $exception) {
+                $this->logger->error('Failed to update worker state: '.$exception->getMessage());
+            }
 
             // IPC Channel manually closed
             if(false === $this->workerFuture->isComplete()) {
@@ -212,6 +225,13 @@ class Worker implements WorkerInterface
         $this->workerFuture->getFuture()->await($cancellation);
     }
 
+    public function initiateTermination(\Throwable $throwable = null): void
+    {
+        if(false === $this->mainCancellation->isCancelled()) {
+            $this->mainCancellation->cancel($throwable);
+        }
+    }
+    
     public function stop(): void
     {
         if($this->isStopped) {
@@ -224,7 +244,11 @@ class Worker implements WorkerInterface
             $this->mainCancellation->cancel();
         }
 
-        $this->workerState->markAsShutdown()->update();
+        try {
+            $this->workerState->markAsShutdown()->updateStateSegment();
+        } catch (\Throwable) {
+            // Ignore
+        }
 
         try {
             foreach ($this->periodicTasks as $task) {
@@ -275,8 +299,29 @@ class Worker implements WorkerInterface
 
     public function addPeriodicTask(float $delay, \Closure $task): int
     {
-        $task                       = new PeriodicTask($delay, $task);
+        $self                       = \WeakReference::create($this);
         $taskId                     = \spl_object_id($task);
+        
+        $task                       = new PeriodicTask($delay, static function (string $id) use($task, $taskId, $self) {
+            
+            try {
+                $task();
+            } catch (\Throwable $exception) {
+                $self               = $self->get();
+                
+                if(false === $exception instanceof RemoteException) {
+                    $exception      = new FatalWorkerException(
+                        'Periodic task encountered an error: '.$exception->getMessage(),
+                        0,
+                        $exception
+                    );
+                }
+                
+                $self?->cancelPeriodicTask($taskId);
+                $self?->getLogger()->error($exception->getMessage(), ['exception' => $exception]);
+                $self?->initiateTermination($exception);
+            }
+        });
 
         $this->periodicTasks[$taskId] = $task;
 
