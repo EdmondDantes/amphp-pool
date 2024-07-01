@@ -133,14 +133,16 @@ final class WorkersStorage implements WorkersStorageInterface
             $this->open();
         }
 
-        $workerOffset               = $this->structureSize * ($workerId - 1) + $offset;
+        $workerOffset               = $this->calculateWorkerOffset($workerId);
 
         \set_error_handler(static function ($number, $error, $file = null, $line = null) {
             throw new \ErrorException($error, 0, $number, $file, $line);
         });
 
         try {
-            $data                   = \shmop_read($this->handler, $offset + $workerOffset, $this->structureSize);
+            $data                   = \shmop_read(
+                $this->handler, $workerOffset + $offset, $this->calculateSize($workerOffset, $offset, $this->structureSize)
+            );
         } finally {
             \restore_error_handler();
         }
@@ -164,14 +166,17 @@ final class WorkersStorage implements WorkersStorageInterface
             $this->open();
         }
 
-        $workerOffset               = $this->structureSize * ($workerId - 1) + $offset;
+        $workerOffset               = $this->calculateWorkerOffset($workerId);
 
         \set_error_handler(static function ($number, $error, $file = null, $line = null) {
             throw new \ErrorException($error, 0, $number, $file, $line);
         });
 
         try {
-            $count                  = \shmop_write($this->handler, $data, $offset + $workerOffset);
+            // validate size of data
+            $this->calculateSize($workerOffset, $offset, \strlen($data));
+            
+            $count                  = \shmop_write($this->handler, $data, $workerOffset + $offset);
         } finally {
             \restore_error_handler();
         }
@@ -202,5 +207,37 @@ final class WorkersStorage implements WorkersStorageInterface
         if($this->workersCount !== 0 && $workerId > $this->workersCount) {
             throw new \InvalidArgumentException('Worker id is out of range');
         }
+    }
+    
+    private function calculateWorkerOffset(int $workerId): int
+    {
+        $this->validateWorkerId($workerId);
+        
+        $offset                     = $this->structureSize * ($workerId - 1);
+        
+        // out of range
+        if($offset >= \shmop_size($this->handler)) {
+            throw new \InvalidArgumentException('Worker id is out of range');
+        }
+        
+        return $this->structureSize * ($workerId - 1);
+    }
+    
+    private function calculateSize(int $workerOffset, int $offset, int $size): int
+    {
+        $totalSize              = \shmop_size($this->handler);
+        
+        // $workerOffset + $offset + $this->structureSize
+        // the sum of offset and size must be less than or equal to the actual size of the shared memory segment.
+        
+        if($workerOffset + $offset + $size > $totalSize) {
+            $size               = $totalSize - $workerOffset - $offset;
+        }
+        
+        if($size <= 0) {
+            throw new \RuntimeException('Invalid size of data to read');
+        }
+        
+        return $size;
     }
 }
