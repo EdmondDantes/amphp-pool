@@ -14,7 +14,7 @@ final class PeriodicTask
 
     public function __construct(float $delay, \Closure $task)
     {
-        $this->id = EventLoop::delay($delay, $task);
+        $this->id = EventLoop::repeat($delay, $task);
     }
 
     public function cancel(): void
