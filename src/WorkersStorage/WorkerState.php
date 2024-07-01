@@ -95,8 +95,9 @@ class WorkerState implements WorkerStateInterface
 
     public function markAsShutdown(): static
     {
-        $this->isReady = false;
-        $this->finishedAt = \time();
+        $this->isReady              = false;
+        $this->finishedAt           = \time();
+        $this->pid                  = 0;
         return $this;
     }
 

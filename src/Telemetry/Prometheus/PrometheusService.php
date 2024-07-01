@@ -37,7 +37,7 @@ class PrometheusService implements WorkerEntryPointInterface
             return;
         }
 
-        $prometheusProvider         = new PrometheusProvider($worker->getWorkersStorage());
+        $prometheusProvider         = new PrometheusProvider($worker->getWorkersStorage(), $worker->getGroupsScheme());
         $httpServer                 = SocketHttpServer::createForDirectAccess(new Logger('prometheus'));
 
         $workerGroup                = $worker->getWorkerGroup();
