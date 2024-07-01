@@ -6,8 +6,7 @@ namespace CT\AmpPool\Telemetry\Prometheus;
 use CT\AmpPool\WorkerGroup;
 use CT\AmpPool\WorkerTypeEnum;
 
-final class PrometheusGroup         extends WorkerGroup
-                                    implements PrometheusGroupInterface
+final class PrometheusGroup extends WorkerGroup implements PrometheusGroupInterface
 {
     public function __construct(private readonly string $address = '0.0.0.0:9091')
     {
@@ -19,7 +18,7 @@ final class PrometheusGroup         extends WorkerGroup
             'Prometheus'
         );
     }
-    
+
     public function getPrometheusAddress(): string
     {
         return $this->address;

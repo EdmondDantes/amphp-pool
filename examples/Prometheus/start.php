@@ -3,11 +3,11 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 
+use CT\AmpPool\Telemetry\Prometheus\PrometheusGroup;
 use CT\AmpPool\WorkerGroup;
 use CT\AmpPool\WorkerPool;
 use CT\AmpPool\WorkerTypeEnum;
-use CT\AmpPool\Telemetry\Prometheus\PrometheusGroup;
-use Examples\HttpServer\HttpReactor;
+use Examples\Prometheus\HttpReactorWithTelemetry;
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
 
@@ -26,7 +26,7 @@ $workerPool->describeGroup(new PrometheusGroup);
 // The HttpReactor class is the entry point for the workers in this group.
 // Please see the HttpReactor class for more details.
 $workerPool->describeGroup(new WorkerGroup(
-    entryPointClass: HttpReactor::class,
+    entryPointClass: HttpReactorWithTelemetry::class,
     workerType: WorkerTypeEnum::REACTOR,
     minWorkers: 3
 ));

@@ -48,7 +48,7 @@ class Worker implements WorkerInterface
     private WorkerEventEmitterInterface $eventEmitter;
 
     private bool $isStopped         = false;
-    
+
     private array $periodicTasks    = [];
 
     public function __construct(
@@ -233,7 +233,7 @@ class Worker implements WorkerInterface
         } finally {
             $this->periodicTasks    = [];
         }
-        
+
         try {
             WorkerGroup::stopStrategies($this->groupsScheme, $this->logger);
         } finally {
@@ -272,17 +272,17 @@ class Worker implements WorkerInterface
             }
         }
     }
-    
+
     public function addPeriodicTask(float $delay, \Closure $task): int
     {
         $task                       = new PeriodicTask($delay, $task);
         $taskId                     = \spl_object_id($task);
-        
+
         $this->periodicTasks[$taskId] = $task;
-        
+
         return $taskId;
     }
-    
+
     public function cancelPeriodicTask(int $taskId): void
     {
         if(isset($this->periodicTasks[$taskId])) {

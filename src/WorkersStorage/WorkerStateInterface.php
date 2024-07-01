@@ -99,53 +99,53 @@ interface WorkerStateInterface
     public function getConnectionsAccepted(): int;
 
     public function setConnectionsAccepted(int $connectionsAccepted): static;
-    
+
     public function incrementConnectionsAccepted(): static;
 
     public function getConnectionsProcessed(): int;
 
     public function setConnectionsProcessed(int $connectionsProcessed): static;
-    
+
     public function incrementConnectionsProcessed(): static;
-    
+
     public function getConnectionsErrors(): int;
 
     public function setConnectionsErrors(int $connectionsErrors): static;
-    
+
     public function incrementConnectionsErrors(): static;
-    
+
     public function getConnectionsRejected(): int;
 
     public function setConnectionsRejected(int $connectionsRejected): static;
-    
+
     public function incrementConnectionsRejected(): static;
-    
+
     public function getConnectionsProcessing(): int;
 
     public function setConnectionsProcessing(int $connectionsProcessing): static;
-    
+
     public function incrementConnectionsProcessing(): static;
-    
+
     public function decrementConnectionsProcessing(): static;
 
     public function getJobAccepted(): int;
 
     public function setJobAccepted(int $jobAccepted): static;
-    
+
     public function incrementJobAccepted(): static;
-    
+
     public function getJobProcessed(): int;
 
     public function setJobProcessed(int $jobProcessed): static;
-    
+
     public function incrementJobProcessed(): static;
 
     public function getJobProcessing(): int;
 
     public function setJobProcessing(int $jobProcessing): static;
-    
+
     public function incrementJobProcessing(): static;
-    
+
     public function decrementJobProcessing(): static;
 
     public function getJobErrors(): int;
@@ -157,7 +157,7 @@ interface WorkerStateInterface
     public function getJobRejected(): int;
 
     public function setJobRejected(int $jobRejected): static;
-    
+
     public function incrementJobRejected(): static;
 
     public function jobEnqueued(int $weight, bool $canAcceptMoreJobs): void;

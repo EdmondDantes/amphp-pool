@@ -16,54 +16,56 @@ use Monolog\Logger;
 class PrometheusService implements WorkerEntryPointInterface
 {
     public const string MIME_TYPE = 'text/plain; version=0.0.4';
-    
+
     protected \WeakReference $worker;
-    
+
     protected function getWorker(): WorkerEntryPointInterface
     {
         return $this->worker->get();
     }
-    
+
     public function initialize(WorkerInterface $worker): void
     {
         $this->worker = \WeakReference::create($worker);
     }
-    
+
     public function run(): void
     {
         $worker                     = $this->worker->get();
-        
+
         if ($worker === null) {
             return;
         }
 
         $prometheusProvider         = new PrometheusProvider($worker->getWorkersStorage());
         $httpServer                 = SocketHttpServer::createForDirectAccess(new Logger('prometheus'));
-        
+
         $workerGroup                = $worker->getWorkerGroup();
-        
+
         if($workerGroup instanceof PrometheusGroup === false) {
             throw new FatalWorkerException('The worker group must be an instance of PrometheusGroup');
         }
-        
+
         $address                    = $workerGroup->getPrometheusAddress();
-        
+
         // 2. Expose the server to the network
         $httpServer->expose($address);
-        
+
         $worker->getLogger()->info('Prometheus service is running on '.$address);
-        
+
         // 3. Handle incoming connections and start the server
         $httpServer->start(
             new ClosureRequestHandler(static function () use ($prometheusProvider): Response {
-                
+
                 return new Response(
-                    HttpStatus::OK, ['content-type' => self::MIME_TYPE], $prometheusProvider->render()
+                    HttpStatus::OK,
+                    ['content-type' => self::MIME_TYPE],
+                    $prometheusProvider->render()
                 );
             }),
             new DefaultErrorHandler(),
         );
-        
+
         $worker->awaitTermination();
         $httpServer->stop();
     }

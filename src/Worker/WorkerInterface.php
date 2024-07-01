@@ -41,10 +41,10 @@ interface WorkerInterface extends WorkerEventEmitterAwareInterface, WorkersStora
     public function stop(): void;
 
     public function isStopped(): bool;
-    
+
     public function onClose(\Closure $onClose): void;
-    
+
     public function addPeriodicTask(float $delay, \Closure $task): int;
-    
+
     public function cancelPeriodicTask(int $taskId): void;
 }

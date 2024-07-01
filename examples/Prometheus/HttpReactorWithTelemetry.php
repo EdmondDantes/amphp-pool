@@ -6,9 +6,11 @@ namespace Examples\Prometheus;
 use Amp\Http\HttpStatus;
 use Amp\Http\Server\DefaultErrorHandler;
 use Amp\Http\Server\Driver\SocketClientFactory;
-use Amp\Http\Server\RequestHandler\ClosureRequestHandler;
 use Amp\Http\Server\Response;
 use Amp\Http\Server\SocketHttpServer;
+use CT\AmpPool\Telemetry\Collectors\WorkerTelemetryCollector;
+use CT\AmpPool\Telemetry\HttpServer\ErrorHandlerCollector;
+use CT\AmpPool\Telemetry\HttpServer\RequestHandler;
 use CT\AmpPool\Worker\WorkerEntryPointInterface;
 use CT\AmpPool\Worker\WorkerInterface;
 
@@ -18,7 +20,7 @@ use CT\AmpPool\Worker\WorkerInterface;
  *
  * @package Examples\HttpServer
  */
-final class HttpReactor implements WorkerEntryPointInterface
+final class HttpReactorWithTelemetry implements WorkerEntryPointInterface
 {
     private ?\WeakReference $worker = null;
 
@@ -45,6 +47,39 @@ final class HttpReactor implements WorkerEntryPointInterface
             return;
         }
 
+        // 2. Create telemetry collectors
+        $workerState                = $worker->getWorkerState();
+        $workerTelemetry            = new WorkerTelemetryCollector($workerState);
+        $worker->addPeriodicTask(5, $workerTelemetry->flushTelemetry(...));
+
+        // And use it for the request handler
+        $requestHandler             = new RequestHandler($workerTelemetry, static function () use ($worker, $workerState): Response {
+
+            $body                   = <<<EOF
+# Basic information about the worker
+
+Worker ID: {$worker->getWorkerId()}
+Worker Group ID: {$worker->getWorkerGroupId()}
+Worker Type: {$worker->getWorkerType()->value}
+Worker Php Memory: {$workerState->getPhpMemoryUsage()}
+Worker Peak Php Memory: {$workerState->getPeakPhpMemoryUsage()}
+
+# Worker connections
+
+Connections Accepted: {$workerState->getConnectionsAccepted()}
+Connections Processing: {$workerState->getConnectionsProcessing()}
+Connections Processed: {$workerState->getConnectionsProcessed()}
+Connections Errors: {$workerState->getConnectionsErrors()}
+
+EOF;
+
+            return new Response(
+                HttpStatus::OK,
+                ['content-type' => 'text/plain; charset=utf-8'],
+                $body
+            );
+        });
+
         $socketFactory              = $worker->getWorkerGroup()->getSocketStrategy()->getServerSocketFactory();
         $clientFactory              = new SocketClientFactory($worker->getLogger());
         $httpServer                 = new SocketHttpServer($worker->getLogger(), $socketFactory, $clientFactory);
@@ -53,20 +88,7 @@ final class HttpReactor implements WorkerEntryPointInterface
         $httpServer->expose('127.0.0.1:9095');
 
         // 3. Handle incoming connections and start the server
-        $httpServer->start(
-            new ClosureRequestHandler(static function () use ($worker): Response {
-
-                return new Response(
-                    HttpStatus::OK,
-                    [
-                    'content-type' => 'text/plain; charset=utf-8',
-                ],
-                    'Hello, World! From worker id: '.$worker->getWorkerId()
-                   .' and group id: '.$worker->getWorkerGroupId()
-                );
-            }),
-            new DefaultErrorHandler(),
-        );
+        $httpServer->start($requestHandler, new ErrorHandlerCollector(new DefaultErrorHandler(), $workerTelemetry));
 
         // 4. Await termination of the worker
         $worker->awaitTermination();

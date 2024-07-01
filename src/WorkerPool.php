@@ -99,7 +99,7 @@ final class WorkerPool implements WorkerPoolInterface
     private array $groupsScheme             = [];
 
     private WorkerEventEmitterInterface $eventEmitter;
-    
+
     private mixed $pidFileHandler           = null;
 
     public function __construct(
@@ -246,7 +246,7 @@ final class WorkerPool implements WorkerPoolInterface
         }
 
         $this->catchPidFile();
-        
+
         $this->validateGroupsScheme();
         $this->applyGroupScheme();
 
@@ -938,89 +938,89 @@ final class WorkerPool implements WorkerPoolInterface
             }
         }
     }
-    
+
     public function getApplicationPid(): int
     {
         if($this->pidFileHandler !== null) {
-            return (int)getmypid();
+            return (int) \getmypid();
         }
-        
+
         $pidFile                    = $this->getPidFile();
         $pidFileHandle              = null;
-        
+
         try {
-            $pidFileHandle          = Safe::execute(fn() => fopen($pidFile, 'c'));
-            $pidFileLocked          = Safe::execute(fn() => flock($pidFileHandle, LOCK_EX | LOCK_NB));
-            
+            $pidFileHandle          = Safe::execute(fn () => \fopen($pidFile, 'c'));
+            $pidFileLocked          = Safe::execute(fn () => \flock($pidFileHandle, LOCK_EX | LOCK_NB));
+
             if(false === $pidFileLocked) {
-                return (int)file_get_contents($pidFile);
+                return (int) \file_get_contents($pidFile);
             }
-            
+
         } catch (\Throwable) {
         } finally {
             if($pidFileHandle) {
-                fclose($pidFileHandle);
+                \fclose($pidFileHandle);
             }
         }
-        
+
         return 0;
     }
-    
+
     public function getPidFile(): string
     {
         if($this->pidFile === false) {
             return '';
         }
-        
-        if(is_string($this->pidFile) && $this->pidFile !== '') {
+
+        if(\is_string($this->pidFile) && $this->pidFile !== '') {
             return $this->pidFile;
         }
-        
+
         return \getcwd().'/server.pid';
     }
-    
+
     private function catchPidFile(): void
     {
         $pidFile                    = $this->getPidFile();
-        
+
         if($pidFile === '') {
             return;
         }
-        
+
         $this->pidFileHandler       = null;
-        
+
         try {
             // Try to lock the pid file without waiting
-            $this->pidFileHandler = Safe::execute(fn() => fopen($pidFile, 'c'));
-            $pidFileLocked        = Safe::execute(fn() => flock($this->pidFileHandler, LOCK_EX | LOCK_NB));
-            
+            $this->pidFileHandler = Safe::execute(fn () => \fopen($pidFile, 'c'));
+            $pidFileLocked        = Safe::execute(fn () => \flock($this->pidFileHandler, LOCK_EX | LOCK_NB));
+
             if(!$pidFileLocked) {
                 echo "Failed to lock the pid file: another instance is running... [EXIT]\n";
                 exit(1);
             }
-            
-            ftruncate($this->pidFileHandler, 0);
-            fwrite($this->pidFileHandler, (string)getmypid());
-            
+
+            \ftruncate($this->pidFileHandler, 0);
+            \fwrite($this->pidFileHandler, (string) \getmypid());
+
         } catch (\Throwable $throwable) {
             echo "Failed to lock the pid file: ".$throwable->getMessage()."\n";
             exit(1);
         } finally {
             if($this->pidFileHandler && true !== $pidFileLocked) {
-                fclose($this->pidFileHandler);
+                \fclose($this->pidFileHandler);
                 $this->pidFileHandler = null;
             }
         }
     }
-    
+
     private function freePidFile(): void
     {
-        if(is_resource($this->pidFileHandler)) {
-            fclose($this->pidFileHandler);
-            unlink($this->getPidFile());
+        if(\is_resource($this->pidFileHandler)) {
+            \fclose($this->pidFileHandler);
+            \unlink($this->getPidFile());
         }
     }
-    
+
     public function __destruct()
     {
         $this->freePidFile();
