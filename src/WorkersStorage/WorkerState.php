@@ -244,7 +244,13 @@ class WorkerState implements WorkerStateInterface
         $this->connectionsAccepted = $connectionsAccepted;
         return $this;
     }
-
+    
+    public function incrementConnectionsAccepted(): static
+    {
+        $this->connectionsAccepted++;
+        return $this;
+    }
+    
     public function getConnectionsProcessed(): int
     {
         return $this->connectionsProcessed;
@@ -253,6 +259,12 @@ class WorkerState implements WorkerStateInterface
     public function setConnectionsProcessed(int $connectionsProcessed): static
     {
         $this->connectionsProcessed = $connectionsProcessed;
+        return $this;
+    }
+    
+    public function incrementConnectionsProcessed(): static
+    {
+        $this->connectionsProcessed++;
         return $this;
     }
 
@@ -264,6 +276,12 @@ class WorkerState implements WorkerStateInterface
     public function setConnectionsErrors(int $connectionsErrors): static
     {
         $this->connectionsErrors = $connectionsErrors;
+        return $this;
+    }
+    
+    public function incrementConnectionsErrors(): static
+    {
+        $this->connectionsErrors++;
         return $this;
     }
 
@@ -278,6 +296,12 @@ class WorkerState implements WorkerStateInterface
         return $this;
     }
 
+    public function incrementConnectionsRejected(): static
+    {
+        $this->connectionsRejected++;
+        return $this;
+    }
+    
     public function getConnectionsProcessing(): int
     {
         return $this->connectionsProcessing;
@@ -286,6 +310,18 @@ class WorkerState implements WorkerStateInterface
     public function setConnectionsProcessing(int $connectionsProcessing): static
     {
         $this->connectionsProcessing = $connectionsProcessing;
+        return $this;
+    }
+    
+    public function incrementConnectionsProcessing(): static
+    {
+        $this->connectionsProcessing++;
+        return $this;
+    }
+    
+    public function decrementConnectionsProcessing(): static
+    {
+        $this->connectionsProcessing--;
         return $this;
     }
 
@@ -299,6 +335,12 @@ class WorkerState implements WorkerStateInterface
         $this->jobAccepted = $jobAccepted;
         return $this;
     }
+    
+    public function incrementJobAccepted(): static
+    {
+        $this->jobAccepted++;
+        return $this;
+    }
 
     public function getJobProcessed(): int
     {
@@ -308,6 +350,12 @@ class WorkerState implements WorkerStateInterface
     public function setJobProcessed(int $jobProcessed): static
     {
         $this->jobProcessed = $jobProcessed;
+        return $this;
+    }
+    
+    public function incrementJobProcessed(): static
+    {
+        $this->jobProcessed++;
         return $this;
     }
 
@@ -321,6 +369,18 @@ class WorkerState implements WorkerStateInterface
         $this->jobProcessing = $jobProcessing;
         return $this;
     }
+    
+    public function incrementJobProcessing(): static
+    {
+        $this->jobProcessing++;
+        return $this;
+    }
+    
+    public function decrementJobProcessing(): static
+    {
+        $this->jobProcessing--;
+        return $this;
+    }
 
     public function getJobErrors(): int
     {
@@ -332,7 +392,7 @@ class WorkerState implements WorkerStateInterface
         $this->jobErrors = $jobErrors;
         return $this;
     }
-
+    
     public function incrementJobErrors(): static
     {
         $this->jobErrors++;
@@ -350,6 +410,12 @@ class WorkerState implements WorkerStateInterface
         return $this;
     }
 
+    public function incrementJobRejected(): static
+    {
+        $this->jobRejected++;
+        return $this;
+    }
+    
     public function jobEnqueued(int $weight, bool $canAcceptMoreJobs): void
     {
         $this->weight               += $weight;
