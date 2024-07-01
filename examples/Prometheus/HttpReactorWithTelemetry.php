@@ -62,7 +62,7 @@ Worker ID: {$worker->getWorkerId()}
 Worker Group ID: {$worker->getWorkerGroupId()}
 Worker Type: {$worker->getWorkerType()->value}
 Worker Php Memory: {$workerState->getPhpMemoryUsage()}
-Worker Peak Php Memory: {$workerState->getPeakPhpMemoryUsage()}
+Worker Peak Php Memory: {$workerState->getPhpMemoryPeakUsage()}
 
 # Worker connections
 

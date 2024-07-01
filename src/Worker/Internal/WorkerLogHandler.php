@@ -6,6 +6,7 @@ namespace CT\AmpPool\Worker\Internal;
 use Amp\ForbidCloning;
 use Amp\ForbidSerialization;
 use Amp\Sync\Channel;
+use CT\AmpPool\Exceptions\RemoteException;
 use CT\AmpPool\Internal\Messages\MessageLog;
 use Monolog\Handler\AbstractProcessingHandler;
 use Monolog\Level;
@@ -40,6 +41,53 @@ final class WorkerLogHandler extends AbstractProcessingHandler
      */
     protected function write(array|LogRecord $record): void
     {
+        // Remove all unserializable data.
+        $record = $this->removeUnserializableData($record);
+
         $this->channel->send(new MessageLog($record['message'] ?? '', $record['level_name'] ?? '', $record['context'] ?? []));
+    }
+
+    private function removeUnserializableData(array|LogRecord $record, int $recursion = 0): array|LogRecord
+    {
+        if($recursion > 10) {
+            return [];
+        }
+
+        if($record instanceof LogRecord) {
+            $record                 = $record->toArray();
+        }
+
+        if(\is_array($record)) {
+            foreach ($record as $key => $value) {
+                if(\is_array($value)) {
+                    $record[$key] = $this->removeUnserializableData($value, $recursion + 1);
+                }
+
+                if($value instanceof RemoteException) {
+                    continue;
+                }
+
+                if($value instanceof \Throwable) {
+                    $record[$key] = $record[$key]->getMessage().' in '.$record[$key]->getFile().':'.$record[$key]->getLine()
+                                    .PHP_EOL.$record[$key]->getTraceAsString();
+                }
+
+                if(\is_object($value)) {
+                    $record[$key] = 'object::'.\get_class($value);
+                }
+
+                if(\is_resource($value)) {
+                    $record[$key] = 'resource::' . \get_resource_type($value);
+                }
+
+                if(\is_callable($value)) {
+                    $record[$key] = 'callable(...)';
+                }
+            }
+
+            return $record;
+        }
+
+        return $record;
     }
 }

@@ -10,13 +10,12 @@ class WorkerTelemetryCollector implements ConnectionCollectorInterface, JobColle
 {
     private int $firstErrorAt       = 0;
     private int $errorsCount        = 0;
-    
+
     public function __construct(
         private readonly WorkerStateInterface $workerState,
         private readonly ?LoggerInterface $logger = null,
         private readonly int $errorsTimeout = 60 * 60
-    )
-    {
+    ) {
     }
 
     public function flushTelemetry(): void
@@ -25,17 +24,17 @@ class WorkerTelemetryCollector implements ConnectionCollectorInterface, JobColle
             $this->workerState->updateConnectionsSegment()->updateJobSegment();
         } catch (\Throwable $exception) {
             $this->errorsCount++;
-            
+
             if($this->firstErrorAt === 0) {
-                $this->firstErrorAt = time();
+                $this->firstErrorAt = \time();
             }
-            
-            if($this->errorsCount <= 1 || time() - $this->firstErrorAt > $this->errorsTimeout) {
+
+            if($this->errorsCount <= 1 || \time() - $this->firstErrorAt > $this->errorsTimeout) {
                 $this->logger?->error(
                     'Telemetry error: '.$exception->getMessage(),
                     ['file' => $exception->getFile(), 'line' => $exception->getLine(), 'trace' => $exception->getTraceAsString()]
                 );
-                
+
                 $this->firstErrorAt = 0;
                 $this->errorsCount  = 0;
             }

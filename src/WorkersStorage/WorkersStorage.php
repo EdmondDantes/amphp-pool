@@ -141,7 +141,9 @@ final class WorkersStorage implements WorkersStorageInterface
 
         try {
             $data                   = \shmop_read(
-                $this->handler, $workerOffset + $offset, $this->calculateSize($workerOffset, $offset, $this->structureSize)
+                $this->handler,
+                $workerOffset + $offset,
+                $this->calculateSize($workerOffset, $offset, $this->structureSize)
             );
         } finally {
             \restore_error_handler();
@@ -175,7 +177,7 @@ final class WorkersStorage implements WorkersStorageInterface
         try {
             // validate size of data
             $this->calculateSize($workerOffset, $offset, \strlen($data));
-            
+
             $count                  = \shmop_write($this->handler, $data, $workerOffset + $offset);
         } finally {
             \restore_error_handler();
@@ -208,36 +210,36 @@ final class WorkersStorage implements WorkersStorageInterface
             throw new \InvalidArgumentException('Worker id is out of range');
         }
     }
-    
+
     private function calculateWorkerOffset(int $workerId): int
     {
         $this->validateWorkerId($workerId);
-        
+
         $offset                     = $this->structureSize * ($workerId - 1);
-        
+
         // out of range
         if($offset >= \shmop_size($this->handler)) {
             throw new \InvalidArgumentException('Worker id is out of range');
         }
-        
+
         return $this->structureSize * ($workerId - 1);
     }
-    
+
     private function calculateSize(int $workerOffset, int $offset, int $size): int
     {
         $totalSize              = \shmop_size($this->handler);
-        
+
         // $workerOffset + $offset + $this->structureSize
         // the sum of offset and size must be less than or equal to the actual size of the shared memory segment.
-        
+
         if($workerOffset + $offset + $size > $totalSize) {
             $size               = $totalSize - $workerOffset - $offset;
         }
-        
+
         if($size <= 0) {
             throw new \RuntimeException('Invalid size of data to read');
         }
-        
+
         return $size;
     }
 }

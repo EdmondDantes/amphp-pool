@@ -25,7 +25,6 @@ use CT\AmpPool\WorkersStorage\WorkersStorageInterface;
 use CT\AmpPool\WorkersStorage\WorkerStateInterface;
 use CT\AmpPool\WorkerTypeEnum;
 use Psr\Log\LoggerInterface;
-use Revolt\EventLoop;
 
 /**
  * Abstraction of Worker Representation within the worker process.
@@ -204,7 +203,7 @@ class Worker implements WorkerInterface
             if($exception instanceof CancelledException && $exception->getPrevious() !== null) {
                 $exception          = $exception->getPrevious();
             }
-            
+
             try {
                 $this->workerState->increaseAndUpdateShutdownErrors();
             } catch (\Throwable $exception) {
@@ -225,13 +224,13 @@ class Worker implements WorkerInterface
         $this->workerFuture->getFuture()->await($cancellation);
     }
 
-    public function initiateTermination(\Throwable $throwable = null): void
+    public function initiateTermination(?\Throwable $throwable = null): void
     {
         if(false === $this->mainCancellation->isCancelled()) {
             $this->mainCancellation->cancel($throwable);
         }
     }
-    
+
     public function stop(): void
     {
         if($this->isStopped) {
@@ -301,14 +300,14 @@ class Worker implements WorkerInterface
     {
         $self                       = \WeakReference::create($this);
         $taskId                     = \spl_object_id($task);
-        
-        $task                       = new PeriodicTask($delay, static function (string $id) use($task, $taskId, $self) {
-            
+
+        $task                       = new PeriodicTask($delay, static function (string $id) use ($task, $taskId, $self) {
+
             try {
                 $task();
             } catch (\Throwable $exception) {
                 $self               = $self->get();
-                
+
                 if(false === $exception instanceof RemoteException) {
                     $exception      = new FatalWorkerException(
                         'Periodic task encountered an error: '.$exception->getMessage(),
@@ -316,7 +315,7 @@ class Worker implements WorkerInterface
                         $exception
                     );
                 }
-                
+
                 $self?->cancelPeriodicTask($taskId);
                 $self?->getLogger()->error($exception->getMessage(), ['exception' => $exception]);
                 $self?->initiateTermination($exception);
