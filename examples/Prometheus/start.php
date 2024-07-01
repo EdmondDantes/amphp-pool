@@ -28,7 +28,8 @@ $workerPool->describeGroup(new PrometheusGroup);
 $workerPool->describeGroup(new WorkerGroup(
     entryPointClass: HttpReactorWithTelemetry::class,
     workerType: WorkerTypeEnum::REACTOR,
-    minWorkers: 1
+    minWorkers: 2,
+    maxWorkers: 5
 ));
 
 // 4. Run the worker pool
