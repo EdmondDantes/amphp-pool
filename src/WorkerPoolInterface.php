@@ -75,4 +75,8 @@ interface WorkerPoolInterface extends WorkerEventEmitterAwareInterface, WorkersS
      *
      */
     public function scaleWorkers(int $groupId, int $delta): int;
+    
+    public function getApplicationPid(): int;
+    
+    public function getPidFile(): string;
 }

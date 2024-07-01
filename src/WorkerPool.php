@@ -25,6 +25,7 @@ use CT\AmpPool\Exceptions\StopException;
 use CT\AmpPool\Exceptions\TerminateWorkerException;
 use CT\AmpPool\Exceptions\WorkerPoolException;
 use CT\AmpPool\Exceptions\WorkerShouldBeStopped;
+use CT\AmpPool\Internal\Safe;
 use CT\AmpPool\Internal\WorkerProcessContext;
 use CT\AmpPool\Strategies\JobClient\JobClientDefault;
 use CT\AmpPool\Strategies\JobExecutor\JobExecutorScheduler;
@@ -98,12 +99,15 @@ final class WorkerPool implements WorkerPoolInterface
     private array $groupsScheme             = [];
 
     private WorkerEventEmitterInterface $eventEmitter;
+    
+    private mixed $pidFileHandler           = null;
 
     public function __construct(
-        protected readonly IpcHub $hub      = new LocalIpcHub(),
-        protected readonly string $workersStorageClass = WorkersStorage::class,
-        protected ?ContextFactory $contextFactory = null,
-        protected ?PsrLogger $logger        = null
+        private readonly IpcHub $hub                    = new LocalIpcHub(),
+        private readonly string $workersStorageClass    = WorkersStorage::class,
+        private ?ContextFactory $contextFactory         = null,
+        private ?PsrLogger $logger                      = null,
+        private readonly string|bool $pidFile           = false
     ) {
         $this->contextFactory       ??= new DefaultContextFactory(ipcHub: $this->hub);
         $this->eventEmitter         = new WorkerEventEmitter;
@@ -241,6 +245,8 @@ final class WorkerPool implements WorkerPoolInterface
             throw new \Exception('The server watcher is already running or has already run');
         }
 
+        $this->catchPidFile();
+        
         $this->validateGroupsScheme();
         $this->applyGroupScheme();
 
@@ -931,5 +937,92 @@ final class WorkerPool implements WorkerPoolInterface
                 $strategy->setWorkerPool($this)->setWorkerGroup($group);
             }
         }
+    }
+    
+    public function getApplicationPid(): int
+    {
+        if($this->pidFileHandler !== null) {
+            return (int)getmypid();
+        }
+        
+        $pidFile                    = $this->getPidFile();
+        $pidFileHandle              = null;
+        
+        try {
+            $pidFileHandle          = Safe::execute(fn() => fopen($pidFile, 'c'));
+            $pidFileLocked          = Safe::execute(fn() => flock($pidFileHandle, LOCK_EX | LOCK_NB));
+            
+            if(false === $pidFileLocked) {
+                return (int)file_get_contents($pidFile);
+            }
+            
+        } catch (\Throwable) {
+        } finally {
+            if($pidFileHandle) {
+                fclose($pidFileHandle);
+            }
+        }
+        
+        return 0;
+    }
+    
+    public function getPidFile(): string
+    {
+        if($this->pidFile === false) {
+            return '';
+        }
+        
+        if(is_string($this->pidFile) && $this->pidFile !== '') {
+            return $this->pidFile;
+        }
+        
+        return \getcwd().'/server.pid';
+    }
+    
+    private function catchPidFile(): void
+    {
+        $pidFile                    = $this->getPidFile();
+        
+        if($pidFile === '') {
+            return;
+        }
+        
+        $this->pidFileHandler       = null;
+        
+        try {
+            // Try to lock the pid file without waiting
+            $this->pidFileHandler = Safe::execute(fn() => fopen($pidFile, 'c'));
+            $pidFileLocked        = Safe::execute(fn() => flock($this->pidFileHandler, LOCK_EX | LOCK_NB));
+            
+            if(!$pidFileLocked) {
+                echo "Failed to lock the pid file: another instance is running... [EXIT]\n";
+                exit(1);
+            }
+            
+            ftruncate($this->pidFileHandler, 0);
+            fwrite($this->pidFileHandler, (string)getmypid());
+            
+        } catch (\Throwable $throwable) {
+            echo "Failed to lock the pid file: ".$throwable->getMessage()."\n";
+            exit(1);
+        } finally {
+            if($this->pidFileHandler && true !== $pidFileLocked) {
+                fclose($this->pidFileHandler);
+                $this->pidFileHandler = null;
+            }
+        }
+    }
+    
+    private function freePidFile(): void
+    {
+        if(is_resource($this->pidFileHandler)) {
+            fclose($this->pidFileHandler);
+            unlink($this->getPidFile());
+        }
+    }
+    
+    public function __destruct()
+    {
+        $this->freePidFile();
     }
 }
