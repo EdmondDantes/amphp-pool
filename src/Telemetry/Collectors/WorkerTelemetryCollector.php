@@ -4,10 +4,18 @@ declare(strict_types=1);
 namespace CT\AmpPool\Telemetry\Collectors;
 
 use CT\AmpPool\WorkersStorage\WorkerStateInterface;
+use Psr\Log\LoggerInterface;
 
 class WorkerTelemetryCollector implements ConnectionCollectorInterface, JobCollectorInterface
 {
-    public function __construct(private readonly WorkerStateInterface $workerState)
+    private int $firstErrorAt       = 0;
+    private int $errorsCount        = 0;
+    
+    public function __construct(
+        private readonly WorkerStateInterface $workerState,
+        private readonly ?LoggerInterface $logger = null,
+        private readonly int $errorsTimeout = 60 * 60
+    )
     {
     }
 
@@ -15,8 +23,22 @@ class WorkerTelemetryCollector implements ConnectionCollectorInterface, JobColle
     {
         try {
             $this->workerState->updateConnectionsSegment()->updateJobSegment();
-        } catch (\Throwable) {
-            // ignore
+        } catch (\Throwable $exception) {
+            $this->errorsCount++;
+            
+            if($this->firstErrorAt === 0) {
+                $this->firstErrorAt = time();
+            }
+            
+            if($this->errorsCount <= 1 || time() - $this->firstErrorAt > $this->errorsTimeout) {
+                $this->logger?->error(
+                    'Telemetry error: '.$exception->getMessage(),
+                    ['file' => $exception->getFile(), 'line' => $exception->getLine(), 'trace' => $exception->getTraceAsString()]
+                );
+                
+                $this->firstErrorAt = 0;
+                $this->errorsCount  = 0;
+            }
         }
     }
 

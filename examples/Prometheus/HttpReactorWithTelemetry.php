@@ -49,7 +49,7 @@ final class HttpReactorWithTelemetry implements WorkerEntryPointInterface
 
         // 2. Create telemetry collectors
         $workerState                = $worker->getWorkerState();
-        $workerTelemetry            = new WorkerTelemetryCollector($workerState);
+        $workerTelemetry            = new WorkerTelemetryCollector($workerState, $worker->getLogger());
         $worker->addPeriodicTask(5, $workerTelemetry->flushTelemetry(...));
 
         // And use it for the request handler
