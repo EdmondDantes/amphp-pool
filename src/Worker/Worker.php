@@ -13,6 +13,7 @@ use CT\AmpPool\Internal\Messages\MessagePingPong;
 use CT\AmpPool\Internal\Messages\MessageShutdown;
 use CT\AmpPool\Internal\Messages\WorkerStarted;
 use CT\AmpPool\Strategies\WorkerStrategyInterface;
+use CT\AmpPool\Worker\Internal\PeriodicTask;
 use CT\AmpPool\Worker\Internal\WorkerLogHandler;
 use CT\AmpPool\WorkerEventEmitter;
 use CT\AmpPool\WorkerEventEmitterInterface;
@@ -47,6 +48,8 @@ class Worker implements WorkerInterface
     private WorkerEventEmitterInterface $eventEmitter;
 
     private bool $isStopped         = false;
+    
+    private array $periodicTasks    = [];
 
     public function __construct(
         private readonly int     $id,
@@ -224,6 +227,14 @@ class Worker implements WorkerInterface
         $this->workerState->markAsShutdown()->update();
 
         try {
+            foreach ($this->periodicTasks as $task) {
+                $task->cancel();
+            }
+        } finally {
+            $this->periodicTasks    = [];
+        }
+        
+        try {
             WorkerGroup::stopStrategies($this->groupsScheme, $this->logger);
         } finally {
             $this->eventEmitter->free();
@@ -259,6 +270,25 @@ class Worker implements WorkerInterface
             if($strategy instanceof WorkerStrategyInterface) {
                 $strategy->setWorker($this)->setWorkerGroup($this->group);
             }
+        }
+    }
+    
+    public function addPeriodicTask(float $delay, \Closure $task): int
+    {
+        $task                       = new PeriodicTask($delay, $task);
+        $taskId                     = \spl_object_id($task);
+        
+        $this->periodicTasks[$taskId] = $task;
+        
+        return $taskId;
+    }
+    
+    public function cancelPeriodicTask(int $taskId): void
+    {
+        if(isset($this->periodicTasks[$taskId])) {
+            $task = $this->periodicTasks[$taskId];
+            unset($this->periodicTasks[$taskId]);
+            $task->cancel();
         }
     }
 }
