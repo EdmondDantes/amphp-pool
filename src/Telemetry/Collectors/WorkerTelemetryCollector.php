@@ -21,6 +21,12 @@ class WorkerTelemetryCollector implements ConnectionCollectorInterface, JobColle
     public function flushTelemetry(): void
     {
         try {
+            
+            // Update memory usage
+            $this->workerState->setPhpMemoryUsage(\memory_get_usage(true));
+            $this->workerState->setPhpMemoryPeakUsage(\memory_get_peak_usage(true));
+            $this->workerState->updateMemorySegment();
+            
             $this->workerState->updateConnectionsSegment()->updateJobSegment();
         } catch (\Throwable $exception) {
             $this->errorsCount++;
