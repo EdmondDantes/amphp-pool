@@ -1,5 +1,5 @@
 {
-    "name": "ifc/amphp-pool",
+    "name": "ifcastle/amphp-pool",
     "type": "library",
     "description": "Middle-level library for creating Stateful Asynchronous server-side applications using the pure PHP and AMPHP",
     "keywords": [
