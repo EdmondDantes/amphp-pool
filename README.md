@@ -6,6 +6,12 @@ using the **pure PHP** and [AMPHP Library](https://github.com/amphp) ![AMPHP](ht
 * without *additional extensions* (such as `Swoole`)
 * without auxiliary tools from *other* programming languages (such as `Go` + `Roadrunner`)
 
+## Why is this needed?
+
+* You want to use only pure PHP without additional extensions.
+* You want to control how your Workers operate, 
+and you want to be able to program their behavior to ensure a better balance of performance and stability.
+
 ## Features
 
 * Workers for handling connections and background tasks (**jobs**), which are restarted and scaled on demand.
