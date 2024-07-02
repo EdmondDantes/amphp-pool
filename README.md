@@ -18,6 +18,9 @@ using the **pure PHP** and [AMPHP Library](https://github.com/amphp) ![AMPHP](ht
 
 ## Installation
 
+```bash
+composer require ifcastle/amphp-pool
+```
 
 ## Example
 
