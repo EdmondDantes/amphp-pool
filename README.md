@@ -1,19 +1,23 @@
-# Am PHP Pool [![PHP Composer](https://github.com/EdmondDantes/amphp-pool/actions/workflows/php.yml/badge.svg)](https://github.com/EdmondDantes/amphp-pool/actions/workflows/php.yml)
+# AmPHP Pool [![PHP Composer](https://github.com/EdmondDantes/amphp-pool/actions/workflows/php.yml/badge.svg)](https://github.com/EdmondDantes/amphp-pool/actions/workflows/php.yml)
 
-Implementation of a process pool for handling `TCP/IP` connections similar to `Swoole`, 
-with the ability to create workers of different types and interaction between them.
+Middle-level library for creating **Stateful** **Asynchronous** server-side applications
+using the **pure PHP** and [AMPHP Library](https://github.com/amphp) ![AMPHP](https://avatars.githubusercontent.com/u/8865682?s=50&v=4)
 
-Workers are divided into two types:
+* without *additional extensions* (such as `Swoole`)
+* without auxiliary tools from *other* programming languages (such as `Go` + `Roadrunner`)
 
-* `reactWorker` - handle connections to the server
-* `jobWorker` - process internal tasks
-* `serviceWorker` - A process that handles tasks, for example, from RabbitMQ
+## Features
 
-Multiple reactWorkers can be created, each listening on different protocols/ports. 
-Similarly, different groups of jobWorkers can be created to handle various types of tasks.
+* Workers for handling connections and background tasks (**jobs**), which are restarted and scaled on demand.
+* Support for different `types` and `groups` of Workers with varying behaviors. 
+* Strategies for `restarting`, `scaling`, and `pickuping` Workers for load distribution.
+* Execution of **Jobs** based on `priority` and `weight` (*weight being an estimate of resource consumption*).
+* `Coroutine Scheduler` for distributing a load among long-running background jobs.
+* Support for telemetry and statistics with **Prometheus** + **Grafana**.
+* Full support for **Windows**.
 
-## Support for the Windows platform
-The project implements a method for distributing socket connections among processes for the Windows platform.
+## Installation
+
 
 ## Example
 
@@ -21,14 +25,14 @@ The project implements a method for distributing socket connections among proces
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/../../vendor/autoload.php';
 
+use CT\AmpPool\WorkerGroup;
 use CT\AmpPool\WorkerPool;
+use CT\AmpPool\WorkerTypeEnum;
+use Examples\HttpServer\HttpReactor;
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
-use Examples\HttpServer\HttpReactor;
-use CT\AmpPool\WorkerGroup;
-use CT\AmpPool\WorkerTypeEnum;
 
 $logger = new Logger('server');
 $logger->pushHandler(new StreamHandler('php://stdout'));

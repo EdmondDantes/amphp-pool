@@ -1,11 +1,24 @@
 {
-    "name": "ct/amphp-pool",
+    "name": "ifc/amphp-pool",
     "type": "library",
-    "description": "Library for creating clustered async servers using amphp/http-server and amphp/cluster",
+    "description": "Middle-level library for creating Stateful Asynchronous server-side applications using the pure PHP and AMPHP",
     "keywords": [
-        "api",
-        "asycn",
-        "server"
+        "server",
+        "async",
+        "asynchronous",
+        "concurrency",
+        "promise",
+        "awaitable",
+        "future",
+        "non-blocking",
+        "event",
+        "event-loop"
+    ],
+    "authors": [
+        {
+            "name": "Edmond Dantes",
+            "email": "edmondifthen@proton.me"
+        }
     ],
     "license": "MIT",
     "require": {
