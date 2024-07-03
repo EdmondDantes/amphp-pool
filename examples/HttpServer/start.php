@@ -7,11 +7,19 @@ use CT\AmpPool\WorkerGroup;
 use CT\AmpPool\WorkerPool;
 use CT\AmpPool\WorkerTypeEnum;
 use Examples\HttpServer\HttpReactor;
-use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
+use Amp\ByteStream;
+use Amp\Log\StreamHandler;
+use Monolog\Processor\PsrLogMessageProcessor;
+use Amp\Log\ConsoleFormatter;
+
+
+$logHandler = new StreamHandler(ByteStream\getStdout());
+$logHandler->pushProcessor(new PsrLogMessageProcessor());
+$logHandler->setFormatter(new ConsoleFormatter());
 
 $logger = new Logger('server');
-$logger->pushHandler(new StreamHandler('php://stdout'));
+$logger->pushHandler($logHandler);
 $logger->useLoggingLoopDetection(false);
 
 // 1. Create a worker pool with a logger

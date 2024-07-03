@@ -270,7 +270,7 @@ final class WorkerProcessContext implements \Psr\Log\LoggerInterface, \Psr\Log\L
             $processException       = null;
 
             try {
-                $this->processFuture->await(new TimeoutCancellation($this->processTimeout + 6000));
+                $this->processFuture->await(new TimeoutCancellation($this->processTimeout));
             } catch (CancelledException) {
                 $this->logger?->error($text);
             } catch (\Throwable $processException) {
