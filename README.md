@@ -36,16 +36,15 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/vendor/autoload.php';
 
+use Amp\ByteStream;
+use Amp\Log\ConsoleFormatter;
+use Amp\Log\StreamHandler;
 use CT\AmpPool\WorkerGroup;
 use CT\AmpPool\WorkerPool;
 use CT\AmpPool\WorkerTypeEnum;
 use Examples\HttpServer\HttpReactor;
 use Monolog\Logger;
-use Amp\ByteStream;
-use Amp\Log\StreamHandler;
 use Monolog\Processor\PsrLogMessageProcessor;
-use Amp\Log\ConsoleFormatter;
-
 
 $logHandler = new StreamHandler(ByteStream\getStdout());
 $logHandler->pushProcessor(new PsrLogMessageProcessor());
