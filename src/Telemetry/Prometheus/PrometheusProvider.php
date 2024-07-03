@@ -34,7 +34,7 @@ final class PrometheusProvider
     protected function renderTimings(array $workers): array
     {
         $metrics[] = '';
-        
+
         $metrics[] = '# TYPE worker_first_started_at gauge';
 
         foreach ($workers as $workerState) {

@@ -221,7 +221,11 @@ class Worker implements WorkerInterface
 
     public function awaitTermination(?Cancellation $cancellation = null): void
     {
-        $this->workerFuture->getFuture()->await($cancellation);
+        try {
+            $this->workerFuture->getFuture()->await($cancellation);
+        } catch (CancelledException) {
+            // Ignore
+        }
     }
 
     public function initiateTermination(?\Throwable $throwable = null): void
@@ -261,6 +265,12 @@ class Worker implements WorkerInterface
             WorkerGroup::stopStrategies($this->groupsScheme, $this->logger);
         } finally {
             $this->eventEmitter->free();
+
+            try {
+                $this->workersStorage->close();
+            } catch (\Throwable) {
+                // Ignore
+            }
 
             if(false === $this->workerFuture->isComplete()) {
                 $this->workerFuture->complete();

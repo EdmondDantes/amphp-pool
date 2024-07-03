@@ -45,7 +45,8 @@ final readonly class SocketPipeFactoryWindows implements ServerSocketFactory
             $this->channel,
             $address,
             $bindContext,
-            $this->worker->get()?->getWorkerEventEmitter()
+            $this->worker->get()?->getWorkerEventEmitter(),
+            $this->worker->get()?->getAbortCancellation()
         );
     }
 }

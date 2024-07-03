@@ -12,7 +12,7 @@ final class JobWorker implements WorkerEntryPointInterface
     {
         // TODO: Implement initialize() method.
     }
-    
+
     public function run(): void
     {
         // TODO: Implement run() method.

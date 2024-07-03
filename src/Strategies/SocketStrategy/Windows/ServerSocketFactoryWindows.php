@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace CT\AmpPool\Strategies\SocketStrategy\Windows;
 
 use Amp\Cancellation;
+use Amp\CancelledException;
+use Amp\CompositeCancellation;
 use Amp\DeferredFuture;
 use Amp\ForbidCloning;
 use Amp\ForbidSerialization;
@@ -34,7 +36,8 @@ final class ServerSocketFactoryWindows implements ServerSocket
         private readonly Channel       $writeOnlyChannel,
         private readonly SocketAddress $socketAddress,
         private readonly BindContext   $bindContext,
-        private readonly WorkerEventEmitterInterface $workerEventEmitter
+        private readonly WorkerEventEmitterInterface $workerEventEmitter,
+        private readonly Cancellation $abortCancellation
     ) {
         $this->onClose              = new DeferredFuture();
         $this->queue                = new Queue();
@@ -83,7 +86,17 @@ final class ServerSocketFactoryWindows implements ServerSocket
      */
     public function accept(?Cancellation $cancellation = null): ?Socket
     {
-        if (false === $this->iterator->continue($cancellation)) {
+        if($cancellation !== null) {
+            $cancellation           = new CompositeCancellation($cancellation, $this->abortCancellation);
+        } else {
+            $cancellation           = $this->abortCancellation;
+        }
+
+        try {
+            if (false === $this->iterator->continue($cancellation)) {
+                return null;
+            }
+        } catch (CancelledException) {
             return null;
         }
 
@@ -101,7 +114,7 @@ final class ServerSocketFactoryWindows implements ServerSocket
 
         \socket_wsaprotocol_info_release($message->socketId);
 
-        return ResourceSocket::fromServerSocket(\socket_export_stream($socket), $this->writeOnlyChannel, $message->socketId);
+        return ResourceSocket::fromServerSocket(\socket_export_stream($socket), $this->writeOnlyChannel, $message->socketId, $this->abortCancellation);
     }
 
     public function getAddress(): SocketAddress

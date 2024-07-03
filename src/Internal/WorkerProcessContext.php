@@ -237,7 +237,7 @@ final class WorkerProcessContext implements \Psr\Log\LoggerInterface, \Psr\Log\L
 
         } finally {
 
-            if($loopException === null) {
+            if($loopException === null || $loopException instanceof WorkerShouldBeStopped) {
                 $text               = 'Waiting for the worker #'.$this->id.' was interrupted due to a timeout ('.$this->processTimeout . '). '
                                     .'The child process properly closed the IPC connection.';
             } elseif ($loopException instanceof ChannelException) {
@@ -262,13 +262,15 @@ final class WorkerProcessContext implements \Psr\Log\LoggerInterface, \Psr\Log\L
 
             } else {
                 $text               = 'Waiting for the worker #'.$this->id.' was interrupted due to a timeout ('.$this->processTimeout . '). '
-                                    .'Error occurred: '.$loopException->getMessage();
+                                    .'Error '.\get_class($loopException)
+                                    .' occurred at '.$loopException->getFile().':'.$loopException->getLine()
+                                    .': "'.$loopException->getMessage();
             }
 
             $processException       = null;
 
             try {
-                $this->processFuture->await(new TimeoutCancellation($this->processTimeout));
+                $this->processFuture->await(new TimeoutCancellation($this->processTimeout + 6000));
             } catch (CancelledException) {
                 $this->logger?->error($text);
             } catch (\Throwable $processException) {

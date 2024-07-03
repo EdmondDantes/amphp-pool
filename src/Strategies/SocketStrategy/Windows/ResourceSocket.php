@@ -9,6 +9,8 @@ use Amp\ByteStream\ReadableStreamIteratorAggregate;
 use Amp\ByteStream\ResourceStream;
 use Amp\ByteStream\WritableResourceStream;
 use Amp\Cancellation;
+use Amp\CancelledException;
+use Amp\CompositeCancellation;
 use Amp\ForbidCloning;
 use Amp\ForbidSerialization;
 use Amp\Socket\ClientTlsContext;
@@ -40,9 +42,9 @@ final class ResourceSocket implements Socket, ResourceStream, \IteratorAggregate
      *
      * @throws SocketException
      */
-    public static function fromServerSocket($resource, Channel $channel, string $socketId, int $chunkSize = self::DEFAULT_CHUNK_SIZE): self
+    public static function fromServerSocket($resource, Channel $channel, string $socketId, Cancellation $abortCancellation, int $chunkSize = self::DEFAULT_CHUNK_SIZE): self
     {
-        return new self($resource, $channel, $socketId, null, $chunkSize);
+        return new self($resource, $channel, $socketId, $abortCancellation, null, $chunkSize);
     }
 
     private TlsState $tlsState = TlsState::Disabled;
@@ -69,6 +71,7 @@ final class ResourceSocket implements Socket, ResourceStream, \IteratorAggregate
         $resource,
         private readonly Channel $channel,
         private readonly string $socketId,
+        private readonly Cancellation $abortCancellation,
         private readonly ?ClientTlsContext $tlsContext = null,
         int $chunkSize = self::DEFAULT_CHUNK_SIZE,
     ) {
@@ -127,7 +130,17 @@ final class ResourceSocket implements Socket, ResourceStream, \IteratorAggregate
 
     public function read(?Cancellation $cancellation = null, ?int $limit = null): ?string
     {
-        return $this->reader->read($cancellation, $limit);
+        if($cancellation !== null) {
+            $cancellation = new CompositeCancellation($cancellation, $this->abortCancellation);
+        } else {
+            $cancellation = $this->abortCancellation;
+        }
+
+        try {
+            return $this->reader->read($cancellation, $limit);
+        } catch (CancelledException) {
+            return null;
+        }
     }
 
     public function write(string $bytes): void
