@@ -61,7 +61,7 @@ use function Amp\trapSignal;
 final class WorkerPool implements WorkerPoolInterface
 {
     protected int $workerStartTimeout = 5;
-    protected int $workerStopTimeout  = 5;
+    protected int $workerStopTimeout  = 60;
     private int $lastGroupId        = 0;
 
     private bool $shouldRestart      = false;
