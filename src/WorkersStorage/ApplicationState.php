@@ -5,38 +5,107 @@ namespace CT\AmpPool\WorkersStorage;
 
 class ApplicationState implements ApplicationStateInterface
 {
-    public static function instanciate(): static
+    private \WeakReference|null $storage = null;
+    
+    public static function instanciate(WorkersStorageInterface $workersStorage, int $workersCount): static
     {
-        // TODO: Implement instanciate() method.
+        $instance                   = new static($workersCount);
+        $instance->storage          = \WeakReference::create($workersStorage);
+        
+        return $instance;
+    }
+    
+    public function __construct(
+        private int $workersCount       = 0,
+        private int $startedAt          = 0,
+        private int $lastRestartedAt    = 0,
+        private int $restartsCount      = 0,
+        private int $workersErrors      = 0,
+        private int $memoryFree         = 0,
+        private int $memoryTotal        = 0,
+        private float $loadAverage      = 0.0
+    ) {}
+    
+    public function update(): void
+    {
+        $storage                    = $this->getStorage();
+        
+        if($storage === null) {
+            return;
+        }
+        
+        $this->startedAt            = $storage->getStartedAt();
+        $this->lastRestartedAt      = $storage->getApplicationState()->getLastRestartedAt();
+        $this->restartsCount        = $storage->getApplicationState()->getRestartsCount();
+        $this->workersErrors        = $storage->getApplicationState()->getWorkersErrors();
+        $this->memoryFree           = $storage->getMemoryUsage()->getWorkersMemoryUsageStat()['free'];
+        $this->memoryTotal          = $storage->getMemoryUsage()->getWorkersMemoryUsageStat()['total'];
+        $this->loadAverage          = \sys_getloadavg()[0];
+    }
+    
+    public function read(): void
+    {
+        $storage                    = $this->getStorage();
+        
+        if($storage === null) {
+            return;
+        }
+
+        
     }
     
     public function getStructureSize(): int
     {
-        // TODO: Implement getStructureSize() method.
+        return 8 * 8;
+    }
+    
+    public function getWorkersCount(): int
+    {
+        return $this->workersCount;
     }
     
     public function getUptime(): int
     {
-        // TODO: Implement getUptime() method.
+        return \time() - $this->startedAt;
     }
     
     public function getStartedAt(): int
     {
-        // TODO: Implement getStartedAt() method.
+        return $this->startedAt;
     }
     
     public function getLastRestartedAt(): int
     {
-        // TODO: Implement getLastRestartedAt() method.
+        return $this->lastRestartedAt;
     }
     
     public function getRestartsCount(): int
     {
-        // TODO: Implement getRestartsCount() method.
+        return $this->restartsCount;
     }
     
     public function getWorkersErrors(): int
     {
-        // TODO: Implement getWorkersErrors() method.
+        return $this->workersErrors;
+    }
+    
+    public function getMemoryFree(): int
+    {
+        return $this->memoryFree;
+    }
+    
+    public function getMemoryTotal(): int
+    {
+        return $this->memoryTotal;
+    }
+    
+    public function getLoadAverage(): float
+    {
+        return $this->loadAverage;
+    }
+    
+    private function getStorage(): WorkersStorageInterface|null
+    {
+        return $this->storage?->get();
     }
 }

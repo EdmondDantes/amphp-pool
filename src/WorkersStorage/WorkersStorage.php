@@ -17,6 +17,9 @@ final class WorkersStorage implements WorkersStorageInterface
     private int $structureSize;
     private int         $totalSize;
     private \Shmop|null $handler = null;
+    
+    private ApplicationStateInterface|null $applicationState = null;
+    private MemoryUsageInterface|null $memoryUsage = null;
 
     public function __construct(
         private readonly string $storageClass,
@@ -194,12 +197,85 @@ final class WorkersStorage implements WorkersStorageInterface
 
     public function getApplicationState(): ApplicationStateInterface
     {
-        return \forward_static_call([$this->applicationClass, 'instanciate'], $this);
+        if($this->applicationState !== null) {
+            return $this->applicationState;
+        }
+        
+        $this->applicationState     = \forward_static_call([$this->applicationClass, 'instanciate'], $this);
+        
+        return $this->applicationState;
+    }
+    
+    public function readApplicationState(): string
+    {
+        $size                       = $this->getApplicationState()->getStructureSize();
+        
+        if($this->handler === null) {
+            $this->open();
+        }
+        
+        if($size < \shmop_size($this->handler)) {
+            throw new \RuntimeException('Shared memory segment is too small for ApplicationState data');
+        }
+        
+        \set_error_handler(static function ($number, $error, $file = null, $line = null) {
+            throw new \ErrorException($error, 0, $number, $file, $line);
+        });
+        
+        try {
+            $data                   = \shmop_read($this->handler, 0, $size);
+        } finally {
+            \restore_error_handler();
+        }
+        
+        if($data === false) {
+            throw new \RuntimeException('Failed to read ApplicationState data from shared memory');
+        }
+        
+        return $data;
     }
     
     public function getMemoryUsage(): MemoryUsageInterface
     {
-        return \forward_static_call([$this->memoryUsageClass, 'instanciate'], $this);
+        if($this->memoryUsage !== null) {
+            return $this->memoryUsage;
+        }
+        
+        $this->memoryUsage          = \forward_static_call([$this->memoryUsageClass, 'instanciate'], $this, $this->workersCount);
+        
+        return $this->memoryUsage;
+    }
+    
+    public function readMemoryUsage(): string
+    {
+        // The memory usage data is stored after the ApplicationState data
+        $offset                     = $this->getApplicationState()->getStructureSize();
+        $size                       = $this->getMemoryUsage()->getStructureSize();
+        
+        if($this->handler === null) {
+            $this->open();
+        }
+        
+        if(($offset + $size) < \shmop_size($this->handler)) {
+            throw new \RuntimeException('Shared memory segment is too small for MemoryUsage data: '
+                                        . \shmop_size($this->handler) . ' < ' . ($offset + $size) . ' bytes');
+        }
+        
+        \set_error_handler(static function ($number, $error, $file = null, $line = null) {
+            throw new \ErrorException($error, 0, $number, $file, $line);
+        });
+        
+        try {
+            $data                   = \shmop_read($this->handler, $offset, $size);
+        } finally {
+            \restore_error_handler();
+        }
+        
+        if($data === false) {
+            throw new \RuntimeException('Failed to read MemoryUsage data from shared memory');
+        }
+        
+        return $data;
     }
     
     public function close(): void
@@ -229,6 +305,7 @@ final class WorkersStorage implements WorkersStorageInterface
     {
         $this->validateWorkerId($workerId);
 
+        //$basicOffset                = $this->getApplicationState()->getStructureSize() + $this->getMemoryUsage()->getStructureSize();
         $offset                     = $this->structureSize * ($workerId - 1);
 
         // out of range

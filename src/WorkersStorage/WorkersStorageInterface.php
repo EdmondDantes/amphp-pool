@@ -22,7 +22,11 @@ interface WorkersStorageInterface
     
     public function getApplicationState(): ApplicationStateInterface;
     
+    public function readApplicationState(): string;
+    
     public function getMemoryUsage(): MemoryUsageInterface;
+    
+    public function readMemoryUsage(): string;
 
     public function close(): void;
 }
