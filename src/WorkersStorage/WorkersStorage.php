@@ -7,7 +7,9 @@ final class WorkersStorage implements WorkersStorageInterface
 {
     public static function instanciate(int $workersCount = 0): static
     {
-        return new static(WorkerState::class, $workersCount);
+        return new static(
+            WorkerState::class, ApplicationState::class, MemoryUsage::class, $workersCount
+        );
     }
 
     private int $key;
@@ -18,7 +20,9 @@ final class WorkersStorage implements WorkersStorageInterface
 
     public function __construct(
         private readonly string $storageClass,
-        private int $workersCount   = 0
+        private readonly string $applicationClass,
+        private readonly string $memoryUsageClass,
+        private int $workersCount   = 0,
     ) {
         $this->structureSize        = $this->getStructureSize();
         $this->totalSize            = $this->structureSize * $this->workersCount;
@@ -188,6 +192,16 @@ final class WorkersStorage implements WorkersStorageInterface
         }
     }
 
+    public function getApplicationState(): ApplicationStateInterface
+    {
+        return \forward_static_call([$this->applicationClass, 'instanciate'], $this);
+    }
+    
+    public function getMemoryUsage(): MemoryUsageInterface
+    {
+        return \forward_static_call([$this->memoryUsageClass, 'instanciate'], $this);
+    }
+    
     public function close(): void
     {
         if($this->handler !== null && $this->isWrite) {

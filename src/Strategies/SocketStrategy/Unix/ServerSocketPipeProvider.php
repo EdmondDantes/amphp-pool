@@ -16,7 +16,7 @@ use Amp\Socket\SocketAddress;
 use Amp\Socket\SocketException;
 use Amp\Sync\Channel;
 use Amp\Sync\ChannelException;
-use CT\AmpPool\System;
+use CT\AmpPool\System\System;
 use const Amp\Process\IS_WINDOWS;
 
 final class ServerSocketPipeProvider

@@ -19,6 +19,10 @@ interface WorkersStorageInterface
     public function readWorkerState(int $workerId, int $offset = 0): string;
 
     public function updateWorkerState(int $workerId, string $data, int $offset = 0): void;
+    
+    public function getApplicationState(): ApplicationStateInterface;
+    
+    public function getMemoryUsage(): MemoryUsageInterface;
 
     public function close(): void;
 }
