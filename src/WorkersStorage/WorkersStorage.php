@@ -234,7 +234,7 @@ final class WorkersStorage implements WorkersStorageInterface
             return $this->applicationState;
         }
 
-        $this->applicationState     = \forward_static_call([$this->applicationClass, 'instanciate'], $this);
+        $this->applicationState     = \forward_static_call([$this->applicationClass, 'instanciate'], $this, $this->workersCount, $this->workerId !== 0);
 
         return $this->applicationState;
     }
@@ -307,7 +307,7 @@ final class WorkersStorage implements WorkersStorageInterface
             $this->open();
         }
 
-        $this->memoryUsage          = \forward_static_call([$this->memoryUsageClass, 'instanciate'], $this, $this->workersCount);
+        $this->memoryUsage          = \forward_static_call([$this->memoryUsageClass, 'instanciate'], $this, $this->workersCount, $this->workerId !== 0);
 
         return $this->memoryUsage;
     }
