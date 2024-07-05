@@ -119,7 +119,7 @@ final class WorkerPool implements WorkerPoolInterface
             throw new \Error("The workers storage class '{$this->workersStorageClass}' does not exist");
         }
 
-        $this->workersStorage       = \forward_static_call([$this->workersStorageClass, 'instanciate'], \count($this->workers));
+        $this->workersStorage       = \forward_static_call([$this->workersStorageClass, 'instanciate'], \count($this->workers), 0);
 
         // Assign worker states to workers
         foreach ($this->workers as $workerDescriptor) {

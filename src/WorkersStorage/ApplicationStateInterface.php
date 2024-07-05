@@ -5,7 +5,7 @@ namespace CT\AmpPool\WorkersStorage;
 
 interface ApplicationStateInterface
 {
-    public static function instanciate(WorkersStorageInterface $workersStorage, int $workersCount): static;
+    public static function instanciate(WorkersStorageInterface $workersStorage, int $workersCount, bool $isReadOnly = true): static;
     public function getStructureSize(): int;
 
     public function getWorkersCount(): int;

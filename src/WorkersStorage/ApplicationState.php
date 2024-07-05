@@ -6,14 +6,16 @@ namespace CT\AmpPool\WorkersStorage;
 class ApplicationState implements ApplicationStateInterface
 {
     private \WeakReference|null $storage = null;
-    private bool $isLoaded = false;
+    private bool $isLoaded   = false;
+    private bool $isReadOnly = true;
 
     protected const int ITEM_COUNT      = 8;
 
-    public static function instanciate(WorkersStorageInterface $workersStorage, int $workersCount): static
+    public static function instanciate(WorkersStorageInterface $workersStorage, int $workersCount, bool $isReadOnly = true): static
     {
         $instance                   = new static($workersCount);
         $instance->storage          = \WeakReference::create($workersStorage);
+        $instance->isReadOnly       = $isReadOnly;
 
         return $instance;
     }
@@ -32,6 +34,10 @@ class ApplicationState implements ApplicationStateInterface
 
     public function update(): void
     {
+        if($this->isReadOnly) {
+            throw new \RuntimeException('The ApplicationState is read-only');
+        }
+        
         $storage                    = $this->getStorage();
 
         if($storage === null) {

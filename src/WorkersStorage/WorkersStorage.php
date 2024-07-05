@@ -19,7 +19,7 @@ namespace CT\AmpPool\WorkersStorage;
  */
 final class WorkersStorage implements WorkersStorageInterface
 {
-    public static function instanciate(int $workersCount = 0): static
+    public static function instanciate(int $workersCount = 0, int $workerId = 0): static
     {
         return new static(
             WorkerState::class, ApplicationState::class, MemoryUsage::class, $workersCount
@@ -39,6 +39,11 @@ final class WorkersStorage implements WorkersStorageInterface
         private readonly string $applicationClass,
         private readonly string $memoryUsageClass,
         private int $workersCount   = 0,
+        /**
+         * Number of the worker for which the data is stored.
+         * For watcher process, this value is 0.
+         */
+        private readonly int $workerId = 0
     ) {
         $this->structureSize        = $this->getStructureSize();
 
@@ -265,7 +270,7 @@ final class WorkersStorage implements WorkersStorageInterface
 
     public function updateApplicationState(string $data): void
     {
-        if(false === $this->isWrite) {
+        if(false === $this->isWrite || $this->workerId !== 0) {
             throw new \RuntimeException('This instance WorkersStorage is read-only');
         }
 
@@ -341,7 +346,7 @@ final class WorkersStorage implements WorkersStorageInterface
 
     public function updateMemoryUsage(string $data): void
     {
-        if(false === $this->isWrite) {
+        if(false === $this->isWrite  || $this->workerId !== 0) {
             throw new \RuntimeException('This instance WorkersStorage is read-only');
         }
 
