@@ -36,7 +36,8 @@ $workerPool->describeGroup(new WorkerGroup(
     entryPointClass: HttpReactorWithTelemetry::class,
     workerType: WorkerTypeEnum::REACTOR,
     minWorkers: 2,
-    maxWorkers: 5
+    maxWorkers: 5,
+    scalingStrategy: new \CT\AmpPool\Strategies\ScalingStrategy\ScalingByRequest(1, 15),
 ));
 
 // 4. Run the worker pool

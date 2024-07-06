@@ -133,7 +133,7 @@ final class ScalingByRequest extends WorkerStrategyAbstract implements ScalingSt
             return;
         }
 
-        if($this->lastScalingRequest + $this->decreaseTimeout <= \time()) {
+        if(($this->lastScalingRequest + $this->decreaseTimeout) >= \time()) {
             return;
         }
 
@@ -145,7 +145,7 @@ final class ScalingByRequest extends WorkerStrategyAbstract implements ScalingSt
 
         $workerPool->scaleWorkers(
             $this->getWorkerGroup()->getWorkerGroupId(),
-            $this->getWorkerGroup()->getMinWorkers()
+            $this->getWorkerGroup()->getMinWorkers() - $runningWorkers
         );
     }
 }

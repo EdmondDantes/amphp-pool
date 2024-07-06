@@ -362,8 +362,6 @@ final class WorkerPool implements WorkerPoolInterface
             Future\await($futures, $this->mainCancellation?->getCancellation());
         } catch (CancelledException $exception) {
         }
-
-        $x = 0;
     }
 
     private function workersWatcher(): void
@@ -387,7 +385,7 @@ final class WorkerPool implements WorkerPoolInterface
                 }
 
                 foreach ($this->workers as $worker) {
-                    if($worker->shouldBeStarted() && $worker->isNotRunning()) {
+                    if($worker->shouldBeStarted() && false === $worker->isRunningOrWillBeRunning()) {
 
                         $worker->starting();
 
@@ -447,7 +445,9 @@ final class WorkerPool implements WorkerPoolInterface
         $delta                      = \abs($delta);
         $handled                    = 0;
 
-        foreach ($this->workers as $workerDescriptor) {
+        $workers                    = $isDecrease ? array_reverse($this->workers) : $this->workers;
+        
+        foreach ($workers as $workerDescriptor) {
             if($workerDescriptor->group->getWorkerGroupId() !== $groupId) {
                 continue;
             }
@@ -461,11 +461,15 @@ final class WorkerPool implements WorkerPoolInterface
                 break;
             }
 
-            if($isDecrease && $workerDescriptor->shouldBeStarted() === false && $workerDescriptor->getWorkerProcess() !== null) {
+            if($isDecrease && $workerDescriptor->shouldBeStarted()) {
                 $workerDescriptor->willBeStopped();
-                $workerDescriptor->getWorkerProcess()->shutdown();
+                
+                if($workerDescriptor->isRunning()) {
+                    $workerDescriptor->getWorkerProcess()->shutdown();
+                }
+                
                 $handled++;
-            } elseif(false === $isDecrease && $workerDescriptor->getWorkerProcess() === null) {
+            } elseif(false === $isDecrease && false === $workerDescriptor->shouldBeStarted()) {
                 $workerDescriptor->willBeStarted();
                 $handled++;
             }
@@ -477,6 +481,7 @@ final class WorkerPool implements WorkerPoolInterface
 
         $this->scalingFuture        = new DeferredFuture;
 
+        $this->logger?->info('Scaling workers request', ['group_id' => $groupId, 'delta' => $delta, 'handled' => $handled, 'is_decrease' => $isDecrease]);
         $this->scalingTrigger->cancel(new ScalingTrigger);
 
         return $handled;
@@ -589,7 +594,7 @@ final class WorkerPool implements WorkerPoolInterface
         try {
             $context                = $this->contextFactory->start(
                 $runnerStrategy->getScript(),
-                new TimeoutCancellation($this->workerStartTimeout)
+                new TimeoutCancellation($this->workerStartTimeout, 'The worker start timeout ('.$this->workerStartTimeout.') has been exceeded')
             );
         } catch (\Throwable $exception) {
             $this->logger?->critical('Starting the worker failed: ' . $exception->getMessage(), ['exception' => $exception]);
@@ -918,11 +923,11 @@ final class WorkerPool implements WorkerPoolInterface
                 continue;
             }
 
-            if($onlyRunning && $worker->getWorkerProcess() !== null) {
+            if($onlyRunning && $worker->isRunning()) {
                 $count++;
-            } elseif ($notRunning && $worker->getWorkerProcess() === null) {
+            } elseif ($notRunning && $worker->isNotRunning()) {
                 $count++;
-            } else {
+            } else if(false === $onlyRunning && false === $notRunning) {
                 $count++;
             }
         }

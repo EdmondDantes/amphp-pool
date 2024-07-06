@@ -67,7 +67,7 @@ final class WorkerDescriptor
         $this->shouldBeStarted      = true;
 
         $this->started();
-        $this->startFuture          = new DeferredFuture;
+        $this->startFuture          = null;
     }
 
     public function willBeStopped(): void
@@ -81,6 +81,11 @@ final class WorkerDescriptor
         $this->workerProcess        = null;
     }
 
+    public function isRunningOrWillBeRunning(): bool
+    {
+        return $this->isRunning() || ($this->startFuture !== null && false === $this->startFuture->isComplete());
+    }
+    
     public function isRunning(): bool
     {
         return $this->workerProcess !== null && false === $this->workerProcess->wasTerminated();
