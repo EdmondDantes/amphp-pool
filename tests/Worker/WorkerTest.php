@@ -82,6 +82,7 @@ class WorkerTest extends TestCase
             '',
             WorkerTypeEnum::JOB,
             1,
+            maxWorkers: 1
         );
     }
 
