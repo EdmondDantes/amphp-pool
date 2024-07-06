@@ -60,6 +60,8 @@ final class WorkerProcessContext implements \Psr\Log\LoggerInterface, \Psr\Log\L
      * This descriptor will always be canceled if the child process has terminated.
      */
     private readonly DeferredCancellation $processCancellation;
+    
+    private readonly DeferredCancellation $loopCancellation;
 
     /**
      * @param positive-int $id
@@ -75,23 +77,44 @@ final class WorkerProcessContext implements \Psr\Log\LoggerInterface, \Psr\Log\L
     ) {
         $this->lastActivity         = \time();
         $this->processCancellation  = new DeferredCancellation;
+        $this->loopCancellation     = new DeferredCancellation;
 
         $processCancellation        = $this->processCancellation;
+        $loopCancellation           = $this->loopCancellation;
+        $workerCancellation         = $this->workerCancellation;
         $context                    = $this->context;
         $processTimeout             = $this->processTimeout;
 
         /**
          * The processFuture is a future that waits for the worker process to end.
          */
-        $this->processFuture        = async(static function () use ($processCancellation, $context, $processTimeout): mixed {
+        $this->processFuture        = async(static function ()
+        use ($processCancellation, $workerCancellation, $loopCancellation, $context, $processTimeout): mixed {
 
             try {
+                
+                //
+                // Two cases for cancellation:
+                // 1. The worker process was terminated.
+                // 2. The workers stopped by the Watcher process.
+                //
+                $cancellation       = new CompositeCancellation(
+                    $workerCancellation,
+                    $processCancellation->getCancellation()
+                );
+                
+                $cancelledException = null;
 
                 // First, wait for the end of the worker process
                 // while waiting for the cancellation.
                 try {
-                    return $context->join($processCancellation->getCancellation());
-                } catch (CancelledException) {
+                    return $context->join($cancellation);
+                } catch (CancelledException $cancelledException) {
+                    
+                    if($cancelledException->getPrevious() !== null) {
+                        $cancelledException = $cancelledException->getPrevious();
+                    }
+                    
                     // Awaiting the worker process was interrupted by a cancellation not related to the worker process.
                 }
 
@@ -136,7 +159,11 @@ final class WorkerProcessContext implements \Psr\Log\LoggerInterface, \Psr\Log\L
 
                 } finally {
                     if(false === $processCancellation->isCancelled()) {
-                        $processCancellation->cancel();
+                        $processCancellation->cancel($cancelledException);
+                    }
+                    
+                    if(false === $loopCancellation->isCancelled()) {
+                        $loopCancellation->cancel($cancelledException);
                     }
                 }
             }
@@ -173,11 +200,6 @@ final class WorkerProcessContext implements \Psr\Log\LoggerInterface, \Psr\Log\L
      */
     public function runWorkerLoop(): void
     {
-        $cancellation               = new CompositeCancellation(
-            $this->workerCancellation,
-            $this->processCancellation->getCancellation()
-        );
-
         try {
 
             $loopException          = null;
@@ -187,11 +209,9 @@ final class WorkerProcessContext implements \Psr\Log\LoggerInterface, \Psr\Log\L
                  * There are several situations in which this loop will be interrupted:
                  *
                  * 1. The child process sent a NULL value - it completed successfully without errors.
-                 * 2. workerCancellation triggered, meaning WorkerPool requires the process to be terminated.
-                 * 3. processCancellation triggered, meaning the process was abruptly stopped or something else occurred.
-                 *
+                 * 2. loopCancellation triggered, meaning the process was abruptly stopped or something else occurred.
                  */
-                while (($message = $this->context->receive($cancellation)) !== null) {
+                while (($message = $this->context->receive($this->loopCancellation->getCancellation())) !== null) {
 
                     $this->lastActivity = \time();
 
@@ -233,6 +253,10 @@ final class WorkerProcessContext implements \Psr\Log\LoggerInterface, \Psr\Log\L
                 // Stop waiting for the worker process to end.
                 if(false === $this->processCancellation->isCancelled()) {
                     $this->processCancellation->cancel();
+                }
+                
+                if(false === $this->loopCancellation->isCancelled()) {
+                    $this->loopCancellation->cancel();
                 }
 
                 if(false === $this->startFuture->isComplete()) {
@@ -298,24 +322,6 @@ final class WorkerProcessContext implements \Psr\Log\LoggerInterface, \Psr\Log\L
         return $this->processFuture->isComplete();
     }
 
-    private function ping(): void
-    {
-        $isXDebug                   = \extension_loaded('xdebug') && \ini_get('xdebug.mode') === 'debug';
-
-        $this->watcher              = EventLoop::repeat($this->pingTimeout / 2, weakClosure(function () use ($isXDebug): void {
-            if (false === $isXDebug && $this->lastActivity < (\time() - $this->pingTimeout)) {
-                $this->close();
-                return;
-            }
-
-            try {
-                $this->context->send(new MessagePingPong);
-            } catch (\Throwable) {
-                $this->close();
-            }
-        }));
-    }
-
     private function close(): void
     {
         if(false === $this->startFuture->isComplete()) {
@@ -324,6 +330,10 @@ final class WorkerProcessContext implements \Psr\Log\LoggerInterface, \Psr\Log\L
 
         if(false === $this->processCancellation->isCancelled()) {
             $this->processCancellation->cancel();
+        }
+        
+        if(false === $this->loopCancellation->isCancelled()) {
+            $this->loopCancellation->cancel();
         }
 
         if($this->watcher !== '') {
@@ -340,7 +350,7 @@ final class WorkerProcessContext implements \Psr\Log\LoggerInterface, \Psr\Log\L
     {
         // Gracefully close the worker process.
         if(false === $this->processCancellation->isCancelled()) {
-            $this->processCancellation->cancel();
+            $this->processCancellation->cancel(new WorkerShouldBeStopped);
         }
     }
 
