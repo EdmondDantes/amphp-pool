@@ -9,7 +9,7 @@ class WorkersStorageTest extends TestCase
 {
     public function testWriteRead(): void
     {
-        $workerStorage              = WorkersStorageMemory::instanciate(10);
+        $workerStorage              = WorkersStorage::instanciate(10);
         $workerState                = $workerStorage->getWorkerState(2);
         $this->fillWorkerState($workerState);
         $workerState->update();
@@ -22,8 +22,8 @@ class WorkersStorageTest extends TestCase
 
     public function testOnlyRead(): void
     {
-        $workerStorage              = WorkersStorageMemory::instanciate(10);
-        $workerStorageReadOnly      = WorkersStorageMemory::instanciate();
+        $workerStorage              = WorkersStorage::instanciate(10);
+        $workerStorageReadOnly      = WorkersStorage::instanciate();
 
         $workerState                = $workerStorage->getWorkerState(2);
         $this->fillWorkerState($workerState);
@@ -37,8 +37,8 @@ class WorkersStorageTest extends TestCase
 
     public function testReview(): void
     {
-        $workerStorage              = WorkersStorageMemory::instanciate(10);
-        $workerStorageReadOnly      = WorkersStorageMemory::instanciate();
+        $workerStorage              = WorkersStorage::instanciate(10);
+        $workerStorageReadOnly      = WorkersStorage::instanciate();
 
         $workerState                = $workerStorage->getWorkerState(2);
         $this->fillWorkerState($workerState);
@@ -52,8 +52,8 @@ class WorkersStorageTest extends TestCase
 
     public function testForeachWorkers(): void
     {
-        $workerStorage              = WorkersStorageMemory::instanciate(10);
-        $workerStorageReadOnly      = WorkersStorageMemory::instanciate();
+        $workerStorage              = WorkersStorage::instanciate(10);
+        $workerStorageReadOnly      = WorkersStorage::instanciate();
 
         $workerStates               = [];
 
@@ -79,7 +79,7 @@ class WorkersStorageTest extends TestCase
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('This instance WorkersStorage is read-only');
 
-        $workerStorageReadOnly      = WorkersStorageMemory::instanciate();
+        $workerStorageReadOnly      = WorkersStorage::instanciate();
 
         $workerState2               = $workerStorageReadOnly->getWorkerState(2);
         $workerState2->update();
@@ -90,7 +90,7 @@ class WorkersStorageTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('Invalid worker id provided');
 
-        $workerStorage              = WorkersStorageMemory::instanciate(10);
+        $workerStorage              = WorkersStorage::instanciate(10);
         $workerStorage->getWorkerState(0);
     }
 
@@ -99,7 +99,7 @@ class WorkersStorageTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('Worker id is out of range');
 
-        $workerStorage              = WorkersStorageMemory::instanciate(10);
+        $workerStorage              = WorkersStorage::instanciate(10);
         $workerStorage->getWorkerState(11);
     }
 
