@@ -46,6 +46,7 @@ class ApplicationState implements ApplicationStateInterface
 
         $data                       = \pack(
             'Q*',
+            $this->workersCount,
             $this->startedAt,
             $this->lastRestartedAt,
             $this->restartsCount,
@@ -82,13 +83,14 @@ class ApplicationState implements ApplicationStateInterface
             throw new \RuntimeException('Invalid application state data');
         }
 
-        $this->startedAt            = $data[1];
-        $this->lastRestartedAt      = $data[2];
-        $this->restartsCount        = $data[3];
-        $this->workersErrors        = $data[4];
-        $this->memoryFree           = $data[5];
-        $this->memoryTotal          = $data[6];
-        $this->loadAverage          = $data[7] / 1000;
+        $this->workersCount         = $data[1];
+        $this->startedAt            = $data[2];
+        $this->lastRestartedAt      = $data[3];
+        $this->restartsCount        = $data[4];
+        $this->workersErrors        = $data[5];
+        $this->memoryFree           = $data[6];
+        $this->memoryTotal          = $data[7];
+        $this->loadAverage          = $data[8] / 1000;
     }
 
     public function read(): void
@@ -145,6 +147,63 @@ class ApplicationState implements ApplicationStateInterface
     public function getLoadAverage(): float
     {
         return $this->loadAverage;
+    }
+    
+    public function setStartedAt(int $startedAt): static
+    {
+        $this->startedAt            = $startedAt;
+        return $this;
+    }
+    
+    public function setLastRestartedAt(int $lastRestartedAt): static
+    {
+        $this->lastRestartedAt      = $lastRestartedAt;
+        return $this;
+    }
+    
+    public function setRestartsCount(int $restartsCount): static
+    {
+        $this->restartsCount        = $restartsCount;
+        return $this;
+    }
+    
+    public function setWorkersErrors(int $workersErrors): static
+    {
+        $this->workersErrors        = $workersErrors;
+        return $this;
+    }
+    
+    public function setMemoryFree(int $memoryFree): static
+    {
+        $this->memoryFree           = $memoryFree;
+        return $this;
+    }
+    
+    public function setMemoryTotal(int $memoryTotal): static
+    {
+        $this->memoryTotal          = $memoryTotal;
+        return $this;
+    }
+    
+    public function setLoadAverage(float $loadAverage): static
+    {
+        $this->loadAverage          = $loadAverage;
+        return $this;
+    }
+    
+    public function toArray(): array
+    {
+        return [
+            'workersCount'          => $this->workersCount,
+            'uptime'                => $this->getUptime(),
+            'startedAt'             => $this->startedAt,
+            'lastRestartedAt'       => $this->lastRestartedAt,
+            'restartsCount'         => $this->restartsCount,
+            'workersErrors'         => $this->workersErrors,
+            'memoryFree'            => $this->memoryFree,
+            'memoryTotal'           => $this->memoryTotal,
+            'loadAverage'           => $this->loadAverage,
+        ];
     }
 
     private function getStorage(): WorkersStorageInterface|null

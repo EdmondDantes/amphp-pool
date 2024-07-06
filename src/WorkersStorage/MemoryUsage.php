@@ -119,6 +119,22 @@ class MemoryUsage implements MemoryUsageInterface
         return $this->stats[$workerId] ?? 0;
     }
 
+    public function setStats(array $stats): static
+    {
+        if($this->isReadOnly) {
+            throw new \RuntimeException('MemoryUsage is read-only');
+        }
+
+        $this->stats                = $stats;
+
+        return $this;
+    }
+    
+    public function getStats(): array
+    {
+        return $this->stats;
+    }
+    
     protected function getStorage(): WorkersStorageInterface|null
     {
         return $this->storage?->get();

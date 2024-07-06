@@ -117,6 +117,8 @@ final class WorkersStorageMemory implements WorkersStorageInterface
     
     public function readApplicationState(): string
     {
+        $this->open();
+        
         $size                       = $this->getApplicationState()->getStructureSize();
         
         return substr($this->buffer, 0, $size);
@@ -124,6 +126,8 @@ final class WorkersStorageMemory implements WorkersStorageInterface
     
     public function updateApplicationState(string $data): void
     {
+        $this->open();
+        
         if(false === $this->isWrite || $this->workerId !== 0) {
             throw new \RuntimeException('This instance WorkersStorage is read-only');
         }
@@ -144,6 +148,8 @@ final class WorkersStorageMemory implements WorkersStorageInterface
     
     public function readMemoryUsage(): string
     {
+        $this->open();
+        
         $size                       = $this->getMemoryUsage()->getStructureSize();
         
         return substr($this->buffer, $this->getApplicationState()->getStructureSize(), $size);
@@ -151,6 +157,8 @@ final class WorkersStorageMemory implements WorkersStorageInterface
     
     public function updateMemoryUsage(string $data): void
     {
+        $this->open();
+        
         if(false === $this->isWrite || $this->workerId !== 0) {
             throw new \RuntimeException('This instance WorkersStorage is read-only');
         }
