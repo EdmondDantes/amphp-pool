@@ -105,7 +105,7 @@ final class SocketUnixStrategy extends WorkerStrategyAbstract implements SocketS
             throw new \Error('Wrong usage of the method getServerSocketFactory(). The deferredFuture undefined.');
         }
 
-        await([$this->deferredFuture->getFuture()], new TimeoutCancellation($this->ipcTimeout));
+        await([$this->deferredFuture->getFuture()], new TimeoutCancellation($this->ipcTimeout, 'Timeout waiting for socketPipeFactory from the parent process'));
 
         return $this->socketPipeFactory;
     }
