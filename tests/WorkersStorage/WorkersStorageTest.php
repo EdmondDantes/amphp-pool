@@ -13,6 +13,7 @@ class WorkersStorageTest extends TestCase
         $workerState                = $workerStorage->getWorkerState(2);
         $this->fillWorkerState($workerState);
         $workerState->update();
+        $workerStorage->getApplicationState()->update();
 
         $workerState2               = $workerStorage->getWorkerState(2);
         $workerState2->read();
@@ -28,6 +29,7 @@ class WorkersStorageTest extends TestCase
         $workerState                = $workerStorage->getWorkerState(2);
         $this->fillWorkerState($workerState);
         $workerState->update();
+        $workerStorage->getApplicationState()->update();
 
         $workerState2               = $workerStorageReadOnly->getWorkerState(2);
         $workerState2->read();
@@ -43,6 +45,7 @@ class WorkersStorageTest extends TestCase
         $workerState                = $workerStorage->getWorkerState(2);
         $this->fillWorkerState($workerState);
         $workerState->update();
+        $workerStorage->getApplicationState()->update();
 
         $workerState                = $workerStorage->reviewWorkerState(2);
 
@@ -54,7 +57,9 @@ class WorkersStorageTest extends TestCase
     {
         $workerStorage              = WorkersStorage::instanciate(10);
         $workerStorageReadOnly      = WorkersStorage::instanciate();
-
+        
+        $workerStorage->getApplicationState()->update();
+        
         $workerStates               = [];
 
         for($i = 1; $i <= 10; $i++) {

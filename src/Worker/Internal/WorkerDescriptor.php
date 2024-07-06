@@ -6,7 +6,7 @@ namespace CT\AmpPool\Worker\Internal;
 use Amp\DeferredFuture;
 use Amp\Future;
 use CT\AmpPool\Internal\WorkerProcessContext;
-use CT\AmpPool\WorkerGroup;
+use CT\AmpPool\WorkerGroupInterface;
 use CT\AmpPool\WorkersStorage\WorkerStateInterface;
 
 /**
@@ -21,7 +21,7 @@ final class WorkerDescriptor
 
     public function __construct(
         public readonly int $id,
-        public readonly WorkerGroup $group,
+        public readonly WorkerGroupInterface $group,
         private bool $shouldBeStarted = false,
     ) {
     }

@@ -7,7 +7,7 @@ interface WorkerStateInterface
 {
     public static function instanciateFromStorage(WorkersStorageInterface $storage, int $workerId, bool $reviewOnly = false): WorkerStateInterface;
 
-    public static function unpackItem(string $packedItem): WorkerStateInterface;
+    public static function unpackItem(string $packedItem, int $workerId = 0): WorkerStateInterface;
 
     /**
      * Returns the size of the item.

@@ -36,6 +36,8 @@ use CT\AmpPool\Strategies\ScalingStrategy\ScalingByRequest;
 use CT\AmpPool\Strategies\SocketStrategy\Unix\SocketUnixStrategy;
 use CT\AmpPool\Strategies\SocketStrategy\Windows\SocketWindowsStrategy;
 use CT\AmpPool\Strategies\WorkerStrategyInterface;
+use CT\AmpPool\Telemetry\Collectors\ApplicationCollector;
+use CT\AmpPool\Telemetry\Collectors\ApplicationCollectorInterface;
 use CT\AmpPool\WatcherEvents\WorkerProcessStarted;
 use CT\AmpPool\WatcherEvents\WorkerProcessTerminating;
 use CT\AmpPool\Worker\Internal\Exceptions\ScalingTrigger;
@@ -101,13 +103,19 @@ final class WorkerPool implements WorkerPoolInterface
     private WorkerEventEmitterInterface $eventEmitter;
 
     private mixed $pidFileHandler           = null;
+    
+    private ApplicationCollectorInterface|null $applicationCollector = null;
+    
+    private string $applicationCollectorId  = '';
 
     public function __construct(
         private readonly IpcHub $hub                    = new LocalIpcHub(),
         private readonly string $workersStorageClass    = WorkersStorage::class,
+        private readonly string $collectorClass         = ApplicationCollector::class,
         private ?ContextFactory $contextFactory         = null,
         private ?PsrLogger $logger                      = null,
-        private readonly string|bool $pidFile           = false
+        private readonly string|bool $pidFile           = false,
+        private readonly int $statsUpdateInterval       = 5
     ) {
         $this->contextFactory       ??= new DefaultContextFactory(ipcHub: $this->hub);
         $this->eventEmitter         = new WorkerEventEmitter;
@@ -124,7 +132,20 @@ final class WorkerPool implements WorkerPoolInterface
         // Assign worker states to workers
         foreach ($this->workers as $workerDescriptor) {
             $workerDescriptor->workerState = $this->workersStorage->getWorkerState($workerDescriptor->id);
+            $workerDescriptor->workerState->setGroupId($workerDescriptor->group->getWorkerGroupId())->update();
         }
+    }
+    
+    private function initApplicationCollector(): void
+    {
+        if($this->collectorClass === '') {
+            return;
+        }
+        
+        $this->applicationCollector = forward_static_call([$this->collectorClass, 'instanciate'], $this->workersStorage);
+        
+        $this->applicationCollector->startApplication();
+        $this->applicationCollectorId = EventLoop::repeat($this->statsUpdateInterval, $this->updateApplicationState(...));
     }
 
     public function getWorkersStorage(): WorkersStorageInterface
@@ -255,6 +276,7 @@ final class WorkerPool implements WorkerPoolInterface
         }
 
         $this->initWorkersStorage();
+        $this->initApplicationCollector();
 
         $this->running              = true;
         $this->mainCancellation     = new DeferredCancellation;
@@ -272,12 +294,16 @@ final class WorkerPool implements WorkerPoolInterface
 
             throw $exception;
         }
-
+        
         //
         // Main watcher loop
         //
         do {
 
+            if($this->shouldRestart) {
+                $this->applicationCollector?->restartApplication();
+            }
+            
             $this->shouldRestart    = false;
 
             if(false === $this->workersCancellation?->isCancelled()) {
@@ -773,7 +799,7 @@ final class WorkerPool implements WorkerPoolInterface
         return $exitResult;
     }
 
-    private function fillWorkersGroup(WorkerGroup $group): void
+    private function fillWorkersGroup(WorkerGroupInterface $group): void
     {
         if($group->getWorkerGroupId() === 0) {
             throw new \Error('The group id must be greater than zero');
@@ -862,6 +888,11 @@ final class WorkerPool implements WorkerPoolInterface
         }
 
         $this->stopWorkers();
+        
+        if($this->applicationCollector !== null) {
+            EventLoop::cancel($this->applicationCollectorId);
+            $this->applicationCollector->stopApplication();
+        }
     }
 
     private function stopWorkers(?\Throwable $throwable = null): void
@@ -899,7 +930,7 @@ final class WorkerPool implements WorkerPoolInterface
         return $count;
     }
 
-    private function defaultWorkerStrategies(WorkerGroup $group): void
+    private function defaultWorkerStrategies(WorkerGroupInterface $group): void
     {
         if($group->getRunnerStrategy() === null) {
             $group->defineRunnerStrategy(new DefaultRunner);
@@ -930,7 +961,7 @@ final class WorkerPool implements WorkerPoolInterface
         }
     }
 
-    private function initWorkerStrategies(WorkerGroup $group): void
+    private function initWorkerStrategies(WorkerGroupInterface $group): void
     {
         foreach ($group->getWorkerStrategies() as $strategy) {
             if($strategy instanceof WorkerStrategyInterface) {
@@ -939,6 +970,17 @@ final class WorkerPool implements WorkerPoolInterface
         }
     }
 
+    private function updateApplicationState(): void
+    {
+        $workersPid                 = [];
+        
+        foreach ($this->workers as $workerDescriptor) {
+            $workersPid[]           = $workerDescriptor->getWorkerProcess()?->getPid() ?? 0;
+        }
+        
+        $this->applicationCollector?->updateApplicationState($workersPid);
+    }
+    
     public function getApplicationPid(): int
     {
         if($this->pidFileHandler !== null) {

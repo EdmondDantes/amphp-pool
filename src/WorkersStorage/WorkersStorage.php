@@ -22,7 +22,11 @@ final class WorkersStorage implements WorkersStorageInterface
     public static function instanciate(int $workersCount = 0, int $workerId = 0): static
     {
         return new static(
-            WorkerState::class, ApplicationState::class, MemoryUsage::class, $workersCount
+            WorkerState::class,
+            ApplicationState::class,
+            MemoryUsage::class,
+            $workersCount,
+            $workerId
         );
     }
 
@@ -93,12 +97,13 @@ final class WorkersStorage implements WorkersStorageInterface
         if($handler === false) {
             throw new \RuntimeException('Failed to open shared memory');
         }
-
+        
+        $this->handler              = $handler;
+        
         if($this->workersCount === 0) {
+            $this->getApplicationState()->read();
             $this->workersCount     = $this->getApplicationState()->getWorkersCount();
         }
-
-        $this->handler              = $handler;
     }
 
     private function getStructureSize(): int
@@ -134,9 +139,11 @@ final class WorkersStorage implements WorkersStorageInterface
         \set_error_handler(static function ($number, $error, $file = null, $line = null) {
             throw new \ErrorException($error, 0, $number, $file, $line);
         });
+        
+        $offset                     = $this->getApplicationState()->getStructureSize() + $this->getMemoryUsage()->getStructureSize();
 
         try {
-            $data                   = \shmop_read($this->handler, 0, \shmop_size($this->handler));
+            $data                   = \shmop_read($this->handler, $offset, \shmop_size($this->handler) - $offset);
         } finally {
             \restore_error_handler();
         }
@@ -158,7 +165,8 @@ final class WorkersStorage implements WorkersStorageInterface
         for($i = 0; $i < $workersCount; $i++) {
             $workers[]              = \forward_static_call(
                 [$this->storageClass, 'unpackItem'],
-                \substr($data, $i * $this->structureSize, $this->structureSize)
+                \substr($data, $i * $this->structureSize, $this->structureSize),
+                $i + 1
             );
         }
 
@@ -247,7 +255,7 @@ final class WorkersStorage implements WorkersStorageInterface
             $this->open();
         }
 
-        if($size < \shmop_size($this->handler)) {
+        if($size > \shmop_size($this->handler)) {
             throw new \RuntimeException('Shared memory segment is too small for ApplicationState data');
         }
 
@@ -322,7 +330,7 @@ final class WorkersStorage implements WorkersStorageInterface
             $this->open();
         }
 
-        if(($offset + $size) < \shmop_size($this->handler)) {
+        if(($offset + $size) > \shmop_size($this->handler)) {
             throw new \RuntimeException('Shared memory segment is too small for MemoryUsage data: '
                                         . \shmop_size($this->handler) . ' < ' . ($offset + $size) . ' bytes');
         }
@@ -411,7 +419,7 @@ final class WorkersStorage implements WorkersStorageInterface
             throw new \InvalidArgumentException('Worker id is out of range');
         }
 
-        return $this->structureSize * ($workerId - 1);
+        return $offset;
     }
 
     private function calculateSize(int $workerOffset, int $offset, int $size): int

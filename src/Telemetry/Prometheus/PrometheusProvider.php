@@ -20,17 +20,81 @@ final class PrometheusProvider
 
     public function render(): string
     {
-        $workers                    = $this->workersStorage->foreachWorkers();
-
-        $metrics                    = $this->renderGroupsScheme($workers);
+        $metrics                    = $this->renderApplicationState();
+        
+        $workers                    = $this->getWorkersInfo();
+        
+        $metrics                    = \array_merge($metrics, $this->renderGroupsScheme($workers));
         $metrics                    = \array_merge($metrics, $this->renderTimings($workers));
         $metrics                    = \array_merge($metrics, $this->renderUsage($workers));
+        $metrics                    = \array_merge($metrics, $this->renderMemoryUsageSystem($workers));
         $metrics                    = \array_merge($metrics, $this->renderConnections($workers));
         $metrics                    = \array_merge($metrics, $this->renderJobs($workers));
 
         return \implode("\n", $metrics);
     }
 
+    protected function getWorkersInfo(): array
+    {
+        $workers                    = $this->workersStorage->foreachWorkers();
+        
+        foreach ($workers as $worker) {
+            if($worker->getGroupId() === 0) {
+                $worker->setGroupId($this->findGroupId($worker->getWorkerId()));
+            }
+        }
+        
+        return $workers;
+    }
+    
+    protected function findGroupId(int $workerId): int
+    {
+        $maxWorkerId                = 1;
+        
+        foreach ($this->groupsScheme as $group) {
+            
+            $minWorkerId            = $maxWorkerId + 1;
+            $maxWorkerId            = $minWorkerId + $group->getMaxWorkers();
+            
+            if($minWorkerId <= $workerId && $workerId <= $maxWorkerId) {
+                return $group->getWorkerGroupId();
+            }
+        }
+        
+        return 0;
+    }
+    
+    protected function renderApplicationState(): array
+    {
+        $this->workersStorage->getApplicationState()->read();
+        
+        $metrics[] = '# TYPE application_started_at gauge';
+        $metrics[] = 'application_started_at ' . $this->workersStorage->getApplicationState()->getStartedAt() * 1000;
+        
+        $metrics[] = '# TYPE application_uptime gauge';
+        $metrics[] = 'application_uptime ' . (\time() - $this->workersStorage->getApplicationState()->getStartedAt());
+        
+        $metrics[] = '# TYPE application_restarts_count counter';
+        $metrics[] = 'application_restarts_count ' . $this->workersStorage->getApplicationState()->getRestartsCount();
+
+        $metrics[] = '# TYPE application_last_restarted_at gauge';
+        $metrics[] = 'application_last_restarted_at ' . $this->workersStorage->getApplicationState()->getLastRestartedAt() * 1000;
+
+        $metrics[] = '# TYPE application_workers_errors counter';
+        $metrics[] = 'application_workers_errors ' . $this->workersStorage->getApplicationState()->getWorkersErrors();
+
+        $metrics[] = '# TYPE system_load_average gauge';
+        $metrics[] = 'system_load_average ' . $this->workersStorage->getApplicationState()->getLoadAverage();
+
+        $metrics[] = '# TYPE application_memory_total gauge';
+        $metrics[] = 'system_memory_total ' . $this->workersStorage->getApplicationState()->getMemoryTotal();
+
+        $metrics[] = '# TYPE application_memory_free gauge';
+        $metrics[] = 'system_memory_free ' . $this->workersStorage->getApplicationState()->getMemoryFree();
+
+        return $metrics;
+    }
+    
     protected function renderTimings(array $workers): array
     {
         $metrics[] = '';
@@ -104,6 +168,24 @@ final class PrometheusProvider
 
         return $metrics;
     }
+    
+    protected function renderMemoryUsageSystem(array $workers): array
+    {
+        $metrics[]                  = '';
+        
+        $this->workersStorage->getMemoryUsage()->read();
+        
+        $stats                      = $this->workersStorage->getMemoryUsage()->getStats();
+        $index                      = 1;
+
+        $metrics[] = '# TYPE worker_memory_usage_system gauge';
+        foreach ($workers as $workerState) {
+            $metrics[] = 'worker_memory_usage_system{' . $this->genLabels($workerState) . '} ' . ($stats[$index] ?? 0);
+            $index++;
+        }
+
+        return $metrics;
+    }
 
     protected function renderConnections(array $workers): array
     {
@@ -172,7 +254,7 @@ final class PrometheusProvider
                          .'", group_type="' .$group->getWorkerType()->value
                          .'", group_min_workers="' .$group->getMinWorkers()
                          .'", group_max_workers="' .$group->getMaxWorkers()
-                         .'"} '.$runningWorkers[$group->getWorkerGroupId()];
+                         .'"} '.($runningWorkers[$group->getWorkerGroupId()] ?? 0);
         }
 
         return $metrics;

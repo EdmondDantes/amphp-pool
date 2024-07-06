@@ -95,7 +95,7 @@ final class SystemInfo
                 return 0;
             }
 
-            $info                   = \explode("\n", $info);
+            $info                   = \explode("\n", trim($info));
 
             if(empty($info[1])) {
                 return 0;
@@ -103,7 +103,7 @@ final class SystemInfo
 
             $info                   = \explode(',', $info[1]);
 
-            return (int) $info[0];
+            return (int) $info[1];
         }
 
         $info                   = \shell_exec('ps -p '.$pid.' -o rss=');

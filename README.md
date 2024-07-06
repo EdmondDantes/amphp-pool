@@ -73,3 +73,7 @@ $workerPool->describeGroup(new WorkerGroup(
 // Try http://127.0.0.1:9095/ in your browser.
 $workerPool->run();
 ```
+
+## Prometheus + Grafana
+
+![Prometheus](docs/images/prometheus.png)

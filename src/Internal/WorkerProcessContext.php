@@ -153,6 +153,11 @@ final class WorkerProcessContext implements \Psr\Log\LoggerInterface, \Psr\Log\L
         return $this->id;
     }
 
+    public function getPid(): int
+    {
+        return $this->context->getPid();
+    }
+    
     public function getCancellation(): Cancellation
     {
         return $this->processCancellation->getCancellation();
