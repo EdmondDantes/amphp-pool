@@ -93,6 +93,8 @@ final class WorkerProcessContext implements \Psr\Log\LoggerInterface, \Psr\Log\L
 
             try {
                 
+                $cancelledException = null;
+                
                 //
                 // Two cases for cancellation:
                 // 1. The worker process was terminated.
@@ -102,8 +104,6 @@ final class WorkerProcessContext implements \Psr\Log\LoggerInterface, \Psr\Log\L
                     $workerCancellation,
                     $processCancellation->getCancellation()
                 );
-                
-                $cancelledException = null;
 
                 // First, wait for the end of the worker process
                 // while waiting for the cancellation.
