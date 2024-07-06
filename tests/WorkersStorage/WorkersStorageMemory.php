@@ -7,10 +7,9 @@ final class WorkersStorageMemory implements WorkersStorageInterface
 {
     public static function instanciate(int $workersCount = 0): static
     {
-        return new static(WorkerState::class, $workersCount);
+        return new static(WorkerState::class, ApplicationState::class, MemoryUsage::class, $workersCount);
     }
 
-    private int $key;
     private bool $isWrite           = false;
     private int $structureSize;
     private int         $totalSize;
@@ -18,16 +17,15 @@ final class WorkersStorageMemory implements WorkersStorageInterface
 
     public function __construct(
         private readonly string $storageClass,
-        private readonly int $workersCount = 0
+        private readonly string $applicationClass,
+        private readonly string $memoryUsageClass,
+        private readonly int $workersCount = 0,
+        private readonly int $workerId = 0
     ) {
         $this->structureSize        = $this->getStructureSize();
-        $this->totalSize            = $this->structureSize * $this->workersCount;
-
-        $this->key                  = \ftok(__FILE__, 's');
-
-        if($this->key === -1) {
-            throw new \RuntimeException('Failed to generate key ftok');
-        }
+        $this->totalSize            = $this->getApplicationState()->getStructureSize() +
+                                      $this->getMemoryUsage()->getStructureSize() +
+                                      $this->structureSize * $this->workersCount;
 
         if($this->workersCount > 0) {
             $this->isWrite          = true;
@@ -84,8 +82,10 @@ final class WorkersStorageMemory implements WorkersStorageInterface
         if($workerId < 0) {
             throw new \RuntimeException('Invalid worker id provided');
         }
+        
+        $baseOffset                 = $this->getApplicationState()->getStructureSize() + $this->getMemoryUsage()->getStructureSize();
 
-        return \substr($this->buffer, ($workerId - 1) * $this->structureSize + $offset, $this->structureSize);
+        return \substr($this->buffer, $baseOffset + ($workerId - 1) * $this->structureSize + $offset, $this->structureSize);
     }
 
     public function updateWorkerState(int $workerId, string $data, int $offset = 0): void
@@ -95,15 +95,75 @@ final class WorkersStorageMemory implements WorkersStorageInterface
         if($workerId < 0) {
             throw new \RuntimeException('Invalid worker id provided');
         }
+        
+        if(false === $this->isWrite) {
+            throw new \RuntimeException('This instance WorkersStorage is read-only');
+        }
 
+        $baseOffset                 = $this->getApplicationState()->getStructureSize() + $this->getMemoryUsage()->getStructureSize();
+        
         $this->buffer               = \substr_replace(
             $this->buffer,
             $data,
-            ($workerId - 1) * $this->structureSize + $offset,
+            $baseOffset + ($workerId - 1) * $this->structureSize + $offset,
             \strlen($data)
         );
     }
-
+    
+    public function getApplicationState(): ApplicationStateInterface
+    {
+        return \forward_static_call([$this->applicationClass, 'instanciate'], $this, $this->workersCount, $this->workerId !== 0);
+    }
+    
+    public function readApplicationState(): string
+    {
+        $size                       = $this->getApplicationState()->getStructureSize();
+        
+        return substr($this->buffer, 0, $size);
+    }
+    
+    public function updateApplicationState(string $data): void
+    {
+        if(false === $this->isWrite || $this->workerId !== 0) {
+            throw new \RuntimeException('This instance WorkersStorage is read-only');
+        }
+        
+        $size                       = $this->getApplicationState()->getStructureSize();
+        
+        if(\strlen($data) !== $size) {
+            throw new \RuntimeException('Invalid application state data size');
+        }
+        
+        $this->buffer               = substr_replace($this->buffer, $data, 0, $size);
+    }
+    
+    public function getMemoryUsage(): MemoryUsageInterface
+    {
+        return \forward_static_call([$this->memoryUsageClass, 'instanciate'], $this, $this->workersCount, $this->workerId !== 0);
+    }
+    
+    public function readMemoryUsage(): string
+    {
+        $size                       = $this->getMemoryUsage()->getStructureSize();
+        
+        return substr($this->buffer, $this->getApplicationState()->getStructureSize(), $size);
+    }
+    
+    public function updateMemoryUsage(string $data): void
+    {
+        if(false === $this->isWrite || $this->workerId !== 0) {
+            throw new \RuntimeException('This instance WorkersStorage is read-only');
+        }
+        
+        $size                       = $this->getMemoryUsage()->getStructureSize();
+        
+        if(\strlen($data) !== $size) {
+            throw new \RuntimeException('Invalid memory usage data size');
+        }
+        
+        $this->buffer               = substr_replace($this->buffer, $data, $this->getApplicationState()->getStructureSize(), $size);
+    }
+    
     public function close(): void
     {
         $this->buffer               = '';

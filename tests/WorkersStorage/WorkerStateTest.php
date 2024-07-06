@@ -1,17 +1,15 @@
 <?php
 declare(strict_types=1);
 
-namespace WorkersStorage;
+namespace CT\AmpPool\WorkersStorage;
 
-use CT\AmpPool\WorkersStorage\WorkersStorageMemory;
-use CT\AmpPool\WorkersStorage\WorkerState;
 use PHPUnit\Framework\TestCase;
 
 class WorkerStateTest extends TestCase
 {
     public function testWriteRead(): void
     {
-        $workerStorage              = new WorkersStorageMemory(WorkerState::class, 5);
+        $workerStorage              = WorkersStorageMemory::instanciate(5);
         $workerState                = $workerStorage->getWorkerState(1);
 
         $this->fillWorkerState($workerState);
@@ -25,7 +23,7 @@ class WorkerStateTest extends TestCase
 
     public function testUpdateStateSegment(): void
     {
-        $workerStorage              = new WorkersStorageMemory(WorkerState::class, 5);
+        $workerStorage              = WorkersStorageMemory::instanciate(5);
         $workerState                = $workerStorage->getWorkerState(1);
 
         $this->fillWorkerState($workerState);
@@ -46,7 +44,7 @@ class WorkerStateTest extends TestCase
 
     public function testUpdateTimeSegment(): void
     {
-        $workerStorage              = new WorkersStorageMemory(WorkerState::class, 5);
+        $workerStorage              = WorkersStorageMemory::instanciate(5);
         $workerState                = $workerStorage->getWorkerState(1);
 
         $this->fillWorkerState($workerState);
@@ -67,7 +65,7 @@ class WorkerStateTest extends TestCase
 
     public function testUpdateMemorySegment(): void
     {
-        $workerStorage              = new WorkersStorageMemory(WorkerState::class, 5);
+        $workerStorage              = WorkersStorageMemory::instanciate(5);
         $workerState                = $workerStorage->getWorkerState(1);
 
         $this->fillWorkerState($workerState);
@@ -87,7 +85,7 @@ class WorkerStateTest extends TestCase
 
     public function testUpdateConnectionsSegment(): void
     {
-        $workerStorage              = new WorkersStorageMemory(WorkerState::class, 5);
+        $workerStorage              = WorkersStorageMemory::instanciate(5);
         $workerState                = $workerStorage->getWorkerState(3);
 
         $this->fillWorkerState($workerState);
@@ -110,7 +108,7 @@ class WorkerStateTest extends TestCase
 
     public function testUpdateJobSegment(): void
     {
-        $workerStorage              = new WorkersStorageMemory(WorkerState::class, 5);
+        $workerStorage              = WorkersStorageMemory::instanciate(5);
         $workerState                = $workerStorage->getWorkerState(2);
 
         $this->fillWorkerState($workerState);
@@ -134,7 +132,7 @@ class WorkerStateTest extends TestCase
 
     public function testUpdateShouldBeStarted(): void
     {
-        $workerStorage              = new WorkersStorageMemory(WorkerState::class, 5);
+        $workerStorage              = WorkersStorageMemory::instanciate(5);
         $workerState                = $workerStorage->getWorkerState(2);
 
         $this->fillWorkerState($workerState);
@@ -152,7 +150,7 @@ class WorkerStateTest extends TestCase
 
     public function testUpdateShutdownErrors(): void
     {
-        $workerStorage              = new WorkersStorageMemory(WorkerState::class, 5);
+        $workerStorage              = WorkersStorageMemory::instanciate(5);
         $workerState                = $workerStorage->getWorkerState(2);
 
         $this->fillWorkerState($workerState);
@@ -171,7 +169,7 @@ class WorkerStateTest extends TestCase
 
     public function testUnpackItem(): void
     {
-        $workerStorage              = new WorkersStorageMemory(WorkerState::class, 5);
+        $workerStorage              = WorkersStorageMemory::instanciate(5);
         $workerState                = $workerStorage->getWorkerState(1);
 
         $this->fillWorkerState($workerState);
