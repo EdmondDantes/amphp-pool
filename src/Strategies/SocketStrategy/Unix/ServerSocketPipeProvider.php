@@ -16,7 +16,7 @@ use Amp\Socket\SocketAddress;
 use Amp\Socket\SocketException;
 use Amp\Sync\Channel;
 use Amp\Sync\ChannelException;
-use CT\AmpPool\System\System;
+use CT\AmpPool\System\SystemInfo;
 use const Amp\Process\IS_WINDOWS;
 
 final class ServerSocketPipeProvider
@@ -31,7 +31,7 @@ final class ServerSocketPipeProvider
 
     public function __construct(BindContext $bindContext = new BindContext())
     {
-        if (System::canReusePort()) {
+        if (SystemInfo::canReusePort()) {
             $bindContext = $bindContext->withReusePort();
         }
 
