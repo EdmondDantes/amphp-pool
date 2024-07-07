@@ -18,9 +18,9 @@ use Amp\Sync\ChannelException;
 use Amp\TimeoutCancellation;
 use CT\AmpPool\Exceptions\RemoteException;
 use CT\AmpPool\Exceptions\WorkerShouldBeStopped;
+use CT\AmpPool\Internal\Messages\MessageIpcShutdown;
 use CT\AmpPool\Internal\Messages\MessageLog;
-use CT\AmpPool\Internal\Messages\MessagePingPong;
-use CT\AmpPool\Internal\Messages\MessageShutdown;
+use CT\AmpPool\Internal\Messages\WorkerShouldBeShutdown;
 use CT\AmpPool\Internal\Messages\WorkerStarted;
 use CT\AmpPool\WorkerEventEmitterInterface;
 use Revolt\EventLoop;
@@ -62,6 +62,8 @@ final class WorkerProcessContext implements \Psr\Log\LoggerInterface, \Psr\Log\L
     private readonly DeferredCancellation $processCancellation;
     
     private readonly DeferredCancellation $loopCancellation;
+    
+    private bool $workerShouldBeStopped = false;
 
     /**
      * @param positive-int $id
@@ -84,12 +86,13 @@ final class WorkerProcessContext implements \Psr\Log\LoggerInterface, \Psr\Log\L
         $workerCancellation         = $this->workerCancellation;
         $context                    = $this->context;
         $processTimeout             = $this->processTimeout;
+        $self                       = \WeakReference::create($this);
 
         /**
          * The processFuture is a future that waits for the worker process to end.
          */
         $this->processFuture        = async(static function ()
-        use ($processCancellation, $workerCancellation, $loopCancellation, $context, $processTimeout): mixed {
+        use ($processCancellation, $workerCancellation, $loopCancellation, $context, $self, $processTimeout): mixed {
 
             try {
                 
@@ -115,13 +118,23 @@ final class WorkerProcessContext implements \Psr\Log\LoggerInterface, \Psr\Log\L
                         $cancelledException = $cancelledException->getPrevious();
                     }
                     
+                    if($cancelledException instanceof WorkerShouldBeStopped) {
+                        // workerShouldBeStopped without restarting
+                        
+                        $self       = $self->get();
+                        
+                        if($self !== null) {
+                            $self->workerShouldBeStopped = true;
+                        }
+                    }
+                    
                     // Awaiting the worker process was interrupted by a cancellation not related to the worker process.
                 }
 
                 // Try to gracefully close the worker process if possible.
                 try {
                     if(false === $context->isClosed()) {
-                        $context->send(new MessageShutdown);
+                        $context->send(new WorkerShouldBeShutdown);
                     }
                 } catch (ChannelException) {
                     // Ignore if the worker has already exited or the channel is closed
@@ -249,7 +262,16 @@ final class WorkerProcessContext implements \Psr\Log\LoggerInterface, \Psr\Log\L
                 }
 
             } finally {
-
+                
+                try {
+                    // Confirm that the child process has completed successfully.
+                    if(false === $this->context->isClosed()) {
+                        $this->context->send(new MessageIpcShutdown);
+                    }
+                } catch (\Throwable) {
+                    // Ignore if the worker has already exited or the channel is closed
+                }
+                
                 // Stop waiting for the worker process to end.
                 if(false === $this->processCancellation->isCancelled()) {
                     $this->processCancellation->cancel();
@@ -266,6 +288,10 @@ final class WorkerProcessContext implements \Psr\Log\LoggerInterface, \Psr\Log\L
 
         } finally {
 
+            if($loopException === null && $this->workerShouldBeStopped) {
+                $loopException      = new WorkerShouldBeStopped;
+            }
+            
             if($loopException === null || $loopException instanceof WorkerShouldBeStopped) {
                 $text               = 'Waiting for the worker #'.$this->id.' was interrupted due to a timeout ('.$this->processTimeout . '). '
                                     .'The child process properly closed the IPC connection.';

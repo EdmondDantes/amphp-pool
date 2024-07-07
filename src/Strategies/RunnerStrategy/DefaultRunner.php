@@ -82,7 +82,7 @@ class DefaultRunner extends WorkerStrategyAbstract implements RunnerStrategyInte
             ]);
 
             // Normally, the worker process will exit when the IPC channel is closed.
-            $channel->send(null);
+            $worker->awaitShutdown();
 
         } catch (\Throwable $exception) {
 
