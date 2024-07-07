@@ -35,7 +35,7 @@ interface WorkerInterface extends WorkerEventEmitterAwareInterface, WorkersStora
     public function mainLoop(): void;
 
     public function getLogger(): LoggerInterface;
-    
+
     public function awaitShutdown(): void;
 
     public function awaitTermination(?Cancellation $cancellation = null): void;

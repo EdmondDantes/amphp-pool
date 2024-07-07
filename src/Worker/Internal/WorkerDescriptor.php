@@ -85,7 +85,7 @@ final class WorkerDescriptor
     {
         return $this->isRunning() || ($this->startFuture !== null && false === $this->startFuture->isComplete());
     }
-    
+
     public function isRunning(): bool
     {
         return $this->workerProcess !== null && false === $this->workerProcess->wasTerminated();

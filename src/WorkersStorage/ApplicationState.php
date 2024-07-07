@@ -37,7 +37,7 @@ class ApplicationState implements ApplicationStateInterface
         if($this->isReadOnly) {
             throw new \RuntimeException('The ApplicationState is read-only');
         }
-        
+
         $storage                    = $this->getStorage();
 
         if($storage === null) {
@@ -148,49 +148,49 @@ class ApplicationState implements ApplicationStateInterface
     {
         return $this->loadAverage;
     }
-    
+
     public function setStartedAt(int $startedAt): static
     {
         $this->startedAt            = $startedAt;
         return $this;
     }
-    
+
     public function setLastRestartedAt(int $lastRestartedAt): static
     {
         $this->lastRestartedAt      = $lastRestartedAt;
         return $this;
     }
-    
+
     public function setRestartsCount(int $restartsCount): static
     {
         $this->restartsCount        = $restartsCount;
         return $this;
     }
-    
+
     public function setWorkersErrors(int $workersErrors): static
     {
         $this->workersErrors        = $workersErrors;
         return $this;
     }
-    
+
     public function setMemoryFree(int $memoryFree): static
     {
         $this->memoryFree           = $memoryFree;
         return $this;
     }
-    
+
     public function setMemoryTotal(int $memoryTotal): static
     {
         $this->memoryTotal          = $memoryTotal;
         return $this;
     }
-    
+
     public function setLoadAverage(float $loadAverage): static
     {
         $this->loadAverage          = $loadAverage;
         return $this;
     }
-    
+
     public function toArray(): array
     {
         return [

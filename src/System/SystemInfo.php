@@ -95,7 +95,7 @@ final class SystemInfo
                 return 0;
             }
 
-            $info                   = \explode("\n", trim($info));
+            $info                   = \explode("\n", \trim($info));
 
             if(empty($info[1])) {
                 return 0;

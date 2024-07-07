@@ -103,9 +103,9 @@ final class WorkerPool implements WorkerPoolInterface
     private WorkerEventEmitterInterface $eventEmitter;
 
     private mixed $pidFileHandler           = null;
-    
+
     private ApplicationCollectorInterface|null $applicationCollector = null;
-    
+
     private string $applicationCollectorId  = '';
 
     public function __construct(
@@ -135,15 +135,15 @@ final class WorkerPool implements WorkerPoolInterface
             $workerDescriptor->workerState->setGroupId($workerDescriptor->group->getWorkerGroupId())->update();
         }
     }
-    
+
     private function initApplicationCollector(): void
     {
         if($this->collectorClass === '') {
             return;
         }
-        
-        $this->applicationCollector = forward_static_call([$this->collectorClass, 'instanciate'], $this->workersStorage);
-        
+
+        $this->applicationCollector = \forward_static_call([$this->collectorClass, 'instanciate'], $this->workersStorage);
+
         $this->applicationCollector->startApplication();
         $this->applicationCollectorId = EventLoop::repeat($this->statsUpdateInterval, $this->updateApplicationState(...));
     }
@@ -294,7 +294,7 @@ final class WorkerPool implements WorkerPoolInterface
 
             throw $exception;
         }
-        
+
         //
         // Main watcher loop
         //
@@ -303,7 +303,7 @@ final class WorkerPool implements WorkerPoolInterface
             if($this->shouldRestart) {
                 $this->applicationCollector?->restartApplication();
             }
-            
+
             $this->shouldRestart    = false;
 
             if(false === $this->workersCancellation?->isCancelled()) {
@@ -445,8 +445,8 @@ final class WorkerPool implements WorkerPoolInterface
         $delta                      = \abs($delta);
         $handled                    = 0;
 
-        $workers                    = $isDecrease ? array_reverse($this->workers) : $this->workers;
-        
+        $workers                    = $isDecrease ? \array_reverse($this->workers) : $this->workers;
+
         foreach ($workers as $workerDescriptor) {
             if($workerDescriptor->group->getWorkerGroupId() !== $groupId) {
                 continue;
@@ -463,11 +463,11 @@ final class WorkerPool implements WorkerPoolInterface
 
             if($isDecrease && $workerDescriptor->shouldBeStarted()) {
                 $workerDescriptor->willBeStopped();
-                
+
                 if($workerDescriptor->isRunning()) {
                     $workerDescriptor->getWorkerProcess()->shutdown();
                 }
-                
+
                 $handled++;
             } elseif(false === $isDecrease && false === $workerDescriptor->shouldBeStarted()) {
                 $workerDescriptor->willBeStarted();
@@ -893,7 +893,7 @@ final class WorkerPool implements WorkerPoolInterface
         }
 
         $this->stopWorkers();
-        
+
         if($this->applicationCollector !== null) {
             EventLoop::cancel($this->applicationCollectorId);
             $this->applicationCollector->stopApplication();
@@ -927,7 +927,7 @@ final class WorkerPool implements WorkerPoolInterface
                 $count++;
             } elseif ($notRunning && $worker->isNotRunning()) {
                 $count++;
-            } else if(false === $onlyRunning && false === $notRunning) {
+            } elseif(false === $onlyRunning && false === $notRunning) {
                 $count++;
             }
         }
@@ -978,14 +978,14 @@ final class WorkerPool implements WorkerPoolInterface
     private function updateApplicationState(): void
     {
         $workersPid                 = [];
-        
+
         foreach ($this->workers as $workerDescriptor) {
             $workersPid[]           = $workerDescriptor->getWorkerProcess()?->getPid() ?? 0;
         }
-        
+
         $this->applicationCollector?->updateApplicationState($workersPid);
     }
-    
+
     public function getApplicationPid(): int
     {
         if($this->pidFileHandler !== null) {

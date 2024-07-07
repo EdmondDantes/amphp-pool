@@ -22,9 +22,9 @@ interface ApplicationStateInterface
     public function getMemoryFree(): int;
     public function getMemoryTotal(): int;
     public function getLoadAverage(): float;
-    
+
     // setters
-    
+
     public function setStartedAt(int $startedAt): static;
     public function setLastRestartedAt(int $lastRestartedAt): static;
     public function setRestartsCount(int $restartsCount): static;
@@ -35,6 +35,6 @@ interface ApplicationStateInterface
 
     public function update(): void;
     public function read(): void;
-    
+
     public function toArray(): array;
 }

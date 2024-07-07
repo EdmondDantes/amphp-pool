@@ -12,8 +12,8 @@ interface MemoryUsageInterface
 
     public function update(): void;
     public function read(): void;
-    
+
     public function getStats(): array;
-    
+
     public function setStats(array $stats): static;
 }

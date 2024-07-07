@@ -61,7 +61,7 @@ class MemoryUsage implements MemoryUsageInterface
         if($this->isReadOnly) {
             throw new \RuntimeException('MemoryUsage is read-only');
         }
-        
+
         $storage                    = $this->getStorage();
 
         if($storage === null) {
@@ -129,12 +129,12 @@ class MemoryUsage implements MemoryUsageInterface
 
         return $this;
     }
-    
+
     public function getStats(): array
     {
         return $this->stats;
     }
-    
+
     protected function getStorage(): WorkersStorageInterface|null
     {
         return $this->storage?->get();

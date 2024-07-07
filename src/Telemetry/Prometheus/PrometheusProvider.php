@@ -21,9 +21,9 @@ final class PrometheusProvider
     public function render(): string
     {
         $metrics                    = $this->renderApplicationState();
-        
+
         $workers                    = $this->getWorkersInfo();
-        
+
         $metrics                    = \array_merge($metrics, $this->renderGroupsScheme($workers));
         $metrics                    = \array_merge($metrics, $this->renderTimings($workers));
         $metrics                    = \array_merge($metrics, $this->renderUsage($workers));
@@ -37,43 +37,43 @@ final class PrometheusProvider
     protected function getWorkersInfo(): array
     {
         $workers                    = $this->workersStorage->foreachWorkers();
-        
+
         foreach ($workers as $worker) {
             if($worker->getGroupId() === 0) {
                 $worker->setGroupId($this->findGroupId($worker->getWorkerId()));
             }
         }
-        
+
         return $workers;
     }
-    
+
     protected function findGroupId(int $workerId): int
     {
         $maxWorkerId                = 1;
-        
+
         foreach ($this->groupsScheme as $group) {
-            
+
             $minWorkerId            = $maxWorkerId + 1;
             $maxWorkerId            = $minWorkerId + $group->getMaxWorkers();
-            
+
             if($minWorkerId <= $workerId && $workerId <= $maxWorkerId) {
                 return $group->getWorkerGroupId();
             }
         }
-        
+
         return 0;
     }
-    
+
     protected function renderApplicationState(): array
     {
         $this->workersStorage->getApplicationState()->read();
-        
+
         $metrics[] = '# TYPE application_started_at gauge';
         $metrics[] = 'application_started_at ' . $this->workersStorage->getApplicationState()->getStartedAt() * 1000;
-        
+
         $metrics[] = '# TYPE application_uptime gauge';
         $metrics[] = 'application_uptime ' . (\time() - $this->workersStorage->getApplicationState()->getStartedAt());
-        
+
         $metrics[] = '# TYPE application_restarts_count counter';
         $metrics[] = 'application_restarts_count ' . $this->workersStorage->getApplicationState()->getRestartsCount();
 
@@ -94,7 +94,7 @@ final class PrometheusProvider
 
         return $metrics;
     }
-    
+
     protected function renderTimings(array $workers): array
     {
         $metrics[] = '';
@@ -168,13 +168,13 @@ final class PrometheusProvider
 
         return $metrics;
     }
-    
+
     protected function renderMemoryUsageSystem(array $workers): array
     {
         $metrics[]                  = '';
-        
+
         $this->workersStorage->getMemoryUsage()->read();
-        
+
         $stats                      = $this->workersStorage->getMemoryUsage()->getStats();
         $index                      = 1;
 

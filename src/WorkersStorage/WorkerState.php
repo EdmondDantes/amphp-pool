@@ -659,7 +659,7 @@ class WorkerState implements WorkerStateInterface
     public static function unpackItem(string $packedItem, int $workerId = 0): WorkerStateInterface
     {
         $unpackedItem               = \unpack('Q*', $packedItem);
-        
+
         if(false === $unpackedItem) {
             throw new \RuntimeException('Failed to unpack worker state');
         }
@@ -667,7 +667,7 @@ class WorkerState implements WorkerStateInterface
         if(empty($unpackedItem[1])) {
             $unpackedItem[1]        = $workerId;
         }
-        
+
         return new WorkerState(
             $unpackedItem[1] ?? $workerId,
             $unpackedItem[2] ?? 0,

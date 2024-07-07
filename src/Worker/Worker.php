@@ -13,8 +13,8 @@ use Amp\Sync\Channel;
 use Amp\TimeoutCancellation;
 use CT\AmpPool\Exceptions\FatalWorkerException;
 use CT\AmpPool\Exceptions\RemoteException;
-use CT\AmpPool\Internal\Messages\MessagePingPong;
 use CT\AmpPool\Internal\Messages\MessageIpcShutdown;
+use CT\AmpPool\Internal\Messages\MessagePingPong;
 use CT\AmpPool\Internal\Messages\WorkerShouldBeShutdown;
 use CT\AmpPool\Internal\Messages\WorkerStarted;
 use CT\AmpPool\Strategies\WorkerStrategyInterface;
@@ -55,7 +55,7 @@ class Worker implements WorkerInterface
     private bool $isStopped         = false;
 
     private array $periodicTasks    = [];
-    
+
     /**
      * Was received a MessageIpcShutdown message.
      */
@@ -201,7 +201,7 @@ class Worker implements WorkerInterface
                 if($message instanceof MessageIpcShutdown) {
                     $this->ipcChannelShutdown = true;
                 }
-                
+
                 if($message instanceof MessageIpcShutdown || $message instanceof WorkerShouldBeShutdown) {
                     break;
                 }
@@ -235,21 +235,21 @@ class Worker implements WorkerInterface
         if($this->ipcChannel->isClosed()) {
             return;
         }
-        
+
         // Send a message to the watcher to confirm that the worker has been shutdown
         $this->ipcChannel->send(null);
-        
+
         if($this->ipcChannelShutdown) {
             return;
         }
-        
+
         try {
             $this->ipcChannel->receive(new TimeoutCancellation(2));
         } catch (\Throwable) {
             // Ignore
         }
     }
-    
+
     public function awaitTermination(?Cancellation $cancellation = null): void
     {
         try {

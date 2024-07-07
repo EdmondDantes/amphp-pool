@@ -20,15 +20,15 @@ class MemoryUsageTest extends TestCase
 
         $this->assertEquals($memoryUsage->getStats(), $memoryUsage2->getStats());
     }
-    
+
     private function fillMemoryUsage(MemoryUsage $memoryUsage): void
     {
         $stats                      = [];
-        
+
         for($workerId = 1; $workerId <= 5; $workerId++) {
-            $stats[$workerId]       = rand(0, 1000);
+            $stats[$workerId]       = \rand(0, 1000);
         }
-        
+
         $memoryUsage->setStats($stats);
     }
 }

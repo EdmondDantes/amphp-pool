@@ -97,9 +97,9 @@ final class WorkersStorage implements WorkersStorageInterface
         if($handler === false) {
             throw new \RuntimeException('Failed to open shared memory');
         }
-        
+
         $this->handler              = $handler;
-        
+
         if($this->workersCount === 0) {
             $this->getApplicationState()->read();
             $this->workersCount     = $this->getApplicationState()->getWorkersCount();
@@ -139,7 +139,7 @@ final class WorkersStorage implements WorkersStorageInterface
         \set_error_handler(static function ($number, $error, $file = null, $line = null) {
             throw new \ErrorException($error, 0, $number, $file, $line);
         });
-        
+
         $offset                     = $this->getApplicationState()->getStructureSize() + $this->getMemoryUsage()->getStructureSize();
 
         try {

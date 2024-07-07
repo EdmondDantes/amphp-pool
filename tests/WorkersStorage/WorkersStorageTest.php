@@ -57,9 +57,9 @@ class WorkersStorageTest extends TestCase
     {
         $workerStorage              = WorkersStorage::instanciate(10);
         $workerStorageReadOnly      = WorkersStorage::instanciate();
-        
+
         $workerStorage->getApplicationState()->update();
-        
+
         $workerStates               = [];
 
         for($i = 1; $i <= 10; $i++) {
