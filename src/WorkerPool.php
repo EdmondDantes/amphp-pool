@@ -685,6 +685,8 @@ final class WorkerPool implements WorkerPoolInterface
 
             $exitResult             = $this->workerEventLoop($workerDescriptor);
 
+            $this->freeWorkerDescriptor($workerDescriptor);
+
             $this->eventEmitter->emitWorkerEvent(
                 new WorkerProcessTerminating($workerDescriptor->id, $workerDescriptor->group, $processContext),
                 $workerDescriptor->id
@@ -804,6 +806,21 @@ final class WorkerPool implements WorkerPoolInterface
         return $exitResult;
     }
 
+    private function freeWorkerDescriptor(WorkerDescriptor $workerDescriptor): void
+    {
+        if($workerDescriptor->workerState === null) {
+            return;
+        }
+
+        try {
+            $workerDescriptor->workerState->read();
+            $workerDescriptor->workerState->markUsShutdown()->update();
+
+        } catch (\Throwable $exception) {
+            $this->logger?->error('Failed to read or update the worker state: '.$exception->getMessage(), ['exception' => $exception]);
+        }
+    }
+
     private function fillWorkersGroup(WorkerGroupInterface $group): void
     {
         if($group->getWorkerGroupId() === 0) {
@@ -868,11 +885,22 @@ final class WorkerPool implements WorkerPoolInterface
     {
         foreach ($this->workers as $workerDescriptor) {
             if($workerDescriptor->id === $workerId) {
-                return $workerDescriptor->getWorkerProcess()->getContext();
+                return $workerDescriptor->getWorkerProcess()?->getContext();
             }
         }
 
         return null;
+    }
+
+    public function isWorkerRunning(int $workerId): bool
+    {
+        foreach ($this->workers as $workerDescriptor) {
+            if($workerDescriptor->id === $workerId) {
+                return $workerDescriptor->isRunning();
+            }
+        }
+
+        return false;
     }
 
     public function findWorkerCancellation(int $workerId): Cancellation|null

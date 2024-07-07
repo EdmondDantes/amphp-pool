@@ -63,6 +63,8 @@ interface WorkerPoolInterface extends WorkerEventEmitterAwareInterface, WorkersS
 
     public function findWorkerContext(int $workerId): Context|null;
 
+    public function isWorkerRunning(int $workerId): bool;
+
     public function findWorkerCancellation(int $workerId): Cancellation|null;
 
     /**

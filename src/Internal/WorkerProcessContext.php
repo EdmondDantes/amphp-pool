@@ -343,7 +343,7 @@ final class WorkerProcessContext implements \Psr\Log\LoggerInterface, \Psr\Log\L
 
     public function wasTerminated(): bool
     {
-        return $this->processFuture->isComplete();
+        return $this->processFuture->isComplete() || $this->context->isClosed();
     }
 
     private function close(): void

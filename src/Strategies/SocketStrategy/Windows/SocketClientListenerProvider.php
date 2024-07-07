@@ -12,9 +12,11 @@ use Amp\Socket\ServerSocket;
 use Amp\Socket\Socket;
 use Amp\Socket\SocketAddress;
 use CT\AmpPool\EventWeakHandler;
+use CT\AmpPool\Internal\Safe;
 use CT\AmpPool\Strategies\SocketStrategy\Windows\Messages\MessageReady;
 use CT\AmpPool\Strategies\SocketStrategy\Windows\Messages\MessageSocketFree;
 use CT\AmpPool\Strategies\SocketStrategy\Windows\Messages\MessageSocketTransfer;
+use CT\AmpPool\WatcherEvents\WorkerProcessTerminating;
 use CT\AmpPool\WorkerGroupInterface;
 use CT\AmpPool\WorkerPoolInterface;
 use Revolt\EventLoop;
@@ -45,6 +47,7 @@ final class SocketClientListenerProvider
      * @var array<int, ResourceSocket|Socket>
      */
     private array                   $transferredSockets = [];
+    private array                   $transferredSocketsByWorker = [];
     /**
      * Map of requests by worker, where key is the worker ID and value is the number of active requests.
      * @var array<int, int>
@@ -86,6 +89,8 @@ final class SocketClientListenerProvider
         }
 
         $this->workers[]            = $workerId;
+        $this->workerStatus[$workerId] = true;
+
         return $this;
     }
 
@@ -116,7 +121,7 @@ final class SocketClientListenerProvider
 
                 $pid                = $foundedWorker->getPid();
 
-                $socketId           = \socket_wsaprotocol_info_export(\socket_import_stream($socket->getResource()), $pid);
+                $socketId           = Safe::execute(fn () => \socket_wsaprotocol_info_export(\socket_import_stream($socket->getResource()), $pid));
 
                 if(false === $socketId) {
                     $socket->close();
@@ -201,7 +206,15 @@ final class SocketClientListenerProvider
         $this->workerGroup->getScalingStrategy()?->requestScaling();
 
         // Select random worker
-        return $this->workers[\array_rand($this->workers)];
+        $workers                    = [];
+
+        foreach ($this->workers as $workerId) {
+            if($this->workerPool->isWorkerRunning($workerId)) {
+                $workers[]          = $workerId;
+            }
+        }
+
+        return $this->workers[\array_rand($workers)];
     }
 
     private function pickupWorkerByRequests(): int|null
@@ -209,7 +222,15 @@ final class SocketClientListenerProvider
         $minRequests                = 0;
         $selectedWorkerId           = null;
 
+        $workers                    = [];
+
         foreach ($this->workers as $workerId) {
+            if($this->workerPool->isWorkerRunning($workerId)) {
+                $workers[]          = $workerId;
+            }
+        }
+
+        foreach ($workers as $workerId) {
 
             if(empty($this->workerStatus[$workerId])) {
                 continue;
@@ -238,12 +259,17 @@ final class SocketClientListenerProvider
         if($event instanceof MessageSocketFree) {
             $this->freeTransferredSocket($workerId, $event->socketId);
         }
+
+        if($event instanceof WorkerProcessTerminating) {
+            $this->shutdownWorker($workerId);
+        }
     }
 
     private function addTransferredSocket(int $workerId, string $socketId, ResourceSocket|Socket $socket): void
     {
         $this->transferredSockets[$socketId] = $socket;
         $this->requestsByWorker[$workerId]   = ($this->requestsByWorker[$workerId] ?? 0) + 1;
+        $this->transferredSocketsByWorker[$workerId][] = $socketId;
 
         $this->workerStatus[$workerId]       = false;
     }
@@ -261,12 +287,37 @@ final class SocketClientListenerProvider
             unset($this->transferredSockets[$socketId]);
         }
 
+        if(\array_key_exists($workerId, $this->transferredSocketsByWorker)) {
+            $this->transferredSocketsByWorker[$workerId] = \array_diff($this->transferredSocketsByWorker[$workerId], [$socketId]);
+        }
+
         if(\array_key_exists($workerId, $this->requestsByWorker)) {
             $this->requestsByWorker[$workerId]--;
 
             if($this->requestsByWorker[$workerId] < 0) {
                 $this->requestsByWorker[$workerId] = 0;
             }
+        }
+    }
+
+    private function shutdownWorker(int $workerId): void
+    {
+        $this->workerStatus[$workerId]      = false;
+        $this->workers                      = \array_diff($this->workers, [$workerId]);
+
+        if(\array_key_exists($workerId, $this->transferredSocketsByWorker)) {
+            foreach ($this->transferredSocketsByWorker[$workerId] as $socketId) {
+                if(\array_key_exists($socketId, $this->transferredSockets)) {
+                    $this->transferredSockets[$socketId]->close();
+                    unset($this->transferredSockets[$socketId]);
+                }
+            }
+
+            $this->transferredSocketsByWorker[$workerId] = [];
+        }
+
+        if(\array_key_exists($workerId, $this->requestsByWorker)) {
+            $this->requestsByWorker[$workerId] = 0;
         }
     }
 

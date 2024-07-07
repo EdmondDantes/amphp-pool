@@ -165,4 +165,6 @@ interface WorkerStateInterface
     public function jobDequeued(int $weight, bool $canAcceptMoreJobs): void;
 
     public function initDefaults(): static;
+
+    public function markUsShutdown(): static;
 }

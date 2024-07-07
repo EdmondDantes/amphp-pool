@@ -460,6 +460,24 @@ class WorkerState implements WorkerStateInterface
         return $this;
     }
 
+    public function markUsShutdown(): static
+    {
+        $this->isReady              = false;
+        $this->startedAt            = 0;
+        $this->finishedAt           = \time();
+        $this->pid                  = 0;
+        $this->weight               = 0;
+        $this->updatedAt            = \time();
+
+        $this->phpMemoryUsage       = 0;
+        $this->phpMemoryPeakUsage   = 0;
+        $this->connectionsProcessing= 0;
+        $this->jobProcessing        = 0;
+
+        $this->update();
+        return $this;
+    }
+
     protected function getStorage(): WorkersStorageInterface|null
     {
         return $this->storage?->get();
