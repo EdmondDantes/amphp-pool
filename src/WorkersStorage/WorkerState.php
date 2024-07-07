@@ -462,6 +462,9 @@ class WorkerState implements WorkerStateInterface
 
     public function markUsShutdown(): static
     {
+        $this->read();
+        
+        $this->shouldBeStarted      = false;
         $this->isReady              = false;
         $this->startedAt            = 0;
         $this->finishedAt           = \time();

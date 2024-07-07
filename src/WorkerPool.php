@@ -813,8 +813,7 @@ final class WorkerPool implements WorkerPoolInterface
         }
 
         try {
-            $workerDescriptor->workerState->read();
-            $workerDescriptor->workerState->markUsShutdown()->update();
+            $workerDescriptor->workerState->markUsShutdown();
 
         } catch (\Throwable $exception) {
             $this->logger?->error('Failed to read or update the worker state: '.$exception->getMessage(), ['exception' => $exception]);
