@@ -37,7 +37,7 @@ $workerPool->describeGroup(new WorkerGroup(
     workerType: WorkerTypeEnum::REACTOR,
     minWorkers: 2,
     maxWorkers: 5,
-    scalingStrategy: new \CT\AmpPool\Strategies\ScalingStrategy\ScalingByRequest(1, 15),
+    scalingStrategy: new \CT\AmpPool\Strategies\ScalingStrategy\ScalingByRequest(15, 15),
 ));
 
 // 4. Run the worker pool

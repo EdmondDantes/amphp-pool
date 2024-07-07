@@ -32,7 +32,7 @@ final class WorkerDescriptor
             $this->startFuture      = new DeferredFuture;
         }
 
-        $this->workerState?->read()->updateShouldBeStarted($this->shouldBeStarted);
+        $this->workerState?->updateShouldBeStarted(true);
     }
 
     public function started(): void
@@ -109,6 +109,6 @@ final class WorkerDescriptor
     public function markAsStoppedForever(): void
     {
         $this->isStoppedForever     = true;
-        $this->workerState?->read()->updateShouldBeStarted(false);
+        $this->workerState?->updateShouldBeStarted(false);
     }
 }

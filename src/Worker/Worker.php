@@ -232,6 +232,11 @@ class Worker implements WorkerInterface
 
     public function awaitShutdown(): void
     {
+        $this->workerState->markUsShutdown()
+                          ->updateStateSegment()
+                          ->updateTimeSegment()
+                          ->updateMemorySegment();
+
         if($this->ipcChannel->isClosed()) {
             return;
         }

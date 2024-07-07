@@ -25,6 +25,7 @@ final class PrometheusProvider
         $workers                    = $this->getWorkersInfo();
 
         $metrics                    = \array_merge($metrics, $this->renderGroupsScheme($workers));
+        $metrics                    = \array_merge($metrics, $this->renderGroupsShouldBeStarted($workers));
         $metrics                    = \array_merge($metrics, $this->renderTimings($workers));
         $metrics                    = \array_merge($metrics, $this->renderUsage($workers));
         $metrics                    = \array_merge($metrics, $this->renderMemoryUsageSystem($workers));
@@ -255,6 +256,43 @@ final class PrometheusProvider
                          .'", group_min_workers="' .$group->getMinWorkers()
                          .'", group_max_workers="' .$group->getMaxWorkers()
                          .'"} '.($runningWorkers[$group->getWorkerGroupId()] ?? 0);
+        }
+
+        return $metrics;
+    }
+
+    /**
+     * @param WorkerStateInterface[] $workers
+     *
+     */
+    protected function renderGroupsShouldBeStarted(array $workers): array
+    {
+        // Calculate worker running and counts by groups
+        $shouldBeStarted = [];
+
+        foreach ($workers as $worker) {
+
+            if(\array_key_exists($worker->getGroupId(), $shouldBeStarted) === false) {
+                $shouldBeStarted[$worker->getGroupId()] = 0;
+            }
+
+            if($worker->isShouldBeStarted()) {
+                $shouldBeStarted[$worker->getGroupId()]++;
+            }
+        }
+
+        $metrics[] = '';
+
+        $metrics[] = '# TYPE worker_group_should_be_started gauge';
+
+        foreach ($this->groupsScheme as $group) {
+
+            $metrics[] = 'worker_group_should_be_started{group_id="'.$group->getWorkerGroupId()
+                         .'", group_name="' .$group->getGroupName()
+                         .'", group_type="' .$group->getWorkerType()->value
+                         .'", group_min_workers="' .$group->getMinWorkers()
+                         .'", group_max_workers="' .$group->getMaxWorkers()
+                         .'"} '.($shouldBeStarted[$group->getWorkerGroupId()] ?? 0);
         }
 
         return $metrics;

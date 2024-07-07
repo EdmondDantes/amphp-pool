@@ -612,10 +612,6 @@ class WorkerState implements WorkerStateInterface
 
     public function updateShouldBeStarted(bool $shouldBeStarted): static
     {
-        if($this->shouldBeStarted === $shouldBeStarted) {
-            return $this;
-        }
-
         $this->shouldBeStarted       = $shouldBeStarted;
 
         $this->getStorage()?->updateWorkerState($this->workerId, \pack('Q', (int) $shouldBeStarted), 2 * 8);

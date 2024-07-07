@@ -145,7 +145,7 @@ final class ScalingByRequest extends WorkerStrategyAbstract implements ScalingSt
 
         $workerPool->scaleWorkers(
             $this->getWorkerGroup()->getWorkerGroupId(),
-            $this->getWorkerGroup()->getMinWorkers() - $runningWorkers
+            -1
         );
     }
 }
