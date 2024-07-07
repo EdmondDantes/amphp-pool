@@ -980,7 +980,11 @@ final class WorkerPool implements WorkerPoolInterface
         $workersPid                 = [];
 
         foreach ($this->workers as $workerDescriptor) {
-            $workersPid[]           = $workerDescriptor->getWorkerProcess()?->getPid() ?? 0;
+            if($workerDescriptor->isRunning()) {
+                $workersPid[]       = $workerDescriptor->getWorkerProcess()?->getPid() ?? 0;
+            } else {
+                $workersPid[]       = 0;
+            }
         }
 
         $this->applicationCollector?->updateApplicationState($workersPid);
