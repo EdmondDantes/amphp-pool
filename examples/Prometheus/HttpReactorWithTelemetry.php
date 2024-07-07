@@ -6,6 +6,7 @@ namespace Examples\Prometheus;
 use Amp\Http\HttpStatus;
 use Amp\Http\Server\DefaultErrorHandler;
 use Amp\Http\Server\Driver\SocketClientFactory;
+use Amp\Http\Server\Request;
 use Amp\Http\Server\Response;
 use Amp\Http\Server\SocketHttpServer;
 use CT\AmpPool\Telemetry\Collectors\WorkerTelemetryCollector;
@@ -53,7 +54,17 @@ final class HttpReactorWithTelemetry implements WorkerEntryPointInterface
         $worker->addPeriodicTask(5, $workerTelemetry->flushTelemetry(...));
 
         // And use it for the request handler
-        $requestHandler             = new RequestHandler($workerTelemetry, static function () use ($worker, $workerState): Response {
+        $requestHandler             = new RequestHandler($workerTelemetry, static function (Request $request) use ($worker, $workerState): Response {
+
+            if(!empty($request->getQueryParameter('job'))) {
+                $worker->getWorkerGroup()->getJobClient()->sendJob($request->getQueryParameter('job'));
+
+                return new Response(
+                    HttpStatus::OK,
+                    ['content-type' => 'text/plain; charset=utf-8'],
+                    'Job sent'
+                );
+            }
 
             $body                   = <<<EOF
 # Basic information about the worker

@@ -82,7 +82,7 @@ final class IpcClient implements IpcClientInterface
             $deferred               = new DeferredFuture();
         }
 
-        EventLoop::queue($this->sendJobImmediately(...), $data, $allowedGroups, $allowedWorkers, $deferred, $priority, $weight);
+        EventLoop::queue($this->sendJobImmediately(...), $data, $allowedGroups, $allowedWorkers, $deferred ?? false, $priority, $weight);
 
         return $deferred?->getFuture();
     }

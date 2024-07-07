@@ -44,7 +44,8 @@ $workerPool->describeGroup(new WorkerGroup(
     entryPointClass: HttpReactorWithTelemetry::class,
     workerType: WorkerTypeEnum::REACTOR,
     minWorkers: 2,
-    maxWorkers: 5
+    maxWorkers: 5,
+    jobGroups: [2]
 ));
 
 // 4. Run the worker pool
