@@ -11,6 +11,7 @@ use CT\AmpPool\WorkerGroup;
 use CT\AmpPool\WorkerPool;
 use CT\AmpPool\WorkerTypeEnum;
 use Examples\Prometheus\HttpReactorWithTelemetry;
+use Examples\Prometheus\JobWorker;
 use Monolog\Logger;
 use Monolog\Processor\PsrLogMessageProcessor;
 
@@ -28,6 +29,13 @@ $workerPool = new WorkerPool(logger: $logger);
 // 2. Add Prometheus group service
 $workerPool->describeGroup(new PrometheusGroup);
 
+$workerPool->describeGroup(new WorkerGroup(
+    entryPointClass: JobWorker::class,
+    workerType: WorkerTypeEnum::JOB,
+    minWorkers: 1,
+    maxWorkers: 4
+));
+
 // 3. Fill the worker pool with workers.
 // We create a group of workers with the Reactor type, which are intended to handle incoming connections.
 // The HttpReactor class is the entry point for the workers in this group.
@@ -36,8 +44,7 @@ $workerPool->describeGroup(new WorkerGroup(
     entryPointClass: HttpReactorWithTelemetry::class,
     workerType: WorkerTypeEnum::REACTOR,
     minWorkers: 2,
-    maxWorkers: 5,
-    scalingStrategy: new \CT\AmpPool\Strategies\ScalingStrategy\ScalingByRequest(15, 15),
+    maxWorkers: 5
 ));
 
 // 4. Run the worker pool

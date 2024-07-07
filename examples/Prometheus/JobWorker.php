@@ -3,18 +3,32 @@ declare(strict_types=1);
 
 namespace Examples\Prometheus;
 
+use Amp\Cancellation;
+use CT\AmpPool\Coroutine\CoroutineInterface;
+use CT\AmpPool\Strategies\JobExecutor\JobHandlerInterface;
 use CT\AmpPool\Worker\WorkerEntryPointInterface;
 use CT\AmpPool\Worker\WorkerInterface;
 
-final class JobWorker implements WorkerEntryPointInterface
+final class JobWorker implements WorkerEntryPointInterface, JobHandlerInterface
 {
+    private WorkerInterface $worker;
+
     public function initialize(WorkerInterface $worker): void
     {
-        // TODO: Implement initialize() method.
+        $this->worker               = $worker;
+        $worker->getWorkerGroup()->getJobExecutor()->defineJobHandler($this);
     }
 
     public function run(): void
     {
-        // TODO: Implement run() method.
+        $this->worker->awaitTermination();
+    }
+
+    public function handleJob(
+        string              $data,
+        ?CoroutineInterface $coroutine = null,
+        ?Cancellation       $cancellation = null
+    ): mixed {
+        return "Handling job: $data\n";
     }
 }
