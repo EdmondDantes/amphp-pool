@@ -340,6 +340,9 @@ final class PrometheusProvider
 
     protected function genLabels(WorkerStateInterface $workerState): string
     {
-        return 'worker_id="'.$workerState->getWorkerId().'", group_id="'.$workerState->getGroupId().'"';
+        $group                      = $this->groupsScheme[$workerState->getGroupId()] ?? null;
+        $groupType                  = $group?->getWorkerType()->value ?? '';
+
+        return 'worker_id="'.$workerState->getWorkerId().'", group_id="'.$workerState->getGroupId().'", group="'.$groupType.'"';
     }
 }

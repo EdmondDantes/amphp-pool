@@ -421,7 +421,7 @@ class WorkerState implements WorkerStateInterface
     {
         $this->jobAccepted++;
         $this->jobProcessing++;
-        
+
         $this->weight               += $weight;
         $this->isReady              = $canAcceptMoreJobs;
 
@@ -432,7 +432,7 @@ class WorkerState implements WorkerStateInterface
     {
         $this->jobProcessed++;
         $this->jobProcessing--;
-        
+
         $this->weight               -= $weight;
         $this->isReady              = $canAcceptMoreJobs;
 
