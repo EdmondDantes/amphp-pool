@@ -83,13 +83,6 @@ abstract class JobExecutorAbstract extends WorkerStrategyAbstract implements Job
         );
     }
 
-    public function onStopped(): void
-    {
-        $this->workerState          = null;
-        $this->group                = null;
-        $this->logger               = null;
-    }
-
     /**
      * Fiber loop for processing the request queue to create Jobs.
      *
@@ -169,7 +162,7 @@ abstract class JobExecutorAbstract extends WorkerStrategyAbstract implements Job
         } catch (CancelledException) {
             // Job loop canceled
         } finally {
-            $this->workerState->markAsUnReady()->updateStateSegment();
+            $this->workerState?->markAsUnReady()->updateStateSegment();
             $this->jobIpc?->close();
             $this->jobIpc               = null;
 
