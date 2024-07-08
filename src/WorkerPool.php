@@ -597,7 +597,10 @@ final class WorkerPool implements WorkerPoolInterface
                 new TimeoutCancellation($this->workerStartTimeout, 'The worker start timeout ('.$this->workerStartTimeout.') has been exceeded')
             );
         } catch (\Throwable $exception) {
-            $this->logger?->critical('Starting the worker failed: ' . $exception->getMessage(), ['exception' => $exception]);
+            $this->logger?->critical('Starting the worker #'.$workerDescriptor->id
+                                     .' group "'.$workerDescriptor->group->getGroupName()
+                                     .'" failed: ' . $exception->getMessage(), ['exception' => $exception]);
+            
             throw new FatalWorkerException('Starting the worker failed', 0, $exception);
         }
 
