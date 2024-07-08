@@ -5,6 +5,8 @@ namespace CT\AmpPool\Strategies\JobExecutor;
 
 use Amp\Cancellation;
 use Amp\CancelledException;
+use Amp\CompositeCancellation;
+use Amp\DeferredCancellation;
 use CT\AmpPool\Exceptions\FatalWorkerException;
 use CT\AmpPool\JobIpc\IpcServerInterface;
 use CT\AmpPool\JobIpc\JobRequestInterface;
@@ -48,6 +50,17 @@ abstract class JobExecutorAbstract extends WorkerStrategyAbstract implements Job
                                            .'Please use $worker->group->getJobExecutor()->defineJobHandler() method before starting the Worker.');
         }
 
+        $jobLoopCancellation        = new DeferredCancellation();
+        $workerState                = $worker->getWorkerState();
+
+        $worker->defineSoftShutdownHandler(static function () use ($jobLoopCancellation, $workerState) {
+            if(false === $jobLoopCancellation->isCancelled()) {
+                $jobLoopCancellation->cancel();
+            }
+
+            $workerState->markAsUnReady()->updateStateSegment();
+        });
+
         $this->workerState          = $worker->getWorkerState();
         $this->group                = $worker->getWorkerGroup();
         $this->logger               = $worker->getLogger();
@@ -62,7 +75,19 @@ abstract class JobExecutorAbstract extends WorkerStrategyAbstract implements Job
         $abortCancellation           = $worker->getAbortCancellation();
 
         EventLoop::queue($this->jobIpc->receiveLoop(...), $abortCancellation);
-        EventLoop::queue($this->jobLoop(...), $abortCancellation);
+
+        EventLoop::queue(
+            $this->jobLoop(...),
+            new CompositeCancellation($abortCancellation, $jobLoopCancellation->getCancellation()),
+            $abortCancellation
+        );
+    }
+
+    public function onStopped(): void
+    {
+        $this->workerState          = null;
+        $this->group                = null;
+        $this->logger               = null;
     }
 
     /**
@@ -70,7 +95,7 @@ abstract class JobExecutorAbstract extends WorkerStrategyAbstract implements Job
      *
      *
      */
-    protected function jobLoop(?Cancellation $cancellation = null): void
+    protected function jobLoop(?Cancellation $cancellation = null, ?Cancellation $abortCancellation = null): void
     {
         $this->workerState->markAsReady()->updateStateSegment();
 
@@ -144,12 +169,16 @@ abstract class JobExecutorAbstract extends WorkerStrategyAbstract implements Job
         } catch (CancelledException) {
             // Job loop canceled
         } finally {
-            $this->workerState          = null;
-            $this->group                = null;
-            $this->logger               = null;
-
+            $this->workerState->markAsUnReady()->updateStateSegment();
             $this->jobIpc?->close();
             $this->jobIpc               = null;
+
+            // Finally, we will wait for all the jobs to complete
+            try {
+                $this->awaitAll($abortCancellation);
+            } catch (CancelledException) {
+                // Ignore
+            }
         }
     }
 }

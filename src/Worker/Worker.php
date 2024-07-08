@@ -61,9 +61,9 @@ class Worker implements WorkerInterface
      * Was received a MessageIpcShutdown message.
      */
     private bool $ipcChannelShutdown = false;
-    
+
     private mixed $softShutdownHandler = null;
-    
+
     public function __construct(
         private readonly int     $id,
         private readonly Channel $ipcChannel,
@@ -208,12 +208,12 @@ class Worker implements WorkerInterface
                 if($message instanceof MessageIpcShutdown || $message instanceof WorkerShouldBeShutdown) {
                     break;
                 }
-                
+
                 if($message instanceof WorkerSoftShutdown) {
-                    
+
                     // handle the soft shutdown handler if defined
                     if($this->softShutdownHandler !== null) {
-                        call_user_func($this->softShutdownHandler);
+                        \call_user_func($this->softShutdownHandler);
                     } else {
                         // else terminate the worker
                         break;
@@ -392,9 +392,13 @@ class Worker implements WorkerInterface
             $task->cancel();
         }
     }
-    
+
     public function defineSoftShutdownHandler(callable $handler): void
     {
+        if($this->softShutdownHandler !== null) {
+            throw new \RuntimeException('Soft shutdown handler already defined');
+        }
+
         $this->softShutdownHandler  = $handler;
     }
 }

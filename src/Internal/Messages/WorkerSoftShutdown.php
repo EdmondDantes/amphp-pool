@@ -11,5 +11,5 @@ namespace CT\AmpPool\Internal\Messages;
  */
 final class WorkerSoftShutdown
 {
-    
+
 }

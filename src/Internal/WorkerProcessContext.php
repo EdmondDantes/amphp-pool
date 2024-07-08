@@ -378,13 +378,13 @@ final class WorkerProcessContext implements \Psr\Log\LoggerInterface, \Psr\Log\L
             $this->processCancellation->cancel(new WorkerShouldBeStopped);
         }
     }
-    
+
     public function softShutdown(): void
     {
         if($this->context->isClosed()) {
             $this->shutdown();
         }
-        
+
         try {
             $this->context->send(new WorkerSoftShutdown);
         } catch (\Throwable $exception) {
