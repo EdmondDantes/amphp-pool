@@ -419,6 +419,9 @@ class WorkerState implements WorkerStateInterface
 
     public function jobEnqueued(int $weight, bool $canAcceptMoreJobs): void
     {
+        $this->jobAccepted++;
+        $this->jobProcessing++;
+        
         $this->weight               += $weight;
         $this->isReady              = $canAcceptMoreJobs;
 
@@ -427,6 +430,9 @@ class WorkerState implements WorkerStateInterface
 
     public function jobDequeued(int $weight, bool $canAcceptMoreJobs): void
     {
+        $this->jobProcessed++;
+        $this->jobProcessing--;
+        
         $this->weight               -= $weight;
         $this->isReady              = $canAcceptMoreJobs;
 
