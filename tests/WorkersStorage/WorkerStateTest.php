@@ -124,7 +124,13 @@ class WorkerStateTest extends TestCase
         $workerState->jobErrors     += 10;
         $workerState->jobRejected   += 5;
 
+        $workerState->jobEnqueued(15, true);
+
         $workerState->updateJobSegment();
+        $workerState2->read();
+        $this->assertEquals($workerState, $workerState2);
+
+        $workerState->jobDequeued(15, false);
         $workerState2->read();
 
         $this->assertEquals($workerState, $workerState2);

@@ -600,7 +600,7 @@ final class WorkerPool implements WorkerPoolInterface
             $this->logger?->critical('Starting the worker #'.$workerDescriptor->id
                                      .' group "'.$workerDescriptor->group->getGroupName()
                                      .'" failed: ' . $exception->getMessage(), ['exception' => $exception]);
-            
+
             throw new FatalWorkerException('Starting the worker failed', 0, $exception);
         }
 

@@ -422,7 +422,7 @@ class WorkerState implements WorkerStateInterface
         $this->weight               += $weight;
         $this->isReady              = $canAcceptMoreJobs;
 
-        $this->updateStateSegment();
+        $this->updateJobSegment()->updateStateSegment();
     }
 
     public function jobDequeued(int $weight, bool $canAcceptMoreJobs): void
@@ -430,7 +430,7 @@ class WorkerState implements WorkerStateInterface
         $this->weight               -= $weight;
         $this->isReady              = $canAcceptMoreJobs;
 
-        $this->updateStateSegment();
+        $this->updateJobSegment()->updateStateSegment();
     }
 
     public function initDefaults(): static
@@ -442,13 +442,13 @@ class WorkerState implements WorkerStateInterface
         if($this->firstStartedAt === 0) {
             $this->firstStartedAt   = $now;
         }
-        
+
         $this->shouldBeStarted      = true;
         $this->weight               = 0;
         $this->startedAt            = $now;
         $this->updatedAt            = $now;
         $this->totalReloaded++;
-        
+
         $this->phpMemoryUsage       = \memory_get_usage(true);
         $this->phpMemoryPeakUsage   = \memory_get_peak_usage(true);
 
