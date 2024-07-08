@@ -442,22 +442,15 @@ class WorkerState implements WorkerStateInterface
         if($this->firstStartedAt === 0) {
             $this->firstStartedAt   = $now;
         }
-
-        if($this->startedAt === 0) {
-            $this->startedAt        = $now;
-        }
-
-        if($this->updatedAt === 0) {
-            $this->updatedAt        = $now;
-        }
-
+        
+        $this->shouldBeStarted      = true;
+        $this->weight               = 0;
+        $this->startedAt            = $now;
+        $this->updatedAt            = $now;
         $this->totalReloaded++;
         
         $this->phpMemoryUsage       = \memory_get_usage(true);
-
-        if($this->phpMemoryPeakUsage < \memory_get_peak_usage(true)) {
-            $this->phpMemoryPeakUsage = \memory_get_peak_usage(true);
-        }
+        $this->phpMemoryPeakUsage   = \memory_get_peak_usage(true);
 
         return $this;
     }
