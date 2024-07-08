@@ -16,6 +16,7 @@ use CT\AmpPool\Exceptions\RemoteException;
 use CT\AmpPool\Internal\Messages\MessageIpcShutdown;
 use CT\AmpPool\Internal\Messages\MessagePingPong;
 use CT\AmpPool\Internal\Messages\WorkerShouldBeShutdown;
+use CT\AmpPool\Internal\Messages\WorkerSoftShutdown;
 use CT\AmpPool\Internal\Messages\WorkerStarted;
 use CT\AmpPool\Strategies\WorkerStrategyInterface;
 use CT\AmpPool\Worker\Internal\PeriodicTask;
@@ -60,7 +61,9 @@ class Worker implements WorkerInterface
      * Was received a MessageIpcShutdown message.
      */
     private bool $ipcChannelShutdown = false;
-
+    
+    private mixed $softShutdownHandler = null;
+    
     public function __construct(
         private readonly int     $id,
         private readonly Channel $ipcChannel,
@@ -204,6 +207,17 @@ class Worker implements WorkerInterface
 
                 if($message instanceof MessageIpcShutdown || $message instanceof WorkerShouldBeShutdown) {
                     break;
+                }
+                
+                if($message instanceof WorkerSoftShutdown) {
+                    
+                    // handle the soft shutdown handler if defined
+                    if($this->softShutdownHandler !== null) {
+                        call_user_func($this->softShutdownHandler);
+                    } else {
+                        // else terminate the worker
+                        break;
+                    }
                 }
 
                 $this->eventEmitter->emitWorkerEvent($message, $this->id);
@@ -377,5 +391,10 @@ class Worker implements WorkerInterface
             unset($this->periodicTasks[$taskId]);
             $task->cancel();
         }
+    }
+    
+    public function defineSoftShutdownHandler(callable $handler): void
+    {
+        $this->softShutdownHandler  = $handler;
     }
 }

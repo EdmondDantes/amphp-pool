@@ -51,4 +51,6 @@ interface WorkerInterface extends WorkerEventEmitterAwareInterface, WorkersStora
     public function addPeriodicTask(float $delay, \Closure $task): int;
 
     public function cancelPeriodicTask(int $taskId): void;
+    
+    public function defineSoftShutdownHandler(callable $handler): void;
 }

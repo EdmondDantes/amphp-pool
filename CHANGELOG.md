@@ -5,7 +5,8 @@
 ### Fixed
 
 - Fixed socket waiting when the server is about to shut down. 
-The issue remains for `UNIX` and is caused by the architecture of the `AMPHP` `httpserver`. 
+The issue remains for `UNIX` and is caused by the architecture of the `AMPHP` `httpserver`.
+- Fixed the synchronization of `WorkerState` for the isReady status and fields related to the worker's termination state.
 
 ### Added
 
@@ -14,6 +15,12 @@ The issue remains for `UNIX` and is caused by the architecture of the `AMPHP` `h
 ### Changed
 
 - Refined the FLOW of error analysis for the running Worker process.
+- Refactored the `WorkerProcessContext` flow. Coroutines for monitoring the process and the message queue 
+are separated by their own triggers, which ensure a clear order of execution. 
+The message loop coroutine finishes first, followed by the observer coroutine.
+- Added a method `Worker::awaitShutdown`, which ensures the orderly shutdown of the worker. 
+Now the worker sends a `NULL` message, signaling the closure of the channel, 
+and then waits for confirmation from the parent process. Only after this does it terminate.
 
 ## [0.9.0] - 2024-07-01 [Pre-release]
 

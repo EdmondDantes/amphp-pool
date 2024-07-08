@@ -21,6 +21,7 @@ use CT\AmpPool\Exceptions\WorkerShouldBeStopped;
 use CT\AmpPool\Internal\Messages\MessageIpcShutdown;
 use CT\AmpPool\Internal\Messages\MessageLog;
 use CT\AmpPool\Internal\Messages\WorkerShouldBeShutdown;
+use CT\AmpPool\Internal\Messages\WorkerSoftShutdown;
 use CT\AmpPool\Internal\Messages\WorkerStarted;
 use CT\AmpPool\WorkerEventEmitterInterface;
 use Revolt\EventLoop;
@@ -375,6 +376,19 @@ final class WorkerProcessContext implements \Psr\Log\LoggerInterface, \Psr\Log\L
         // Gracefully close the worker process.
         if(false === $this->processCancellation->isCancelled()) {
             $this->processCancellation->cancel(new WorkerShouldBeStopped);
+        }
+    }
+    
+    public function softShutdown(): void
+    {
+        if($this->context->isClosed()) {
+            $this->shutdown();
+        }
+        
+        try {
+            $this->context->send(new WorkerSoftShutdown);
+        } catch (\Throwable $exception) {
+            $this->logger?->error('Soft shutdown error: '.$exception->getMessage(), ['exception' => $exception]);
         }
     }
 

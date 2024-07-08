@@ -465,7 +465,7 @@ final class WorkerPool implements WorkerPoolInterface
                 $workerDescriptor->willBeStopped();
 
                 if($workerDescriptor->isRunning()) {
-                    $workerDescriptor->getWorkerProcess()->shutdown();
+                    $workerDescriptor->getWorkerProcess()->softShutdown();
                 }
 
                 $handled++;
