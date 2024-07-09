@@ -82,7 +82,21 @@ final class IpcClient implements IpcClientInterface
             $deferred               = new DeferredFuture();
         }
 
-        EventLoop::queue($this->sendJobImmediately(...), $data, $allowedGroups, $allowedWorkers, $deferred ?? false, $priority, $weight);
+        EventLoop::queue(function () use ($data, $allowedGroups, $allowedWorkers, $deferred, $priority, $weight) {
+
+            //
+            // We always catch and suppress exceptions at this point because otherwise,
+            // they could disrupt the entire process.
+            //
+
+            try {
+                $this->sendJobImmediately($data, $allowedGroups, $allowedWorkers, $deferred ?? false, $priority, $weight);
+            } catch (\Throwable $exception) {
+                if($deferred instanceof DeferredFuture && false === $deferred->isComplete()) {
+                    $deferred->complete($exception);
+                }
+            }
+        });
 
         return $deferred?->getFuture();
     }

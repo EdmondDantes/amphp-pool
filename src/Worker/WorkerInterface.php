@@ -5,6 +5,7 @@ namespace CT\AmpPool\Worker;
 
 use Amp\Cancellation;
 use Amp\Sync\Channel;
+use CT\AmpPool\GlobalErrorHandlerInterface;
 use CT\AmpPool\WorkerEventEmitterAwareInterface;
 use CT\AmpPool\WorkerGroup;
 use CT\AmpPool\WorkersStorage\WorkersStorageAwareInterface;
@@ -12,7 +13,7 @@ use CT\AmpPool\WorkersStorage\WorkerStateInterface;
 use CT\AmpPool\WorkerTypeEnum;
 use Psr\Log\LoggerInterface;
 
-interface WorkerInterface extends WorkerEventEmitterAwareInterface, WorkersStorageAwareInterface
+interface WorkerInterface extends WorkerEventEmitterAwareInterface, WorkersStorageAwareInterface, GlobalErrorHandlerInterface
 {
     /**
      * @return array<int, WorkerGroup>

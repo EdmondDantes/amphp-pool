@@ -1060,6 +1060,23 @@ final class WorkerPool implements WorkerPoolInterface
         return \getcwd().'/server.pid';
     }
 
+    public function applyGlobalErrorHandler(): void
+    {
+        $logger                     = \WeakReference::create($this->logger);
+        $self                       = \WeakReference::create($this);
+
+        EventLoop::setErrorHandler(static function (\Throwable $exception) use ($logger, $self): void {
+
+            $logger                 = $logger->get();
+            $self                   = $self->get();
+
+            $logger?->error('Uncaught exception: ' . $exception->getMessage(), ['exception' => $exception]);
+
+            // Try to stop gracefully
+            $self?->stop();
+        });
+    }
+
     private function catchPidFile(): void
     {
         $pidFile                    = $this->getPidFile();

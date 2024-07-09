@@ -61,6 +61,7 @@ class DefaultRunner extends WorkerStrategyAbstract implements RunnerStrategyInte
             $worker                 = new Worker((int) $id, $channel, $group, $groupsScheme, $workersStorage);
 
             $entryPoint->initialize($worker);
+            $worker->applyGlobalErrorHandler();
             $worker->initWorker();
 
             $referenceWorker        = \WeakReference::create($worker);

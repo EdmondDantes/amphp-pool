@@ -28,6 +28,7 @@ use CT\AmpPool\WorkersStorage\WorkersStorageInterface;
 use CT\AmpPool\WorkersStorage\WorkerStateInterface;
 use CT\AmpPool\WorkerTypeEnum;
 use Psr\Log\LoggerInterface;
+use Revolt\EventLoop;
 
 /**
  * Abstraction of Worker Representation within the worker process.
@@ -400,5 +401,23 @@ class Worker implements WorkerInterface
         }
 
         $this->softShutdownHandler  = $handler;
+    }
+
+    public function applyGlobalErrorHandler(): void
+    {
+        $logger                     = \WeakReference::create($this->logger);
+        $self                       = \WeakReference::create($this);
+
+        EventLoop::setErrorHandler(static function (\Throwable $exception) use ($logger, $self): void {
+
+            $logger                 = $logger->get();
+            $self                   = $self->get();
+
+            $logger?->error('Uncaught exception: ' . $exception->getMessage(), ['exception' => $exception]);
+
+            if($self instanceof self) {
+                $self->stop();
+            }
+        });
     }
 }

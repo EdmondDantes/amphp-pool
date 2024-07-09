@@ -9,7 +9,7 @@ use Amp\Parallel\Ipc\IpcHub;
 use CT\AmpPool\WorkersStorage\WorkersStorageAwareInterface;
 use Psr\Log\LoggerInterface as PsrLogger;
 
-interface WorkerPoolInterface extends WorkerEventEmitterAwareInterface, WorkersStorageAwareInterface
+interface WorkerPoolInterface extends WorkerEventEmitterAwareInterface, WorkersStorageAwareInterface, GlobalErrorHandlerInterface
 {
     public function describeGroup(WorkerGroupInterface $group): self;
 
