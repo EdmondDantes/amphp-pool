@@ -41,7 +41,7 @@ abstract class JobExecutorAbstract extends WorkerStrategyAbstract implements Job
     {
         $worker                     = $this->getWorker();
 
-        if(null === $worker) {
+        if(null === $worker || $this->isNotSelfWorker()) {
             return;
         }
 

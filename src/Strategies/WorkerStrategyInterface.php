@@ -15,7 +15,7 @@ interface WorkerStrategyInterface
 
     public function setWorkerPool(WorkerPoolInterface $workerPool): self;
 
-    public function setWorker(WorkerInterface $worker): self;
+    public function setWorker(WorkerInterface $worker, bool $isSelfWorker): self;
 
     public function setWorkerGroup(WorkerGroupInterface $workerGroup): self;
 

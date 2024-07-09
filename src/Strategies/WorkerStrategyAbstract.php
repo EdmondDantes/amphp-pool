@@ -13,6 +13,7 @@ abstract class WorkerStrategyAbstract implements WorkerStrategyInterface
     private \WeakReference|null $workerPool = null;
     private \WeakReference|null $worker = null;
     private \WeakReference|null $workerGroup = null;
+    private bool $isSelfWorker = false;
 
     public function getWorkerPool(): WorkerPoolInterface|null
     {
@@ -36,9 +37,10 @@ abstract class WorkerStrategyAbstract implements WorkerStrategyInterface
         return $this;
     }
 
-    public function setWorker(WorkerInterface $worker): self
+    public function setWorker(WorkerInterface $worker, bool $isSelfWorker): self
     {
         $this->worker               = \WeakReference::create($worker);
+        $this->isSelfWorker         = $isSelfWorker;
 
         return $this;
     }
@@ -48,6 +50,20 @@ abstract class WorkerStrategyAbstract implements WorkerStrategyInterface
         $this->workerGroup          = \WeakReference::create($workerGroup);
 
         return $this;
+    }
+
+    /**
+     * Returns true if the current worker is the same as the worker that the strategy is attached to.
+     *
+     */
+    protected function isSelfWorker(): bool
+    {
+        return $this->isSelfWorker;
+    }
+
+    protected function isNotSelfWorker(): bool
+    {
+        return !$this->isSelfWorker;
     }
 
     protected function getGroupsScheme(): array

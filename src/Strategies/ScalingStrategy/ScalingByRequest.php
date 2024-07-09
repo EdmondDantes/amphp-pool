@@ -39,7 +39,7 @@ final class ScalingByRequest extends WorkerStrategyAbstract implements ScalingSt
         }
 
         // Inside worker process, send a message to a watcher process
-        $this->getWorker()?->sendMessageToWatcher(new ScalingRequest($this->getWorker()?->getWorkerId()));
+        $this->getWorker()?->sendMessageToWatcher(new ScalingRequest($workerGroup->getWorkerGroupId()));
 
         return true;
     }
@@ -103,7 +103,9 @@ final class ScalingByRequest extends WorkerStrategyAbstract implements ScalingSt
             return;
         }
 
-        $this->tryToScale();
+        if($this->getWorkerGroup()?->getWorkerGroupId() === $message->toGroupId) {
+            $this->tryToScale();
+        }
     }
 
     private function tryToScale(): void

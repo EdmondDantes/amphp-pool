@@ -384,9 +384,11 @@ class Worker implements WorkerInterface
 
     protected function initWorkerStrategies(): void
     {
-        foreach ($this->group->getWorkerStrategies() as $strategy) {
-            if($strategy instanceof WorkerStrategyInterface) {
-                $strategy->setWorker($this)->setWorkerGroup($this->group);
+        foreach ($this->groupsScheme as $group) {
+            foreach ($group->getWorkerStrategies() as $strategy) {
+                if($strategy instanceof WorkerStrategyInterface) {
+                    $strategy->setWorker($this, $group === $this->group)->setWorkerGroup($group);
+                }
             }
         }
     }
