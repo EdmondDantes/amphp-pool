@@ -21,6 +21,7 @@ use Amp\Pipeline\Queue;
 use Amp\Sync\ChannelException;
 use Amp\TimeoutCancellation;
 use CT\AmpPool\Exceptions\FatalWorkerException;
+use CT\AmpPool\Exceptions\RemoteException;
 use CT\AmpPool\Exceptions\StopException;
 use CT\AmpPool\Exceptions\TerminateWorkerException;
 use CT\AmpPool\Exceptions\WorkerPoolException;
@@ -594,7 +595,7 @@ final class WorkerPool implements WorkerPoolInterface
         try {
             $context                = $this->contextFactory->start(
                 $runnerStrategy->getScript(),
-                new TimeoutCancellation($this->workerStartTimeout, 'The worker start timeout ('.$this->workerStartTimeout.') has been exceeded')
+                new TimeoutCancellation($this->workerStartTimeout + 6000, 'The worker start timeout ('.$this->workerStartTimeout.') has been exceeded')
             );
         } catch (\Throwable $exception) {
             $this->logger?->critical('Starting the worker #'.$workerDescriptor->id
@@ -766,33 +767,53 @@ final class WorkerPool implements WorkerPoolInterface
              * and communication with the child process has been disrupted.
              * We interpret this as an abnormal termination of the worker.
              */
-            $exitResult         = $exception;
+            $exitResult = $exception;
 
             $workerProcess->error(
                 "Worker #{$id} died unexpectedly: {$exception->getMessage()}" .
                 ($this->running ? ', restarting...' : '')
             );
 
-            $remoteException    = $exception->getPrevious();
+            $remoteException = $exception->getPrevious();
 
             if ($remoteException instanceof TaskFailureThrowable || $remoteException instanceof ContextPanicError) {
 
-                if($remoteException->getOriginalClassName() === FatalWorkerException::class) {
+                if ($remoteException->getOriginalClassName() === FatalWorkerException::class) {
                     // The Worker died due to a fatal error, so we should stop the server.
                     $workerDescriptor->markAsStoppedForever();
-                    $this->logger?->error('Server shutdown due to fatal worker error: '.$remoteException->getMessage());
+                    $this->logger?->error(
+                        'Server shutdown due to fatal worker error: ' . $remoteException->getMessage()
+                    );
 
                     throw $remoteException;
                 }
 
-                if($remoteException->getOriginalClassName() === TerminateWorkerException::class) {
+                if ($remoteException->getOriginalClassName() === TerminateWorkerException::class) {
                     // The Worker has terminated itself cleanly.
-                    $exitResult     = new TerminateWorkerException;
+                    $exitResult = new TerminateWorkerException;
                     $workerProcess->info("Worker #{$id} terminated yourself cleanly without restart");
                 }
             }
 
-        } catch (TerminateWorkerException|WorkerShouldBeStopped $exception) {
+        } catch (RemoteException $exception) {
+
+            //
+            // This exception was received from the worker process.
+            //
+
+            $exitResult             = $exception;
+
+            if($exception instanceof TerminateWorkerException) {
+                $workerProcess->info("Worker #{$id} terminated cleanly without restart");
+            } elseif ($exception instanceof FatalWorkerException) {
+                $this->logger?->error(
+                    'Server shutdown due to fatal worker error: ' . $exception->getMessage()
+                );
+
+                throw $exception;
+            }
+
+        } catch (WorkerShouldBeStopped $exception) {
 
             // The worker has terminated itself cleanly.
             $exitResult         = $exception;

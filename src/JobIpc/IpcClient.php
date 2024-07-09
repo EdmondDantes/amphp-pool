@@ -6,6 +6,7 @@ namespace CT\AmpPool\JobIpc;
 use Amp\ByteStream\StreamChannel;
 use Amp\ByteStream\StreamException;
 use Amp\Cancellation;
+use Amp\CancelledException;
 use Amp\DeferredFuture;
 use Amp\ForbidCloning;
 use Amp\ForbidSerialization;
@@ -333,7 +334,9 @@ final class IpcClient implements IpcClientInterface
             }
 
             // Ignore the exception if it is not a ChannelException
-            if(false === $exception instanceof ChannelException) {
+            if(false === $exception instanceof ChannelException
+               && false === $exception instanceof TimeoutException
+               && false === $exception instanceof CancelledException) {
                 throw $exception;
             }
         }

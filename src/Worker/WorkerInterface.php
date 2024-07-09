@@ -43,7 +43,7 @@ interface WorkerInterface extends WorkerEventEmitterAwareInterface, WorkersStora
 
     public function initiateTermination(?\Throwable $throwable = null): void;
 
-    public function stop(): void;
+    public function stop(?\Throwable $throwable = null): void;
 
     public function isStopped(): bool;
 

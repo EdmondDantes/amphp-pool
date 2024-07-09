@@ -41,6 +41,12 @@ use Revolt\EventLoop;
 class Worker implements WorkerInterface
 {
     protected readonly DeferredCancellation $mainCancellation;
+
+    /**
+     * A Future is resolved when the Worker needs to be stopped.
+     * This Future never throws exceptions,
+     * but its result can be an exception thrown when the Worker had to terminate.
+     */
     private readonly DeferredFuture $workerFuture;
 
     /** @var Queue<TReceive> */
@@ -232,13 +238,21 @@ class Worker implements WorkerInterface
 
             try {
                 $this->workerState->increaseAndUpdateShutdownErrors();
-            } catch (\Throwable $exception) {
-                $this->logger->error('Failed to update worker state: '.$exception->getMessage());
+            } catch (\Throwable $stateException) {
+                $this->logger->error('Failed to update worker state: '.$stateException->getMessage());
+            }
+
+            if(false === $exception instanceof CancelledException) {
+                $this->sendException($exception);
             }
 
             // IPC Channel manually closed
             if(false === $this->workerFuture->isComplete()) {
-                $this->workerFuture->error($exception);
+                //
+                // We always use the complete() method instead of error()
+                // because this Future should not throw any exceptions!
+                //
+                $this->workerFuture->complete($exception);
             }
         } finally {
             $this->stop();
@@ -283,7 +297,7 @@ class Worker implements WorkerInterface
         }
     }
 
-    public function stop(): void
+    public function stop(?\Throwable $throwable = null): void
     {
         if($this->isStopped) {
             return;
@@ -291,14 +305,33 @@ class Worker implements WorkerInterface
 
         $this->isStopped            = true;
 
-        if(false === $this->mainCancellation->isCancelled()) {
-            $this->mainCancellation->cancel();
+        if($throwable !== null) {
+
+            if(false === $throwable instanceof RemoteException) {
+
+                $pid                = \getmypid();
+
+                // Make sure that the exception is a FatalWorkerException
+                $throwable          = new FatalWorkerException(
+                    "Fatal Worker Exception  (id:{$this->id}, group:{$this->group->getGroupName()}, pid:$pid): "
+                    .$throwable->getMessage()
+                    ." in {$throwable->getFile()}:{$throwable->getLine()}",
+                    0,
+                    $throwable
+                );
+            }
+
+            $this->sendException($throwable);
         }
 
         try {
             $this->workerState->markAsShutdown()->updateStateSegment();
         } catch (\Throwable) {
             // Ignore
+        }
+
+        if(false === $this->mainCancellation->isCancelled()) {
+            $this->mainCancellation->cancel($throwable);
         }
 
         try {
@@ -327,6 +360,10 @@ class Worker implements WorkerInterface
             if(false === $this->queue->isComplete()) {
                 $this->queue->complete();
             }
+        }
+
+        if($throwable !== null) {
+            throw $throwable;
         }
     }
 
@@ -405,19 +442,38 @@ class Worker implements WorkerInterface
 
     public function applyGlobalErrorHandler(): void
     {
-        $logger                     = \WeakReference::create($this->logger);
         $self                       = \WeakReference::create($this);
 
-        EventLoop::setErrorHandler(static function (\Throwable $exception) use ($logger, $self): void {
+        EventLoop::setErrorHandler(static function (\Throwable $exception) use ($self): void {
 
-            $logger                 = $logger->get();
             $self                   = $self->get();
 
-            $logger?->error('Uncaught exception: ' . $exception->getMessage(), ['exception' => $exception]);
-
             if($self instanceof self) {
-                $self->stop();
+                $self->initiateTermination($exception);
             }
         });
+    }
+
+    protected function sendException(\Throwable $exception): void
+    {
+        if($this->ipcChannel->isClosed()) {
+            return;
+        }
+
+        if(false === $exception instanceof RemoteException) {
+            $pid                    = \getmypid();
+            $exception              = new RemoteException(
+                "Uncaught worker (id: {$this->id}, pid: $pid) exception: "
+                                                  .$exception->getMessage(),
+                0,
+                $exception
+            );
+        }
+
+        try {
+            $this->ipcChannel->send($exception);
+        } catch (\Throwable) {
+            // Ignore
+        }
     }
 }

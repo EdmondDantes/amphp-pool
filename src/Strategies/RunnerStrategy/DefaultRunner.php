@@ -10,7 +10,6 @@ use Amp\Sync\Channel;
 use Amp\Sync\ChannelException;
 use Amp\TimeoutCancellation;
 use CT\AmpPool\Exceptions\FatalWorkerException;
-use CT\AmpPool\Exceptions\RemoteException;
 use CT\AmpPool\Strategies\WorkerStrategyAbstract;
 use CT\AmpPool\Worker\Worker;
 use CT\AmpPool\Worker\WorkerEntryPointInterface;
@@ -85,24 +84,8 @@ class DefaultRunner extends WorkerStrategyAbstract implements RunnerStrategyInte
             // Normally, the worker process will exit when the IPC channel is closed.
             $worker->awaitShutdown();
 
-        } catch (\Throwable $exception) {
-
-            if(false === $exception instanceof RemoteException) {
-
-                $pid                = \getmypid();
-
-                // Make sure that the exception is a FatalWorkerException
-                $exception = new FatalWorkerException(
-                    "Worker #$id, pid:$pid encountered a fatal error: {$exception->getMessage()} "
-                    ."in {$exception->getFile()}:{$exception->getLine()}",
-                    0,
-                    $exception
-                );
-            }
-
-            $channel->send($exception);
-
-            throw $exception;
+        } catch (\Throwable $throwable) {
+            $worker?->stop($throwable);
         } finally {
             $worker?->stop();
         }

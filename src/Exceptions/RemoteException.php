@@ -58,6 +58,11 @@ class RemoteException extends \RuntimeException
             return null;
         }
 
+        // Ignore self and unwrap previous exceptions
+        if($exception instanceof self && $exception->getPrevious() !== null) {
+            $exception              = $exception->getPrevious();
+        }
+
         return [
             'message'               => $exception->getMessage(),
             'code'                  => $exception->getCode(),
