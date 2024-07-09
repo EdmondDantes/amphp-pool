@@ -74,8 +74,9 @@ class DefaultRunner extends WorkerStrategyAbstract implements RunnerStrategyInte
                 async(static function () use ($referenceEntryPoint, $referenceWorker): void {
                     try {
                         $referenceEntryPoint->get()?->run();
+                    } catch (\Throwable $throwable) {
+                        $referenceWorker->get()?->stop($throwable);
                     } finally {
-                        // Stop the worker process if the entry point has finished running.
                         $referenceWorker->get()?->stop();
                     }
                 }),

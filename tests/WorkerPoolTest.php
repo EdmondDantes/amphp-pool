@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace CT\AmpPool;
 
-use Amp\Parallel\Context\ContextPanicError;
 use Amp\Sync\ChannelException;
 use CT\AmpPool\Exceptions\FatalWorkerException;
 use CT\AmpPool\Strategies\RestartStrategy\RestartNever;
@@ -169,7 +168,7 @@ class WorkerPoolTest extends TestCase
         } catch (\Throwable $exception) {
         }
 
-        $this->assertInstanceOf(ContextPanicError::class, $exception);
+        $this->assertInstanceOf(FatalWorkerException::class, $exception);
         $this->assertEquals(0, $restartStrategy->restarts, 'Worker should not be restarted');
     }
 
