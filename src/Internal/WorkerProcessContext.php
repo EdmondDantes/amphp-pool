@@ -257,8 +257,12 @@ final class WorkerProcessContext implements \Psr\Log\LoggerInterface, \Psr\Log\L
                 if($loopException instanceof WorkerShouldBeStopped) {
                     $this->logger?->info('Worker #'.$this->id.' should be stopped: '.$loopException->getMessage());
                 } elseif ($loopException instanceof RemoteException) {
-                    $this->logger?->error("Worker #{$this->id} should be terminated cleanly with exception:"
-                                          ." {$loopException->getMessage()} in {$loopException->getRemoteFile()}:{$loopException->getRemoteLine()}");
+                    $this->logger?->error(
+                        "Worker #{$this->id} should be terminated cleanly with exception:"
+                                          ." {$loopException->getMessage()} class '".$loopException->getRemoteClass()
+                                          ."' in {$loopException->getRemoteFile()}:{$loopException->getRemoteLine()}",
+                        ['trace' => $loopException->getRemoteTrace()]
+                    );
                 } else {
                     $this->logger?->error('Worker #'.$this->id.' error: '.$loopException->getMessage());
                 }

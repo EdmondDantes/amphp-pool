@@ -15,7 +15,9 @@ use Amp\Socket;
 use Amp\Socket\SocketAddress;
 use Amp\Socket\SocketException;
 use Amp\Sync\Channel;
+use Amp\Sync\ChannelException;
 use Amp\TimeoutCancellation;
+use Amp\TimeoutException;
 use Psr\Log\LoggerInterface;
 use Revolt\EventLoop;
 use const Amp\Process\IS_WINDOWS;
@@ -204,7 +206,7 @@ final class IpcServer implements IpcServerInterface
                         ));
                     }
                 }
-            } catch (CancelledException) {
+            } catch (CancelledException|TimeoutException|ChannelException) {
                 // Ignore
             } finally {
                 $channel->close();

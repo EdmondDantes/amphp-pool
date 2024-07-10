@@ -22,6 +22,11 @@ class RemoteException extends \RuntimeException
         return $this->remoteException['code'] ?? $this->getCode();
     }
 
+    public function getRemoteClass(): string
+    {
+        return $this->remoteException['class'] ?? '';
+    }
+
     public function getRemoteFile(): string
     {
         return $this->remoteException['file'] ?? $this->getFile();
@@ -65,6 +70,7 @@ class RemoteException extends \RuntimeException
 
         return [
             'message'               => $exception->getMessage(),
+            'class'                 => \get_class($exception),
             'code'                  => $exception->getCode(),
             'file'                  => $exception->getFile(),
             'line'                  => $exception->getLine(),
