@@ -482,7 +482,7 @@ final class WorkerPool implements WorkerPoolInterface
 
         $this->scalingFuture        = new DeferredFuture;
 
-        $this->logger?->info('Scaling workers request', ['group_id' => $groupId, 'delta' => $delta, 'handled' => $handled, 'is_decrease' => $isDecrease]);
+        $this->logger?->debug('Scaling workers request', ['group_id' => $groupId, 'delta' => $delta, 'handled' => $handled, 'is_decrease' => $isDecrease]);
         $this->scalingTrigger->cancel(new ScalingTrigger);
 
         return $handled;
