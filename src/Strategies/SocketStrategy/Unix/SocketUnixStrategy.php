@@ -92,7 +92,8 @@ final class SocketUnixStrategy extends WorkerStrategyAbstract implements SocketS
     }
 
     /**
-     * Calling this method pauses the Worker’s execution thread until the Watcher returns data for socket initialization.
+     * Calling this method pauses the Worker’s execution thread until the Watcher returns data for socket
+     * initialization.
      *
      */
     public function getServerSocketFactory(): ServerSocketFactory|null
@@ -124,6 +125,7 @@ final class SocketUnixStrategy extends WorkerStrategyAbstract implements SocketS
             if($socket instanceof ResourceSocket) {
                 return $socket;
             }
+
             throw new \RuntimeException('Type of socket is not ResourceSocket');
 
         } catch (\Throwable $exception) {
@@ -133,69 +135,82 @@ final class SocketUnixStrategy extends WorkerStrategyAbstract implements SocketS
 
     private function handleMessage(mixed $message, int $workerId = 0): void
     {
-        if($message instanceof SocketTransferInfo) {
+        if($this->isSelfWorker()) {
+            $this->watcherHandler($message);
+        } elseif ($this->getWorkerPool() !== null) {
+            $this->watcherHandler($message);
+        }
+    }
 
-            if($this->workerEventHandler !== null) {
-                $this->getSelfWorker()?->getWorkerEventEmitter()->removeWorkerEventListener($this->workerEventHandler);
-                $this->workerEventHandler = null;
-            }
-
-            if($this->deferredFuture === null || $this->deferredFuture->isComplete()) {
-                return;
-            }
-
-            $this->uri              = $message->uri;
-            $this->key              = $message->key;
-
-            $this->socketPipeFactory = new ServerSocketPipeFactory($this->createIpcForTransferSocket());
-            $this->deferredFuture->complete();
-
+    private function workerHandler(mixed $message): void
+    {
+        if(false === $message instanceof SocketTransferInfo) {
             return;
         }
 
+        if($this->workerEventHandler !== null) {
+            $this->getSelfWorker()?->getWorkerEventEmitter()->removeWorkerEventListener($this->workerEventHandler);
+            $this->workerEventHandler = null;
+        }
+
+        if($this->deferredFuture === null || $this->deferredFuture->isComplete()) {
+            return;
+        }
+
+        $this->uri              = $message->uri;
+        $this->key              = $message->key;
+
+        $this->socketPipeFactory = new ServerSocketPipeFactory($this->createIpcForTransferSocket());
+        $this->deferredFuture->complete();
+    }
+
+    private function watcherHandler(mixed $message): void
+    {
         $workerPool             = $this->getWorkerPool();
 
         if($workerPool === null) {
             return;
         }
 
-        //
-        // Events from the watcher
-        //
+        if(false === $message instanceof InitiateSocketTransfer) {
+            return;
+        }
 
-        if($message instanceof InitiateSocketTransfer) {
+        if($message->groupId !== $this->getWorkerGroup()?->getWorkerGroupId()) {
+            return;
+        }
 
-            if($message->groupId !== $this->getWorkerGroup()?->getWorkerGroupId()) {
-                return;
+        $workerContext              = $workerPool->findWorkerContext($message->workerId);
+
+        if($workerContext === null) {
+            return;
+        }
+
+        $workerCancellation         = $workerPool->findWorkerCancellation($message->workerId);
+
+        try {
+
+            $ipcHub                 = $workerPool->getIpcHub();
+            $ipcKey                 = $ipcHub->generateKey();
+            $socketPipeProvider     = new SocketProvider($message->workerId, $ipcHub, $ipcKey, $workerCancellation, $this->ipcTimeout);
+
+            $workerContext->send(new SocketTransferInfo($ipcKey, $ipcHub->getUri()));
+
+            if(\array_key_exists($message->workerId, $this->workerSocketProviders)) {
+                $this->workerSocketProviders[$message->workerId]->stop();
             }
 
-            $workerContext              = $workerPool->findWorkerContext($message->workerId);
+            $this->workerSocketProviders[$message->workerId] = $socketPipeProvider;
 
-            if($workerContext === null) {
-                return;
+            $socketPipeProvider->start();
+
+        } catch (\Throwable $exception) {
+            if(\array_key_exists($message->workerId, $this->workerSocketProviders)) {
+                $this->workerSocketProviders[$message->workerId]->stop();
+                unset($this->workerSocketProviders[$message->workerId]);
             }
 
-            $workerCancellation         = $workerPool->findWorkerCancellation($message->workerId);
-
-            try {
-
-                $ipcHub                 = $workerPool->getIpcHub();
-                $ipcKey                 = $ipcHub->generateKey();
-                $socketPipeProvider     = new SocketProvider($ipcHub, $ipcKey, $workerCancellation, $this->ipcTimeout);
-
-                $workerContext->send(new SocketTransferInfo($ipcKey, $ipcHub->getUri()));
-
-                if(\array_key_exists($message->workerId, $this->workerSocketProviders)) {
-                    $this->workerSocketProviders[$message->workerId]->stop();
-                }
-
-                $this->workerSocketProviders[$message->workerId] = $socketPipeProvider;
-
-                $socketPipeProvider->start();
-
-            } catch (\Throwable $exception) {
-                $workerPool->getLogger()?->error('Could not send socket transfer info to worker', ['exception' => $exception]);
-            }
+            $workerPool->getLogger()?->error('Could not send socket transfer info to worker', ['exception' => $exception]);
         }
     }
 

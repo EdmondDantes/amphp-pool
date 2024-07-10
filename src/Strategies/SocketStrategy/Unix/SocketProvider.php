@@ -22,13 +22,18 @@ final class SocketProvider
     private Cancellation $cancellation;
     private DeferredCancellation $deferredCancellation;
 
-    public function __construct(private readonly IpcHub $hub, private readonly string $ipcKey, Cancellation $cancellation, private readonly int $timeout = 5)
-    {
+    public function __construct(
+        private readonly int    $workerId,
+        private readonly IpcHub $hub,
+        private readonly string $ipcKey,
+        Cancellation            $cancellation,
+        private readonly int    $timeout = 5
+    ) {
         if (IS_WINDOWS) {
             throw new \Error(__CLASS__.' can\'t be used under Windows OS');
         }
 
-        $this->provider             = new ServerSocketPipeProvider;
+        $this->provider             = new ServerSocketPipeProvider($this->workerId);
         $this->deferredCancellation = new DeferredCancellation();
         $this->cancellation         = new CompositeCancellation($cancellation, $this->deferredCancellation->getCancellation());
     }
