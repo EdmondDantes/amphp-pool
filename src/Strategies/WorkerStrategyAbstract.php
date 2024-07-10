@@ -30,8 +30,8 @@ abstract class WorkerStrategyAbstract implements WorkerStrategyInterface
         if($this->isSelfWorker()) {
             return $this->getWorker();
         }
-        return null;
 
+        return null;
     }
 
     public function getWorkerGroup(): WorkerGroupInterface|null
