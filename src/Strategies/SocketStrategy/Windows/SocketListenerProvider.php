@@ -6,6 +6,7 @@ namespace CT\AmpPool\Strategies\SocketStrategy\Windows;
 use Amp\Socket\SocketAddress;
 use CT\AmpPool\EventWeakHandler;
 use CT\AmpPool\Strategies\SocketStrategy\Windows\Messages\MessageSocketListen;
+use CT\AmpPool\WatcherEvents\WorkerProcessTerminating;
 use CT\AmpPool\WorkerGroupInterface;
 use CT\AmpPool\WorkerPool;
 
@@ -62,6 +63,27 @@ final class SocketListenerProvider
     {
         if ($event instanceof MessageSocketListen) {
             $this->listen($workerId, $event->address);
+        }
+
+        if($event instanceof WorkerProcessTerminating) {
+            $this->removeWorker($workerId);
+            $this->cleanListeners();
+        }
+    }
+
+    private function removeWorker(int $workerId): void
+    {
+        foreach($this->socketListeners as $listener) {
+            $listener->removeWorker($workerId);
+        }
+    }
+
+    private function cleanListeners(): void
+    {
+        foreach($this->socketListeners as $address => $listener) {
+            if($listener->stopIfNoWorkers()) {
+                unset($this->socketListeners[$address]);
+            }
         }
     }
 }

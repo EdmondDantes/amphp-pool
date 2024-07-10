@@ -5,6 +5,8 @@ namespace CT\AmpPool\Strategies\SocketStrategy\Windows;
 
 use Amp\Cancellation;
 use Amp\CancelledException;
+use Amp\CompositeCancellation;
+use Amp\DeferredCancellation;
 use Amp\Socket\BindContext;
 use Amp\Socket\ResourceServerSocket;
 use Amp\Socket\ResourceSocket;
@@ -54,13 +56,15 @@ final class SocketClientListenerProvider
      */
     private array                   $requestsByWorker   = [];
     private Cancellation|null       $cancellation       = null;
+    private DeferredCancellation    $deferredCancellation;
 
     public function __construct(
         private readonly SocketAddress $address,
         private readonly WorkerPoolInterface $workerPool,
         private readonly WorkerGroupInterface $workerGroup
     ) {
-        $this->cancellation         = $this->workerPool->getMainCancellation();
+        $this->deferredCancellation = new DeferredCancellation;
+        $this->cancellation         = new CompositeCancellation($this->workerPool->getMainCancellation(), $this->deferredCancellation->getCancellation());
 
         $self                       = \WeakReference::create($this);
 
@@ -94,9 +98,29 @@ final class SocketClientListenerProvider
         return $this;
     }
 
+    public function removeWorker(int $workerId): self
+    {
+        $this->shutdownWorker($workerId);
+
+        return $this;
+    }
+
     public function startListen(): void
     {
         EventLoop::queue($this->receiveLoop(...), $this->listenAddress($this->address));
+    }
+
+    public function stopIfNoWorkers(): bool
+    {
+        if(!empty($this->workers)) {
+            return false;
+        }
+
+        if(false === $this->deferredCancellation->isCancelled()) {
+            $this->deferredCancellation->cancel();
+        }
+
+        return true;
     }
 
     private function receiveLoop(ServerSocket $server): void
