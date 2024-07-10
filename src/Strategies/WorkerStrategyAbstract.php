@@ -25,6 +25,15 @@ abstract class WorkerStrategyAbstract implements WorkerStrategyInterface
         return $this->worker?->get();
     }
 
+    public function getSelfWorker(): WorkerInterface|null
+    {
+        if($this->isSelfWorker()) {
+            return $this->getWorker();
+        }
+        return null;
+
+    }
+
     public function getWorkerGroup(): WorkerGroupInterface|null
     {
         return $this->workerGroup?->get();

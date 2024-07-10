@@ -46,9 +46,9 @@ final class JobClientDefault extends WorkerStrategyAbstract implements JobClient
             );
         }
 
-        $worker                     = $this->getWorker();
+        $worker                     = $this->getSelfWorker();
 
-        if($worker === null || $this->isNotSelfWorker()) {
+        if($worker === null) {
             return;
         }
 

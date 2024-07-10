@@ -18,7 +18,7 @@ final class SocketWindowsStrategy extends WorkerStrategyAbstract implements Sock
             return $this->socketPipeFactory;
         }
 
-        $worker                     = $this->getWorker();
+        $worker                     = $this->getSelfWorker();
 
         if($worker === null) {
             throw new \Error('Wrong usage of the method getServerSocketFactory(). This method can be used only inside the worker!');

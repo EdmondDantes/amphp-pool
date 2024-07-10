@@ -39,9 +39,9 @@ abstract class JobExecutorAbstract extends WorkerStrategyAbstract implements Job
 
     public function onStarted(): void
     {
-        $worker                     = $this->getWorker();
+        $worker                     = $this->getSelfWorker();
 
-        if(null === $worker || $this->isNotSelfWorker()) {
+        if(null === $worker) {
             return;
         }
 

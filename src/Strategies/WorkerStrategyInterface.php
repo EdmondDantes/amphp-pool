@@ -11,6 +11,9 @@ interface WorkerStrategyInterface
 {
     public function getWorkerPool(): WorkerPoolInterface|null;
     public function getWorker(): WorkerInterface|null;
+
+    public function getSelfWorker(): WorkerInterface|null;
+
     public function getWorkerGroup(): WorkerGroupInterface|null;
 
     public function setWorkerPool(WorkerPoolInterface $workerPool): self;

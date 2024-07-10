@@ -52,4 +52,5 @@ $workerPool->describeGroup(new WorkerGroup(
 // Start the main loop of the worker pool
 // Now the server is ready to accept incoming connections.
 // Try http://127.0.0.1:9095/ in your browser.
+$workerPool->applyGlobalErrorHandler();
 $workerPool->run();

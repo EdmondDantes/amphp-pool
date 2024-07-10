@@ -46,7 +46,7 @@ final class SocketUnixStrategy extends WorkerStrategyAbstract implements SocketS
             return;
         }
 
-        $worker                     = $this->getWorker();
+        $worker                     = $this->getSelfWorker();
 
         if($worker === null) {
             return;
@@ -77,7 +77,7 @@ final class SocketUnixStrategy extends WorkerStrategyAbstract implements SocketS
         }
 
         if($this->workerEventHandler !== null) {
-            $this->getWorker()?->getWorkerEventEmitter()->removeWorkerEventListener($this->workerEventHandler);
+            $this->getSelfWorker()?->getWorkerEventEmitter()->removeWorkerEventListener($this->workerEventHandler);
             $this->workerEventHandler = null;
         }
 
@@ -112,7 +112,7 @@ final class SocketUnixStrategy extends WorkerStrategyAbstract implements SocketS
 
     private function createIpcForTransferSocket(): ResourceSocket
     {
-        $worker                     = $this->getWorker();
+        $worker                     = $this->getSelfWorker();
 
         if($worker === null) {
             throw new \Error('Wrong usage of the method getServerSocketFactory(). This method can be used only inside the worker!');
@@ -136,7 +136,7 @@ final class SocketUnixStrategy extends WorkerStrategyAbstract implements SocketS
         if($message instanceof SocketTransferInfo) {
 
             if($this->workerEventHandler !== null) {
-                $this->getWorker()?->getWorkerEventEmitter()->removeWorkerEventListener($this->workerEventHandler);
+                $this->getSelfWorker()?->getWorkerEventEmitter()->removeWorkerEventListener($this->workerEventHandler);
                 $this->workerEventHandler = null;
             }
 
