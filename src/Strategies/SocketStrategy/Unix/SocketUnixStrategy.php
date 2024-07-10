@@ -136,7 +136,7 @@ final class SocketUnixStrategy extends WorkerStrategyAbstract implements SocketS
     private function handleMessage(mixed $message, int $workerId = 0): void
     {
         if($this->isSelfWorker()) {
-            $this->watcherHandler($message);
+            $this->workerHandler($message);
         } elseif ($this->getWorkerPool() !== null) {
             $this->watcherHandler($message);
         }
