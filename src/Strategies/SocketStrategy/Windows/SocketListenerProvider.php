@@ -67,7 +67,11 @@ final class SocketListenerProvider
 
         if($event instanceof WorkerProcessTerminating) {
             $this->removeWorker($workerId);
-            $this->cleanListeners();
+            //
+            // Hack!
+            // For windows, we have some issues when we try to create a Server socket again after closing it.
+            //
+            // $this->cleanListeners();
         }
     }
 
