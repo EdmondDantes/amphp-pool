@@ -49,7 +49,7 @@ The following options are available:
 * `maxWorkers` - The maximum number of workers in the group.
 * `groupName` - The name of the worker group.
 * `runnerStrategy` - The strategy responsible for launching workers and initialization.
-* `pickupStrategy` - The strategy used to pick up tasks from the queue.
+* `pickupStrategy` - The strategy used to pick up worker from the pool.
 * `restartStrategy` - The strategy used to restart workers in the group.
 * `scalingStrategy` - The strategy used to scale the number of workers in the group.
 * `socketStrategy` - The strategy responsible for sharing connections between different processes, 
