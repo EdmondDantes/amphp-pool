@@ -12,7 +12,7 @@ use Revolt\EventLoop;
  * The worker will be restarted when it reaches the specified quota.
  * The quota can be defined by the number of requests, time, jobs, or system memory.
  */
-final class AutoRestartByQuota      extends WorkerStrategyAbstract
+final class AutoRestartByQuota extends WorkerStrategyAbstract
 {
     private string $checkerId                   = '';
     private array $workersLastState             = [];
