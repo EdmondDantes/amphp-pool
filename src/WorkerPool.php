@@ -488,6 +488,20 @@ final class WorkerPool implements WorkerPoolInterface
         return $handled;
     }
 
+    public function restartWorker(int $workerId): bool
+    {
+        foreach ($this->workers as $workerDescriptor) {
+            if($workerDescriptor->id === $workerId) {
+                if($workerDescriptor->isRunning()) {
+                    $workerDescriptor->getWorkerProcess()->softShutdown();
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     public function getWorkerEventEmitter(): WorkerEventEmitterInterface
     {
         return $this->eventEmitter;

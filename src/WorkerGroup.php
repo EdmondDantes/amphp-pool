@@ -47,6 +47,11 @@ class WorkerGroup implements WorkerGroupInterface
         }
     }
 
+    /**
+     * @var WorkerStrategyInterface[]
+     */
+    private array $extraStrategies  = [];
+
     public function __construct(
         private readonly string         $entryPointClass,
         private readonly WorkerTypeEnum $workerType,
@@ -64,8 +69,12 @@ class WorkerGroup implements WorkerGroupInterface
         private ?SocketStrategyInterface  $socketStrategy = null,
         private ?JobExecutorInterface     $jobExecutor = null,
         private ?JobClientInterface       $jobClient = null,
+        ?WorkerStrategyInterface          $autoRestartStrategy = null,
         private int                       $workerGroupId = 0,
     ) {
+        if($autoRestartStrategy !== null) {
+            $this->addExtraStrategy($autoRestartStrategy);
+        }
     }
 
     public function getEntryPointClass(): string
@@ -288,6 +297,17 @@ class WorkerGroup implements WorkerGroupInterface
             $strategyList[]         = $this->socketStrategy;
         }
 
+        if($this->extraStrategies !== []) {
+            $strategyList           = \array_merge($strategyList, $this->extraStrategies);
+        }
+
         return $strategyList;
+    }
+
+    public function addExtraStrategy(WorkerStrategyInterface $strategy): static
+    {
+        $this->extraStrategies[]    = $strategy;
+
+        return $this;
     }
 }

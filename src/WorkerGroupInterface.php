@@ -67,4 +67,6 @@ interface WorkerGroupInterface
      * @return WorkerStrategyInterface[]
      */
     public function getWorkerStrategies(): array;
+
+    public function addExtraStrategy(WorkerStrategyInterface $strategy): static;
 }

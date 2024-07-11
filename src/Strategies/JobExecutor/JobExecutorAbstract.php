@@ -53,12 +53,13 @@ abstract class JobExecutorAbstract extends WorkerStrategyAbstract implements Job
         $jobLoopCancellation        = new DeferredCancellation();
         $workerState                = $worker->getWorkerState();
 
-        $worker->defineSoftShutdownHandler(static function () use ($jobLoopCancellation, $workerState) {
+        $worker->defineSoftShutdownHandler(static function () use ($jobLoopCancellation, $worker, $workerState) {
             if(false === $jobLoopCancellation->isCancelled()) {
                 $jobLoopCancellation->cancel();
             }
 
             $workerState->markAsUnReady()->updateStateSegment();
+            $worker->stop();
         });
 
         $this->workerState          = $worker->getWorkerState();

@@ -78,6 +78,13 @@ interface WorkerPoolInterface extends WorkerEventEmitterAwareInterface, WorkersS
      */
     public function scaleWorkers(int $groupId, int $delta): int;
 
+    /**
+     * Try to restart the worker by the worker id.
+     *
+     * The method returns true if the worker was found and running.
+     */
+    public function restartWorker(int $workerId): bool;
+
     public function getApplicationPid(): int;
 
     public function getPidFile(): string;
