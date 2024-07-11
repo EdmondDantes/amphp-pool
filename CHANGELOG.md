@@ -7,10 +7,13 @@
 - Fixed socket waiting when the server is about to shut down. 
 The issue remains for `UNIX` and is caused by the architecture of the `AMPHP` `httpserver`.
 - Fixed the synchronization of `WorkerState` for the isReady status and fields related to the worker's termination state.
+- Fixed the bug with Server Socket hanging under `Windows`. 
 
 ### Added
 
 - Added a component for monitoring the summary application state: `start time`, `number of restarts`, `uptime`.
+- Added a new strategy `AutoRestartByQuota`, 
+which allows you to restart the worker after a certain number of processed jobs or memory quota, etc.
 
 ### Changed
 
@@ -21,6 +24,8 @@ The message loop coroutine finishes first, followed by the observer coroutine.
 - Added a method `Worker::awaitShutdown`, which ensures the orderly shutdown of the worker. 
 Now the worker sends a `NULL` message, signaling the closure of the channel, 
 and then waits for confirmation from the parent process. Only after this does it terminate.
+- Added a new method `WorkerPool::restartWorker`, which allows you to restart the worker softly without stopping the entire pool.
+- Improved error handling from workers. Remote exceptions are properly accounted for and available for logging.
 
 ## [0.9.0] - 2024-07-01 [Pre-release]
 
