@@ -2,13 +2,245 @@
 
 ## Workers Scheme
 
+The `WorkerPool` class is responsible for managing the lifecycle of worker processes, 
+including starting, restarting, and monitoring. 
+Worker processes are organized into groups, with each group capable of having its own configurations and strategies.
+
+Before calling `run()` the `WorkerPool`,
+you must define all worker groups and specify their respective strategies and parameters.
+Only after these configurations are in place can the WorkerPool be initiated.
+
 Workers are divided into three types:
 
 * `reactor` - handle connections to the server
 * `job` - process internal tasks
-* `service` - A process that handles tasks, for example, from RabbitMQ
+* `service` - A process that handles tasks, for example, from `RabbitMQ`
 
-Multiple `reactors` can be created, each listening on different protocols/ports.
-Similarly, different groups of `jobs` can be created to handle various types of tasks.
+Example:
 
+```php
+// 1. Create a worker pool with a logger
+$workerPool = new WorkerPool(logger: $logger);
 
+// 2. Fill the worker pool with workers.
+$workerPool->describeGroup(new WorkerGroup(
+    entryPointClass: HttpReactor::class,
+    workerType: WorkerTypeEnum::REACTOR    
+));
+
+// 3. Run the worker pool
+$workerPool->applyGlobalErrorHandler();
+$workerPool->run();
+```
+
+Once the `run()` method has been called, the worker groups cannot be modified.
+
+## Worker Group options
+
+The `WorkerGroup` class is responsible for defining the worker group configuration.
+The following options are available:
+
+* `entryPointClass` - The class that will be used as the entry point for the worker group.
+* `workerType` - The type of worker group. The following types are available:
+    * `WorkerTypeEnum::REACTOR` - A worker group that handles connections to the server.
+    * `WorkerTypeEnum::JOB` - A worker group that processes internal tasks.
+    * `WorkerTypeEnum::SERVICE` - A worker group that handles tasks from `RabbitMQ`. 
+* `minWorkers` - The minimum number of workers in the group.
+* `maxWorkers` - The maximum number of workers in the group.
+* `groupName` - The name of the worker group.
+* `runnerStrategy` - The strategy responsible for launching workers and initialization.
+* `pickupStrategy` - The strategy used to pick up tasks from the queue.
+* `restartStrategy` - The strategy used to restart workers in the group.
+* `scalingStrategy` - The strategy used to scale the number of workers in the group.
+* `socketStrategy` - The strategy responsible for sharing connections between different processes, 
+designed for Reactor-type Workers.
+* `jobExecutor` - The strategy responsible for task execution.
+* `jobClient` - The strategy that allows sending tasks for execution to other workers.
+* `autoRestartStrategy` - The strategy allows restarting workers if they reach certain boundary conditions or exhaust their quota.
+
+## Entry point class
+
+The entry point class serves as the entry point for a worker process. 
+It allows for initialization or additional specific actions if needed.
+
+The class should implement the `WorkerEntryPointInterface` interface, which contains the following methods:
+1. `initialize(WorkerInterface $worker): void` - This method is called when the worker is initialized.
+2. `run(): void` - This method is called when the worker is started.
+
+```php
+use CT\AmpPool\Strategies\JobExecutor\JobHandlerInterface;
+use CT\AmpPool\Worker\WorkerEntryPointInterface;
+use CT\AmpPool\Worker\WorkerInterface;
+
+final class MyWorker implements WorkerEntryPointInterface
+{
+    private WorkerInterface $worker;
+
+    public function initialize(WorkerInterface $worker): void
+    {
+        // Now worker is ready to work but not started events Loops...
+        // we can change some state or do some initialization here
+        $this->worker               = $worker;
+    }
+
+    public function run(): void
+    {
+        // Here Worker is started and ready to work.
+        // We can add some logic here if needed.        
+        $this->worker->awaitTermination();
+        
+        // The worker process will be stopped after run() return.
+    }
+}
+```
+
+The `WorkerInterface` interface allows you to interact with the worker process, worker state, strategies.
+
+The worker process will be stopped as soon as the `run()` method completes 
+normally or throws an exception.
+If you want to simply wait for the worker to finish, 
+you should use `$this->worker->awaitTermination()`.
+
+## Reactor Worker
+
+The `Reactor` worker is responsible for handling connections to the server.
+
+Below, you can see an example of a reactor running an `AMPHP` `HTTP server`.
+
+```php
+/**
+ * This class is the entry point of the reactor process,
+ * which is designed to handle incoming connections.
+ *
+ * @package Examples\HttpServer
+ */
+final class HttpReactor implements WorkerEntryPointInterface
+{
+    private ?\WeakReference $worker = null;
+
+    public function initialize(WorkerInterface $worker): void
+    {
+        // 1. This method receives a class that handles the abstraction of the Worker process.
+        // The method is called before the run() method.
+        $this->worker               = \WeakReference::create($worker);
+    }
+
+    public function run(): void
+    {
+        // The method is called after the initialize() method.
+
+        // 1. Create a socket server (please see amp/http-server package for more details)
+
+        // The workerStrategy provides the socket factory, which is used to create the server.
+        // This is necessary because the socket is initially created in the parent process
+        // and only then passed to the child process.
+
+        $worker                     = $this->worker->get();
+
+        if ($worker === null) {
+            return;
+        }
+
+        $socketFactory              = $worker->getWorkerGroup()->getSocketStrategy()->getServerSocketFactory();
+        $clientFactory              = new SocketClientFactory($worker->getLogger());
+        $httpServer                 = new SocketHttpServer($worker->getLogger(), $socketFactory, $clientFactory);
+
+        // 2. Expose the server to the network
+        $httpServer->expose('127.0.0.1:9095');
+
+        // 3. Handle incoming connections and start the server
+        $httpServer->start(
+            new ClosureRequestHandler(static function () use ($worker): Response {
+
+                return new Response(
+                    HttpStatus::OK,
+                    [
+                    'content-type' => 'text/plain; charset=utf-8',
+                ],
+                    'Hello, World! From worker id: '.$worker->getWorkerId()
+                   .' and group id: '.$worker->getWorkerGroupId()
+                );
+            }),
+            new DefaultErrorHandler(),
+        );
+
+        // 4. Await termination of the worker
+        $worker->awaitTermination();
+
+        // 5. Stop the HTTP server
+        $httpServer->stop();
+    }
+}
+```
+
+## Job Worker
+
+The `Job` worker is responsible for processing internal tasks.
+
+Below, you can see an example of a job worker that processes tasks.
+
+```php
+final class JobWorker implements WorkerEntryPointInterface, JobHandlerInterface
+{
+    private WorkerInterface $worker;
+
+    public function initialize(WorkerInterface $worker): void
+    {
+        $this->worker               = $worker;
+        
+        // Here we define the job handler for the jobs that will be executed by this worker.
+        $worker->getWorkerGroup()->getJobExecutor()->defineJobHandler($this);
+    }
+
+    public function run(): void
+    {
+        $this->worker->awaitTermination();
+    }
+
+    // This method is called when a job is received by the worker.
+    public function handleJob(
+        string              $data,
+        ?CoroutineInterface $coroutine = null,
+        ?Cancellation       $cancellation = null
+    ): mixed {
+        return "Hello a job: $data\n";
+    }
+}
+```
+
+## Service Worker
+
+A worker `service` is generally intended to perform specific tasks that are not related to receiving external connections from users or handling tasks. 
+For example, a `Prometheus worker` allows retrieving the current state of the `WorkerPool` from shared memory.
+
+Below, you can see an example of a service worker that processes tasks.
+
+```php
+final class ServiceWorker implements WorkerEntryPointInterface, JobHandlerInterface
+{
+    private WorkerInterface $worker;
+    private string $callbackId;
+
+    public function initialize(WorkerInterface $worker): void
+    {
+        $this->worker = $worker;        
+    }
+
+    public function run(): void
+    {
+        $this->callbackId = EventLoop::repeat(1000, function () {
+            $this->worker->getLogger()->info('Service worker is running');
+        });
+        
+        try {
+            $this->worker->awaitTermination();
+        } finally {
+            EventLoop::cancel($this->callbackId);
+        }      
+    }
+}
+```
+
+A service worker can also use job execution in other workers or run its own HttpServer to accept connections. 
+A service worker is especially useful when you need additional functionality and want to ensure 
+that it runs in only one process and is automatically restarted in case of issues.
