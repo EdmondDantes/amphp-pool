@@ -244,3 +244,69 @@ final class ServiceWorker implements WorkerEntryPointInterface, JobHandlerInterf
 A service worker can also use job execution in other workers or run its own HttpServer to accept connections. 
 A service worker is especially useful when you need additional functionality and want to ensure 
 that it runs in only one process and is automatically restarted in case of issues.
+
+## How to use asynchronous programming inside workers
+
+When writing code for the `WorkerPool` in an asynchronous style, 
+it's important to remember that the code can be stopped at any moment and must be able to terminate correctly.
+
+Coroutines should be periodically and properly stopped, kernel object waits should be correctly canceled, 
+and resources should be freed and closed.
+
+The `WorkerInterface` provides several ways to stop the code at the moment when the worker needs to be terminated. 
+The `public function getAbortCancellation()` method returns a `Cancellation` object, 
+which can be added to kernel object wait methods to stop execution upon triggering.
+
+For watcher process, we should use `WorkerPoolInterface::getMainCancellation()` method.
+
+```php
+        try {
+            while (($client = $this->server->accept($this->worker->getAbortCancellation())) !== null) {
+                // ...
+            }
+        } catch (CancelledException) {
+            // The worker is stopping
+            // exit from the loop
+        }
+```
+
+## Prometheus' metrics and Grafana dashboard
+
+The `WorkerPool` provides a built-in `Prometheus` metrics server 
+that allows you to monitor the state of the `WorkerPool` in real-time.
+
+To enable the `Prometheus` server, you need to add the following code to the `WorkerPool` initialization:
+
+1. Step. Add the `Prometheus` group to the `WorkerPool`.
+
+```php
+$workerPool->describeGroup(new PrometheusGroup);
+```
+
+By default, the `Prometheus` service will be available at `http://localhost:9091/metrics`.
+
+2. Step. Add to prometheus.yml the following configuration:
+
+```yaml
+scrape_configs:
+  - job_name: 'worker_pool'
+    static_configs:
+      - targets: ['localhost:9091']
+```
+
+3. Step. Import to Grafana the following dashboard JSON model: [Model](./grafana/model.json).
+
+4. Step. Add to Grafana the Prometheus data source.
+
+
+## Windows Support
+
+All the functionality of this library works on `Windows OS`, 
+enabling the application to be used across different operating systems. However, there are a few known issues:
+
+* `Windows` uses a different socket sharing model, which affects the implementation of the `TCP server`.
+* `Windows` has a memory leak when using `Fiber` + `Socket` that cannot be bypassed.
+* There is a minor bug when attempting to reopen a closed socket, which does not impact the application's operation.
+
+Therefore, we do not recommend using `Windows` for production. 
+However, you should not encounter any issues if you want to use this library for debugging purposes on `Windows`.
