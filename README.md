@@ -74,6 +74,10 @@ $workerPool->describeGroup(new WorkerGroup(
 $workerPool->run();
 ```
 
+Please also read the [Getting Started](docs/00-getting_started.md) guide.
+
 ## Prometheus + Grafana
 
 ![Prometheus](docs/images/prometheus.png)
+
+Please see: [How to setup Grafana Dashboard](docs/00-getting_started.md#prometheus-metrics-and-grafana-dashboard)
