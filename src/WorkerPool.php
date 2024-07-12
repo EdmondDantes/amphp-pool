@@ -546,7 +546,7 @@ final class WorkerPool implements WorkerPoolInterface
             $this->stop();
         } elseif($signal === \SIGUSR1) {
             $this->logger?->info('Server should hard-reload due to signal SIGUSR1');
-            $this->restart();
+            $this->restart(false);
         } elseif($signal === \SIGUSR2) {
             $this->logger?->info('Server should soft-reload due to signal SIGUSR2');
             $this->restart();
@@ -995,7 +995,9 @@ final class WorkerPool implements WorkerPoolInterface
     public function restart(bool $isSoft = true): void
     {
         if($isSoft) {
-
+            
+            $this->applicationCollector?->restartApplication();
+            
             foreach ($this->workers as $workerDescriptor) {
                 if($workerDescriptor->isRunning()) {
                     $workerDescriptor->getWorkerProcess()->softShutdown();
