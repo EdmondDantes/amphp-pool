@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Telemetry\Collectors;
+namespace IfCastle\AmpPool\Telemetry\Collectors;
 
-use CT\AmpPool\WorkersStorage\WorkersStorageInterface;
+use IfCastle\AmpPool\WorkersStorage\WorkersStorageInterface;
 
 interface ApplicationCollectorInterface extends TelemetryCollectorInterface
 {

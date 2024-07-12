@@ -1,16 +1,16 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool;
+namespace IfCastle\AmpPool;
 
-use CT\AmpPool\JobIpc\JobClientInterface;
-use CT\AmpPool\Strategies\JobExecutor\JobExecutorInterface;
-use CT\AmpPool\Strategies\PickupStrategy\PickupStrategyInterface;
-use CT\AmpPool\Strategies\RestartStrategy\RestartStrategyInterface;
-use CT\AmpPool\Strategies\RunnerStrategy\RunnerStrategyInterface;
-use CT\AmpPool\Strategies\ScalingStrategy\ScalingStrategyInterface;
-use CT\AmpPool\Strategies\SocketStrategy\SocketStrategyInterface;
-use CT\AmpPool\Strategies\WorkerStrategyInterface;
+use IfCastle\AmpPool\JobIpc\JobClientInterface;
+use IfCastle\AmpPool\Strategies\JobExecutor\JobExecutorInterface;
+use IfCastle\AmpPool\Strategies\PickupStrategy\PickupStrategyInterface;
+use IfCastle\AmpPool\Strategies\RestartStrategy\RestartStrategyInterface;
+use IfCastle\AmpPool\Strategies\RunnerStrategy\RunnerStrategyInterface;
+use IfCastle\AmpPool\Strategies\ScalingStrategy\ScalingStrategyInterface;
+use IfCastle\AmpPool\Strategies\SocketStrategy\SocketStrategyInterface;
+use IfCastle\AmpPool\Strategies\WorkerStrategyInterface;
 
 /**
  * Worker Group Interface, which defines the configuration of a worker group.

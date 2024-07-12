@@ -1,18 +1,18 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Strategies\JobExecutor;
+namespace IfCastle\AmpPool\Strategies\JobExecutor;
 
 use Amp\Cancellation;
 use Amp\CancelledException;
 use Amp\CompositeCancellation;
 use Amp\DeferredCancellation;
-use CT\AmpPool\Exceptions\FatalWorkerException;
-use CT\AmpPool\JobIpc\IpcServerInterface;
-use CT\AmpPool\JobIpc\JobRequestInterface;
-use CT\AmpPool\Strategies\WorkerStrategyAbstract;
-use CT\AmpPool\WorkerGroup;
-use CT\AmpPool\WorkersStorage\WorkerStateInterface;
+use IfCastle\AmpPool\Exceptions\FatalWorkerException;
+use IfCastle\AmpPool\JobIpc\IpcServerInterface;
+use IfCastle\AmpPool\JobIpc\JobRequestInterface;
+use IfCastle\AmpPool\Strategies\WorkerStrategyAbstract;
+use IfCastle\AmpPool\WorkerGroup;
+use IfCastle\AmpPool\WorkersStorage\WorkerStateInterface;
 use Psr\Log\LoggerInterface;
 use Revolt\EventLoop;
 use function Amp\delay;

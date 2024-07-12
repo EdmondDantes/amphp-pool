@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Telemetry\Collectors;
+namespace IfCastle\AmpPool\Telemetry\Collectors;
 
 interface TelemetryCollectorInterface
 {

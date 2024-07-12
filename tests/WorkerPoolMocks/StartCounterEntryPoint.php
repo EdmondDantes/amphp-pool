@@ -1,11 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\WorkerPoolMocks;
+namespace IfCastle\AmpPool\WorkerPoolMocks;
 
 use Amp\TimeoutCancellation;
-use CT\AmpPool\Worker\WorkerEntryPointInterface;
-use CT\AmpPool\Worker\WorkerInterface;
+use IfCastle\AmpPool\Worker\WorkerEntryPointInterface;
+use IfCastle\AmpPool\Worker\WorkerInterface;
 
 /**
  * Use file to count how many times workers were started.

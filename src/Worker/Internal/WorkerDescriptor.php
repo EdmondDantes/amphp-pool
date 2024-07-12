@@ -1,13 +1,13 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Worker\Internal;
+namespace IfCastle\AmpPool\Worker\Internal;
 
 use Amp\DeferredFuture;
 use Amp\Future;
-use CT\AmpPool\Internal\WorkerProcessContext;
-use CT\AmpPool\WorkerGroupInterface;
-use CT\AmpPool\WorkersStorage\WorkerStateInterface;
+use IfCastle\AmpPool\Internal\WorkerProcessContext;
+use IfCastle\AmpPool\WorkerGroupInterface;
+use IfCastle\AmpPool\WorkersStorage\WorkerStateInterface;
 
 /**
  * @internal

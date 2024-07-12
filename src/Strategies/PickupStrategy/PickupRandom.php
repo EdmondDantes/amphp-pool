@@ -1,12 +1,12 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Strategies\PickupStrategy;
+namespace IfCastle\AmpPool\Strategies\PickupStrategy;
 
 /**
  * Class PickupRandom.
  *
- * @package CT\AmpPool\Worker\PickupStrategy
+ * @package IfCastle\AmpPool\Worker\PickupStrategy
  */
 final class PickupRandom extends PickupStrategyAbstract
 {

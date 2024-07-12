@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\WorkerPoolMocks\Runners;
+namespace IfCastle\AmpPool\WorkerPoolMocks\Runners;
 
 use Amp\Sync\Channel;
-use CT\AmpPool\Strategies\RunnerStrategy\DefaultRunner;
+use IfCastle\AmpPool\Strategies\RunnerStrategy\DefaultRunner;
 use function Amp\delay;
 
 final class RunnerLostChannel extends DefaultRunner

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Strategies\SocketStrategy\Unix\Messages;
+namespace IfCastle\AmpPool\Strategies\SocketStrategy\Unix\Messages;
 
 final readonly class InitiateSocketTransfer
 {

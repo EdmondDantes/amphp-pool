@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Strategies\SocketStrategy\Windows\Messages;
+namespace IfCastle\AmpPool\Strategies\SocketStrategy\Windows\Messages;
 
 use Amp\Socket\SocketAddress;
 

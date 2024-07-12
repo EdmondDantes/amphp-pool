@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Strategies\PickupStrategy;
+namespace IfCastle\AmpPool\Strategies\PickupStrategy;
 
 /**
  * Selects a worker with the smallest weight.

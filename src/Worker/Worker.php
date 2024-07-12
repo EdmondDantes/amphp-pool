@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Worker;
+namespace IfCastle\AmpPool\Worker;
 
 use Amp\Cancellation;
 use Amp\CancelledException;
@@ -11,22 +11,22 @@ use Amp\Pipeline\ConcurrentIterator;
 use Amp\Pipeline\Queue;
 use Amp\Sync\Channel;
 use Amp\TimeoutCancellation;
-use CT\AmpPool\Exceptions\FatalWorkerException;
-use CT\AmpPool\Exceptions\RemoteException;
-use CT\AmpPool\Internal\Messages\MessageIpcShutdown;
-use CT\AmpPool\Internal\Messages\MessagePingPong;
-use CT\AmpPool\Internal\Messages\WorkerShouldBeShutdown;
-use CT\AmpPool\Internal\Messages\WorkerSoftShutdown;
-use CT\AmpPool\Internal\Messages\WorkerStarted;
-use CT\AmpPool\Strategies\WorkerStrategyInterface;
-use CT\AmpPool\Worker\Internal\PeriodicTask;
-use CT\AmpPool\Worker\Internal\WorkerLogHandler;
-use CT\AmpPool\WorkerEventEmitter;
-use CT\AmpPool\WorkerEventEmitterInterface;
-use CT\AmpPool\WorkerGroup;
-use CT\AmpPool\WorkersStorage\WorkersStorageInterface;
-use CT\AmpPool\WorkersStorage\WorkerStateInterface;
-use CT\AmpPool\WorkerTypeEnum;
+use IfCastle\AmpPool\Exceptions\FatalWorkerException;
+use IfCastle\AmpPool\Exceptions\RemoteException;
+use IfCastle\AmpPool\Internal\Messages\MessageIpcShutdown;
+use IfCastle\AmpPool\Internal\Messages\MessagePingPong;
+use IfCastle\AmpPool\Internal\Messages\WorkerShouldBeShutdown;
+use IfCastle\AmpPool\Internal\Messages\WorkerSoftShutdown;
+use IfCastle\AmpPool\Internal\Messages\WorkerStarted;
+use IfCastle\AmpPool\Strategies\WorkerStrategyInterface;
+use IfCastle\AmpPool\Worker\Internal\PeriodicTask;
+use IfCastle\AmpPool\Worker\Internal\WorkerLogHandler;
+use IfCastle\AmpPool\WorkerEventEmitter;
+use IfCastle\AmpPool\WorkerEventEmitterInterface;
+use IfCastle\AmpPool\WorkerGroup;
+use IfCastle\AmpPool\WorkersStorage\WorkersStorageInterface;
+use IfCastle\AmpPool\WorkersStorage\WorkerStateInterface;
+use IfCastle\AmpPool\WorkerTypeEnum;
 use Psr\Log\LoggerInterface;
 use Revolt\EventLoop;
 

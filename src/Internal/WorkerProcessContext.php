@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Internal;
+namespace IfCastle\AmpPool\Internal;
 
 use Amp\Cancellation;
 use Amp\CancelledException;
@@ -16,14 +16,14 @@ use Amp\Parallel\Context\ProcessContext;
 use Amp\Process\ProcessException;
 use Amp\Sync\ChannelException;
 use Amp\TimeoutCancellation;
-use CT\AmpPool\Exceptions\RemoteException;
-use CT\AmpPool\Exceptions\WorkerShouldBeStopped;
-use CT\AmpPool\Internal\Messages\MessageIpcShutdown;
-use CT\AmpPool\Internal\Messages\MessageLog;
-use CT\AmpPool\Internal\Messages\WorkerShouldBeShutdown;
-use CT\AmpPool\Internal\Messages\WorkerSoftShutdown;
-use CT\AmpPool\Internal\Messages\WorkerStarted;
-use CT\AmpPool\WorkerEventEmitterInterface;
+use IfCastle\AmpPool\Exceptions\RemoteException;
+use IfCastle\AmpPool\Exceptions\WorkerShouldBeStopped;
+use IfCastle\AmpPool\Internal\Messages\MessageIpcShutdown;
+use IfCastle\AmpPool\Internal\Messages\MessageLog;
+use IfCastle\AmpPool\Internal\Messages\WorkerShouldBeShutdown;
+use IfCastle\AmpPool\Internal\Messages\WorkerSoftShutdown;
+use IfCastle\AmpPool\Internal\Messages\WorkerStarted;
+use IfCastle\AmpPool\WorkerEventEmitterInterface;
 use Revolt\EventLoop;
 use const Amp\Process\IS_WINDOWS;
 use function Amp\async;

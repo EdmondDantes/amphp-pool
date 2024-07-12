@@ -1,13 +1,13 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Coroutine;
+namespace IfCastle\AmpPool\Coroutine;
 
 use Amp\Cancellation;
 use Amp\DeferredFuture;
 use Amp\Future;
-use CT\AmpPool\Coroutine\Exceptions\CoroutineNotStarted;
-use CT\AmpPool\Coroutine\Exceptions\CoroutineTerminationException;
+use IfCastle\AmpPool\Coroutine\Exceptions\CoroutineNotStarted;
+use IfCastle\AmpPool\Coroutine\Exceptions\CoroutineTerminationException;
 use Revolt\EventLoop;
 use Revolt\EventLoop\Suspension;
 

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Coroutine\Exceptions;
+namespace IfCastle\AmpPool\Coroutine\Exceptions;
 
 class CoroutineTimeLimit extends CoroutineTerminationException
 {

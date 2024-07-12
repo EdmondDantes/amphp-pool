@@ -1,13 +1,13 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Strategies\JobExecutor;
+namespace IfCastle\AmpPool\Strategies\JobExecutor;
 
 use Amp\Cancellation;
 use Amp\CompositeCancellation;
 use Amp\Future;
 use Amp\TimeoutCancellation;
-use CT\AmpPool\JobIpc\IpcServer;
+use IfCastle\AmpPool\JobIpc\IpcServer;
 use function Amp\async;
 
 final class JobExecutorAsync extends JobExecutorAbstract

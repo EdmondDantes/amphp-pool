@@ -1,13 +1,13 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\JobIpc;
+namespace IfCastle\AmpPool\JobIpc;
 
 use Amp\CancelledException;
 use Amp\DeferredCancellation;
 use Amp\TimeoutCancellation;
-use CT\AmpPool\WorkerGroup;
-use CT\AmpPool\WorkerTypeEnum;
+use IfCastle\AmpPool\WorkerGroup;
+use IfCastle\AmpPool\WorkerTypeEnum;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use Revolt\EventLoop;

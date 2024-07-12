@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Strategies\RestartStrategy;
+namespace IfCastle\AmpPool\Strategies\RestartStrategy;
 
 /**
  * Worker Restart Strategy, which defines the rules by which a worker can be restarted.

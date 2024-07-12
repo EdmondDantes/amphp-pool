@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Strategies\RestartStrategy;
+namespace IfCastle\AmpPool\Strategies\RestartStrategy;
 
-use CT\AmpPool\Strategies\WorkerStrategyAbstract;
+use IfCastle\AmpPool\Strategies\WorkerStrategyAbstract;
 
 final class RestartAlways extends WorkerStrategyAbstract implements RestartStrategyInterface
 {

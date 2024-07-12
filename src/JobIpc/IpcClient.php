@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\JobIpc;
+namespace IfCastle\AmpPool\JobIpc;
 
 use Amp\ByteStream\StreamChannel;
 use Amp\ByteStream\StreamException;
@@ -15,9 +15,9 @@ use Amp\Serialization\PassthroughSerializer;
 use Amp\Sync\ChannelException;
 use Amp\TimeoutCancellation;
 use Amp\TimeoutException;
-use CT\AmpPool\Exceptions\NoWorkersAvailable;
-use CT\AmpPool\Exceptions\SendJobException;
-use CT\AmpPool\WorkerGroupInterface;
+use IfCastle\AmpPool\Exceptions\NoWorkersAvailable;
+use IfCastle\AmpPool\Exceptions\SendJobException;
+use IfCastle\AmpPool\WorkerGroupInterface;
 use Revolt\EventLoop;
 use function Amp\delay;
 use function Amp\Socket\socketConnector;

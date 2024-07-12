@@ -1,12 +1,12 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Integration\WorkerIpc;
+namespace IfCastle\AmpPool\Integration\WorkerIpc;
 
-use CT\AmpPool\Strategies\RestartStrategy\RestartNever;
-use CT\AmpPool\WorkerGroup;
-use CT\AmpPool\WorkerPool;
-use CT\AmpPool\WorkerTypeEnum;
+use IfCastle\AmpPool\Strategies\RestartStrategy\RestartNever;
+use IfCastle\AmpPool\WorkerGroup;
+use IfCastle\AmpPool\WorkerPool;
+use IfCastle\AmpPool\WorkerTypeEnum;
 use PHPUnit\Framework\TestCase;
 
 class WorkerToWorkerTest extends TestCase

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Strategies\SocketStrategy\Windows;
+namespace IfCastle\AmpPool\Strategies\SocketStrategy\Windows;
 
 use Amp\Cancellation;
 use Amp\CancelledException;
@@ -17,9 +17,9 @@ use Amp\Socket\Socket;
 use Amp\Socket\SocketAddress;
 use Amp\Socket\SocketException;
 use Amp\Sync\Channel;
-use CT\AmpPool\EventWeakHandler;
-use CT\AmpPool\Strategies\SocketStrategy\Windows\Messages\MessageSocketTransfer;
-use CT\AmpPool\WorkerEventEmitterInterface;
+use IfCastle\AmpPool\EventWeakHandler;
+use IfCastle\AmpPool\Strategies\SocketStrategy\Windows\Messages\MessageSocketTransfer;
+use IfCastle\AmpPool\WorkerEventEmitterInterface;
 
 final class ServerSocketFactoryWindows implements ServerSocket
 {

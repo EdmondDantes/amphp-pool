@@ -1,12 +1,12 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool;
+namespace IfCastle\AmpPool;
 
 use Amp\Cancellation;
 use Amp\Parallel\Context\Context;
 use Amp\Parallel\Ipc\IpcHub;
-use CT\AmpPool\WorkersStorage\WorkersStorageAwareInterface;
+use IfCastle\AmpPool\WorkersStorage\WorkersStorageAwareInterface;
 use Psr\Log\LoggerInterface as PsrLogger;
 
 interface WorkerPoolInterface extends WorkerEventEmitterAwareInterface, WorkersStorageAwareInterface, GlobalErrorHandlerInterface

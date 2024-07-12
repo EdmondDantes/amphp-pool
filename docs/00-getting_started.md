@@ -68,9 +68,9 @@ The class should implement the `WorkerEntryPointInterface` interface, which cont
 2. `run(): void` - This method is called when the worker is started.
 
 ```php
-use CT\AmpPool\Strategies\JobExecutor\JobHandlerInterface;
-use CT\AmpPool\Worker\WorkerEntryPointInterface;
-use CT\AmpPool\Worker\WorkerInterface;
+use IfCastle\AmpPool\Strategies\JobExecutor\JobHandlerInterface;
+use IfCastle\AmpPool\Worker\WorkerEntryPointInterface;
+use IfCastle\AmpPool\Worker\WorkerInterface;
 
 final class MyWorker implements WorkerEntryPointInterface
 {
@@ -284,7 +284,7 @@ However, sometimes you need more. For example, you might want to execute long-ru
 in one group of workers and quick tasks in another. 
 This can be useful if you need to control the maximum number of tasks of a specific type.
 
-Please see the `CT\AmpPool\Strategies\PickupStrategy` namespace for more details.
+Please see the `IfCastle\AmpPool\Strategies\PickupStrategy` namespace for more details.
 
 ## How to use asynchronous programming inside workers
 

@@ -1,16 +1,16 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Worker;
+namespace IfCastle\AmpPool\Worker;
 
 use Amp\Cancellation;
 use Amp\Sync\Channel;
-use CT\AmpPool\GlobalErrorHandlerInterface;
-use CT\AmpPool\WorkerEventEmitterAwareInterface;
-use CT\AmpPool\WorkerGroup;
-use CT\AmpPool\WorkersStorage\WorkersStorageAwareInterface;
-use CT\AmpPool\WorkersStorage\WorkerStateInterface;
-use CT\AmpPool\WorkerTypeEnum;
+use IfCastle\AmpPool\GlobalErrorHandlerInterface;
+use IfCastle\AmpPool\WorkerEventEmitterAwareInterface;
+use IfCastle\AmpPool\WorkerGroup;
+use IfCastle\AmpPool\WorkersStorage\WorkersStorageAwareInterface;
+use IfCastle\AmpPool\WorkersStorage\WorkerStateInterface;
+use IfCastle\AmpPool\WorkerTypeEnum;
 use Psr\Log\LoggerInterface;
 
 interface WorkerInterface extends WorkerEventEmitterAwareInterface, WorkersStorageAwareInterface, GlobalErrorHandlerInterface

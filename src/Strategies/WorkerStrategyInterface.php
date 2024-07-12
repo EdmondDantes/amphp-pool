@@ -1,11 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Strategies;
+namespace IfCastle\AmpPool\Strategies;
 
-use CT\AmpPool\Worker\WorkerInterface;
-use CT\AmpPool\WorkerGroupInterface;
-use CT\AmpPool\WorkerPoolInterface;
+use IfCastle\AmpPool\Worker\WorkerInterface;
+use IfCastle\AmpPool\WorkerGroupInterface;
+use IfCastle\AmpPool\WorkerPoolInterface;
 
 interface WorkerStrategyInterface
 {

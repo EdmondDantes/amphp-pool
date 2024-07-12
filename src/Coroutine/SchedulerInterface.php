@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Coroutine;
+namespace IfCastle\AmpPool\Coroutine;
 
 use Amp\Cancellation;
 use Amp\Future;

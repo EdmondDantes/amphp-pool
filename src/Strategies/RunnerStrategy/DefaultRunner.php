@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Strategies\RunnerStrategy;
+namespace IfCastle\AmpPool\Strategies\RunnerStrategy;
 
 use Amp\Future;
 use Amp\Parallel\Context\Context;
@@ -9,11 +9,11 @@ use Amp\Serialization\SerializationException;
 use Amp\Sync\Channel;
 use Amp\Sync\ChannelException;
 use Amp\TimeoutCancellation;
-use CT\AmpPool\Exceptions\FatalWorkerException;
-use CT\AmpPool\Strategies\WorkerStrategyAbstract;
-use CT\AmpPool\Worker\Worker;
-use CT\AmpPool\Worker\WorkerEntryPointInterface;
-use CT\AmpPool\WorkerGroupInterface;
+use IfCastle\AmpPool\Exceptions\FatalWorkerException;
+use IfCastle\AmpPool\Strategies\WorkerStrategyAbstract;
+use IfCastle\AmpPool\Worker\Worker;
+use IfCastle\AmpPool\Worker\WorkerEntryPointInterface;
+use IfCastle\AmpPool\WorkerGroupInterface;
 use function Amp\async;
 
 class DefaultRunner extends WorkerStrategyAbstract implements RunnerStrategyInterface

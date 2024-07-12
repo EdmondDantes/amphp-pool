@@ -1,12 +1,12 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Telemetry\Collectors;
+namespace IfCastle\AmpPool\Telemetry\Collectors;
 
-use CT\AmpPool\System\SystemInfo;
-use CT\AmpPool\WorkersStorage\ApplicationStateInterface;
-use CT\AmpPool\WorkersStorage\MemoryUsageInterface;
-use CT\AmpPool\WorkersStorage\WorkersStorageInterface;
+use IfCastle\AmpPool\System\SystemInfo;
+use IfCastle\AmpPool\WorkersStorage\ApplicationStateInterface;
+use IfCastle\AmpPool\WorkersStorage\MemoryUsageInterface;
+use IfCastle\AmpPool\WorkersStorage\WorkersStorageInterface;
 
 final readonly class ApplicationCollector implements ApplicationCollectorInterface
 {

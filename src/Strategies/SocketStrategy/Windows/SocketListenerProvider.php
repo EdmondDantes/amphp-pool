@@ -1,14 +1,14 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Strategies\SocketStrategy\Windows;
+namespace IfCastle\AmpPool\Strategies\SocketStrategy\Windows;
 
 use Amp\Socket\SocketAddress;
-use CT\AmpPool\EventWeakHandler;
-use CT\AmpPool\Strategies\SocketStrategy\Windows\Messages\MessageSocketListen;
-use CT\AmpPool\WatcherEvents\WorkerProcessTerminating;
-use CT\AmpPool\WorkerGroupInterface;
-use CT\AmpPool\WorkerPool;
+use IfCastle\AmpPool\EventWeakHandler;
+use IfCastle\AmpPool\Strategies\SocketStrategy\Windows\Messages\MessageSocketListen;
+use IfCastle\AmpPool\WatcherEvents\WorkerProcessTerminating;
+use IfCastle\AmpPool\WorkerGroupInterface;
+use IfCastle\AmpPool\WorkerPool;
 
 final class SocketListenerProvider
 {

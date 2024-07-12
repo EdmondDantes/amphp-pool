@@ -1,4 +1,4 @@
 <?php
 declare(strict_types=1);
 
-return \CT\AmpPool\WorkerPoolMocks\Runners\RunnerLostChannel::processEntryPoint(...);
+return \IfCastle\AmpPool\WorkerPoolMocks\Runners\RunnerLostChannel::processEntryPoint(...);

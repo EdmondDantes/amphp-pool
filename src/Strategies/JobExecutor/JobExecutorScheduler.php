@@ -1,24 +1,24 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Strategies\JobExecutor;
+namespace IfCastle\AmpPool\Strategies\JobExecutor;
 
 use Amp\Cancellation;
 use Amp\CompositeCancellation;
 use Amp\Future;
 use Amp\TimeoutCancellation;
-use CT\AmpPool\Coroutine\Coroutine;
-use CT\AmpPool\Coroutine\CoroutineInterface;
-use CT\AmpPool\Coroutine\Scheduler;
-use CT\AmpPool\Coroutine\SchedulerInterface;
-use CT\AmpPool\JobIpc\IpcServer;
+use IfCastle\AmpPool\Coroutine\Coroutine;
+use IfCastle\AmpPool\Coroutine\CoroutineInterface;
+use IfCastle\AmpPool\Coroutine\Scheduler;
+use IfCastle\AmpPool\Coroutine\SchedulerInterface;
+use IfCastle\AmpPool\JobIpc\IpcServer;
 
 /**
  * Class JobRunnerScheduler.
  *
  * Run jobs using a coroutine scheduler.
  *
- * @package CT\AmpPool\Strategies\JobRunner
+ * @package IfCastle\AmpPool\Strategies\JobRunner
  */
 final class JobExecutorScheduler extends JobExecutorAbstract
 {

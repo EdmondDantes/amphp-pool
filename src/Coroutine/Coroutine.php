@@ -1,7 +1,7 @@
 <?php /** @noinspection ALL */
 declare(strict_types=1);
 
-namespace CT\AmpPool\Coroutine;
+namespace IfCastle\AmpPool\Coroutine;
 
 use Amp\DeferredFuture;
 use Amp\Future;

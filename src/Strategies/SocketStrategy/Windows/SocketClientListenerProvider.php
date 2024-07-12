@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Strategies\SocketStrategy\Windows;
+namespace IfCastle\AmpPool\Strategies\SocketStrategy\Windows;
 
 use Amp\Cancellation;
 use Amp\CancelledException;
@@ -13,14 +13,14 @@ use Amp\Socket\ResourceSocket;
 use Amp\Socket\ServerSocket;
 use Amp\Socket\Socket;
 use Amp\Socket\SocketAddress;
-use CT\AmpPool\EventWeakHandler;
-use CT\AmpPool\Internal\Safe;
-use CT\AmpPool\Strategies\SocketStrategy\Windows\Messages\MessageReady;
-use CT\AmpPool\Strategies\SocketStrategy\Windows\Messages\MessageSocketFree;
-use CT\AmpPool\Strategies\SocketStrategy\Windows\Messages\MessageSocketTransfer;
-use CT\AmpPool\WatcherEvents\WorkerProcessTerminating;
-use CT\AmpPool\WorkerGroupInterface;
-use CT\AmpPool\WorkerPoolInterface;
+use IfCastle\AmpPool\EventWeakHandler;
+use IfCastle\AmpPool\Internal\Safe;
+use IfCastle\AmpPool\Strategies\SocketStrategy\Windows\Messages\MessageReady;
+use IfCastle\AmpPool\Strategies\SocketStrategy\Windows\Messages\MessageSocketFree;
+use IfCastle\AmpPool\Strategies\SocketStrategy\Windows\Messages\MessageSocketTransfer;
+use IfCastle\AmpPool\WatcherEvents\WorkerProcessTerminating;
+use IfCastle\AmpPool\WorkerGroupInterface;
+use IfCastle\AmpPool\WorkerPoolInterface;
 use Revolt\EventLoop;
 
 /**

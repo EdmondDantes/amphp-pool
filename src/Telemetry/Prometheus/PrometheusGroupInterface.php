@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Telemetry\Prometheus;
+namespace IfCastle\AmpPool\Telemetry\Prometheus;
 
 interface PrometheusGroupInterface
 {

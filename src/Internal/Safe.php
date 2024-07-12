@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Internal;
+namespace IfCastle\AmpPool\Internal;
 
 /**
  * @internal

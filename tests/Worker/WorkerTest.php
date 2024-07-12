@@ -1,15 +1,15 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Worker;
+namespace IfCastle\AmpPool\Worker;
 
 use Amp\DeferredCancellation;
 use Amp\Sync\Channel;
 use Amp\TimeoutCancellation;
-use CT\AmpPool\Internal\Messages\MessageIpcShutdown;
-use CT\AmpPool\WorkerGroup;
-use CT\AmpPool\WorkersStorage\WorkersStorageMemory;
-use CT\AmpPool\WorkerTypeEnum;
+use IfCastle\AmpPool\Internal\Messages\MessageIpcShutdown;
+use IfCastle\AmpPool\WorkerGroup;
+use IfCastle\AmpPool\WorkersStorage\WorkersStorageMemory;
+use IfCastle\AmpPool\WorkerTypeEnum;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use Revolt\EventLoop;

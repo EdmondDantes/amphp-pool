@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool;
+namespace IfCastle\AmpPool;
 
 final class WorkerEventEmitter implements WorkerEventEmitterInterface
 {

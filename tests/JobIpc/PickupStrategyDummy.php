@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\JobIpc;
+namespace IfCastle\AmpPool\JobIpc;
 
-use CT\AmpPool\Strategies\PickupStrategy\PickupStrategyInterface;
+use IfCastle\AmpPool\Strategies\PickupStrategy\PickupStrategyInterface;
 
 /**
  * Always returns the same workerId.

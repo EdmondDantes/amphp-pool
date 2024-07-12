@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\WorkersStorage;
+namespace IfCastle\AmpPool\WorkersStorage;
 
 /**
  * Application Data Storage in Virtual Shared Memory.

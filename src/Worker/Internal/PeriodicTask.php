@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Worker\Internal;
+namespace IfCastle\AmpPool\Worker\Internal;
 
 use Revolt\EventLoop;
 

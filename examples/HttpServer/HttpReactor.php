@@ -9,8 +9,8 @@ use Amp\Http\Server\Driver\SocketClientFactory;
 use Amp\Http\Server\RequestHandler\ClosureRequestHandler;
 use Amp\Http\Server\Response;
 use Amp\Http\Server\SocketHttpServer;
-use CT\AmpPool\Worker\WorkerEntryPointInterface;
-use CT\AmpPool\Worker\WorkerInterface;
+use IfCastle\AmpPool\Worker\WorkerEntryPointInterface;
+use IfCastle\AmpPool\Worker\WorkerInterface;
 
 /**
  * This class is the entry point of the reactor process,

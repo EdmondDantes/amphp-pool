@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Strategies\RunnerStrategy;
+namespace IfCastle\AmpPool\Strategies\RunnerStrategy;
 
 use Amp\Parallel\Context\Context;
-use CT\AmpPool\WorkerGroupInterface;
+use IfCastle\AmpPool\WorkerGroupInterface;
 
 interface RunnerStrategyInterface
 {

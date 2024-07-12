@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\WatcherEvents;
+namespace IfCastle\AmpPool\WatcherEvents;
 
 use Amp\Parallel\Context\Context;
-use CT\AmpPool\WorkerGroupInterface;
+use IfCastle\AmpPool\WorkerGroupInterface;
 
 final readonly class WorkerProcessTerminating
 {

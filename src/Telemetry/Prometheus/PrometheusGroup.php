@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Telemetry\Prometheus;
+namespace IfCastle\AmpPool\Telemetry\Prometheus;
 
-use CT\AmpPool\WorkerGroup;
-use CT\AmpPool\WorkerTypeEnum;
+use IfCastle\AmpPool\WorkerGroup;
+use IfCastle\AmpPool\WorkerTypeEnum;
 
 final class PrometheusGroup extends WorkerGroup implements PrometheusGroupInterface
 {

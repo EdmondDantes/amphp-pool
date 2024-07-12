@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Strategies\PickupStrategy;
+namespace IfCastle\AmpPool\Strategies\PickupStrategy;
 
 /**
  * The class implements the strategy of selecting workers in a round-robin manner.

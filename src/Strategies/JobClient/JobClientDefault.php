@@ -1,15 +1,15 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Strategies\JobClient;
+namespace IfCastle\AmpPool\Strategies\JobClient;
 
 use Amp\DeferredFuture;
 use Amp\Future;
-use CT\AmpPool\Exceptions\FatalWorkerException;
-use CT\AmpPool\JobIpc\IpcClient;
-use CT\AmpPool\JobIpc\IpcClientInterface;
-use CT\AmpPool\JobIpc\JobClientInterface;
-use CT\AmpPool\Strategies\WorkerStrategyAbstract;
+use IfCastle\AmpPool\Exceptions\FatalWorkerException;
+use IfCastle\AmpPool\JobIpc\IpcClient;
+use IfCastle\AmpPool\JobIpc\IpcClientInterface;
+use IfCastle\AmpPool\JobIpc\JobClientInterface;
+use IfCastle\AmpPool\Strategies\WorkerStrategyAbstract;
 
 final class JobClientDefault extends WorkerStrategyAbstract implements JobClientInterface
 {

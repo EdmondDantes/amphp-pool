@@ -1,16 +1,16 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Integration\WorkerIpc;
+namespace IfCastle\AmpPool\Integration\WorkerIpc;
 
 use Amp\Cancellation;
 use Amp\TimeoutCancellation;
-use CT\AmpPool\Coroutine\CoroutineInterface;
-use CT\AmpPool\Exceptions\FatalWorkerException;
-use CT\AmpPool\Strategies\JobExecutor\JobHandlerInterface;
-use CT\AmpPool\Worker\WorkerEntryPointInterface;
-use CT\AmpPool\Worker\WorkerInterface;
-use CT\AmpPool\WorkerTypeEnum;
+use IfCastle\AmpPool\Coroutine\CoroutineInterface;
+use IfCastle\AmpPool\Exceptions\FatalWorkerException;
+use IfCastle\AmpPool\Strategies\JobExecutor\JobHandlerInterface;
+use IfCastle\AmpPool\Worker\WorkerEntryPointInterface;
+use IfCastle\AmpPool\Worker\WorkerInterface;
+use IfCastle\AmpPool\WorkerTypeEnum;
 use Revolt\EventLoop;
 
 final class EntryPoint implements WorkerEntryPointInterface, JobHandlerInterface

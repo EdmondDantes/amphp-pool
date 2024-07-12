@@ -1,12 +1,12 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Telemetry\HttpServer;
+namespace IfCastle\AmpPool\Telemetry\HttpServer;
 
 use Amp\Http\Server\ErrorHandler;
 use Amp\Http\Server\Request;
 use Amp\Http\Server\Response;
-use CT\AmpPool\Telemetry\Collectors\ConnectionCollectorInterface;
+use IfCastle\AmpPool\Telemetry\Collectors\ConnectionCollectorInterface;
 
 final readonly class ErrorHandlerCollector implements ErrorHandler
 {

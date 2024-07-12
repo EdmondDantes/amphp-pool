@@ -1,15 +1,15 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Strategies\PickupStrategy;
+namespace IfCastle\AmpPool\Strategies\PickupStrategy;
 
-use CT\AmpPool\Strategies\WorkerStrategyAbstract;
+use IfCastle\AmpPool\Strategies\WorkerStrategyAbstract;
 
 abstract class PickupStrategyAbstract extends WorkerStrategyAbstract implements PickupStrategyInterface
 {
     /**
      *
-     * @return iterable<\CT\AmpPool\WorkersStorage\WorkerStateInterface>
+     * @return iterable<\IfCastle\AmpPool\WorkersStorage\WorkerStateInterface>
      */
     protected function iterate(array $possibleGroups = [], array $possibleWorkers = [], array $ignoredWorkers = []): iterable
     {

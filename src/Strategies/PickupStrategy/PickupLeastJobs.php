@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Strategies\PickupStrategy;
+namespace IfCastle\AmpPool\Strategies\PickupStrategy;
 
 /**
  * The algorithm selects a worker based on the number of tasks assigned to them.

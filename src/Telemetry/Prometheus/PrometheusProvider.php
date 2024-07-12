@@ -1,11 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Telemetry\Prometheus;
+namespace IfCastle\AmpPool\Telemetry\Prometheus;
 
-use CT\AmpPool\WorkerGroupInterface;
-use CT\AmpPool\WorkersStorage\WorkersStorageInterface;
-use CT\AmpPool\WorkersStorage\WorkerStateInterface;
+use IfCastle\AmpPool\WorkerGroupInterface;
+use IfCastle\AmpPool\WorkersStorage\WorkersStorageInterface;
+use IfCastle\AmpPool\WorkersStorage\WorkerStateInterface;
 
 final class PrometheusProvider
 {

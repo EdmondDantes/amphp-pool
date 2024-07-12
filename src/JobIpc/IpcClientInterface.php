@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\JobIpc;
+namespace IfCastle\AmpPool\JobIpc;
 
 interface IpcClientInterface extends JobClientInterface
 {

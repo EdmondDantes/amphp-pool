@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\JobIpc;
+namespace IfCastle\AmpPool\JobIpc;
 
-use CT\AmpPool\Exceptions\RemoteException;
+use IfCastle\AmpPool\Exceptions\RemoteException;
 
 final readonly class JobResponse implements JobResponseInterface
 {

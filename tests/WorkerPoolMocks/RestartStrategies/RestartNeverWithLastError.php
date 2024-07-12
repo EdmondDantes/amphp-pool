@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\WorkerPoolMocks\RestartStrategies;
+namespace IfCastle\AmpPool\WorkerPoolMocks\RestartStrategies;
 
-use CT\AmpPool\Strategies\RestartStrategy\RestartStrategyInterface;
+use IfCastle\AmpPool\Strategies\RestartStrategy\RestartStrategyInterface;
 
 final class RestartNeverWithLastError implements RestartStrategyInterface
 {

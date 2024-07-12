@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Strategies\SocketStrategy\Windows;
+namespace IfCastle\AmpPool\Strategies\SocketStrategy\Windows;
 
 use Amp\ByteStream\ClosedException;
 use Amp\ByteStream\ReadableResourceStream;
@@ -22,7 +22,7 @@ use Amp\Socket\TlsException;
 use Amp\Socket\TlsInfo;
 use Amp\Socket\TlsState;
 use Amp\Sync\Channel;
-use CT\AmpPool\Strategies\SocketStrategy\Windows\Messages\MessageSocketFree;
+use IfCastle\AmpPool\Strategies\SocketStrategy\Windows\Messages\MessageSocketFree;
 
 /**
  * Copy of the ResourceSocket class from the amphp/socket package.

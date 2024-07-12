@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\WorkersStorage;
+namespace IfCastle\AmpPool\WorkersStorage;
 
 interface WorkersStorageAwareInterface
 {

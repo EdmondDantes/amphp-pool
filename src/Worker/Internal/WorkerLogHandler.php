@@ -1,13 +1,13 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Worker\Internal;
+namespace IfCastle\AmpPool\Worker\Internal;
 
 use Amp\ForbidCloning;
 use Amp\ForbidSerialization;
 use Amp\Sync\Channel;
-use CT\AmpPool\Exceptions\RemoteException;
-use CT\AmpPool\Internal\Messages\MessageLog;
+use IfCastle\AmpPool\Exceptions\RemoteException;
+use IfCastle\AmpPool\Internal\Messages\MessageLog;
 use Monolog\Handler\AbstractProcessingHandler;
 use Monolog\Level;
 use Monolog\LogRecord;

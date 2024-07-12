@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Strategies\JobExecutor;
+namespace IfCastle\AmpPool\Strategies\JobExecutor;
 
 use Amp\Cancellation;
 use Amp\Future;

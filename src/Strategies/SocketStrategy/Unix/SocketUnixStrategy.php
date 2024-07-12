@@ -1,18 +1,18 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Strategies\SocketStrategy\Unix;
+namespace IfCastle\AmpPool\Strategies\SocketStrategy\Unix;
 
 use Amp\DeferredFuture;
 use Amp\Parallel\Ipc;
 use Amp\Socket\ResourceSocket;
 use Amp\Socket\ServerSocketFactory;
 use Amp\TimeoutCancellation;
-use CT\AmpPool\EventWeakHandler;
-use CT\AmpPool\Strategies\SocketStrategy\SocketStrategyInterface;
-use CT\AmpPool\Strategies\SocketStrategy\Unix\Messages\InitiateSocketTransfer;
-use CT\AmpPool\Strategies\SocketStrategy\Unix\Messages\SocketTransferInfo;
-use CT\AmpPool\Strategies\WorkerStrategyAbstract;
+use IfCastle\AmpPool\EventWeakHandler;
+use IfCastle\AmpPool\Strategies\SocketStrategy\SocketStrategyInterface;
+use IfCastle\AmpPool\Strategies\SocketStrategy\Unix\Messages\InitiateSocketTransfer;
+use IfCastle\AmpPool\Strategies\SocketStrategy\Unix\Messages\SocketTransferInfo;
+use IfCastle\AmpPool\Strategies\WorkerStrategyAbstract;
 use function Amp\Future\await;
 
 final class SocketUnixStrategy extends WorkerStrategyAbstract implements SocketStrategyInterface

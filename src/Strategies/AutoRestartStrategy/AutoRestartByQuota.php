@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Strategies\AutoRestartStrategy;
+namespace IfCastle\AmpPool\Strategies\AutoRestartStrategy;
 
-use CT\AmpPool\Strategies\WorkerStrategyAbstract;
+use IfCastle\AmpPool\Strategies\WorkerStrategyAbstract;
 use Revolt\EventLoop;
 
 /**

@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\System;
+namespace IfCastle\AmpPool\System;
 
-use CT\AmpPool\Internal\Safe;
+use IfCastle\AmpPool\Internal\Safe;
 use const Amp\Process\IS_WINDOWS;
 
 final class SystemInfo

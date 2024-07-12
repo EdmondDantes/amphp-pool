@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Strategies\RestartStrategy;
+namespace IfCastle\AmpPool\Strategies\RestartStrategy;
 
 final class RestartNever implements RestartStrategyInterface
 {

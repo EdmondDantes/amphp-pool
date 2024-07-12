@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Strategies\ScalingStrategy;
+namespace IfCastle\AmpPool\Strategies\ScalingStrategy;
 
-use CT\AmpPool\EventWeakHandler;
-use CT\AmpPool\Strategies\WorkerStrategyAbstract;
+use IfCastle\AmpPool\EventWeakHandler;
+use IfCastle\AmpPool\Strategies\WorkerStrategyAbstract;
 use Revolt\EventLoop;
 
 final class ScalingByRequest extends WorkerStrategyAbstract implements ScalingStrategyInterface

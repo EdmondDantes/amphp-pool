@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Telemetry\Collectors;
+namespace IfCastle\AmpPool\Telemetry\Collectors;
 
-use CT\AmpPool\WorkersStorage\WorkerStateInterface;
+use IfCastle\AmpPool\WorkersStorage\WorkerStateInterface;
 use Psr\Log\LoggerInterface;
 
 class WorkerTelemetryCollector implements ConnectionCollectorInterface, JobCollectorInterface

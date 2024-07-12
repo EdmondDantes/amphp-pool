@@ -1,11 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\WorkerPoolMocks;
+namespace IfCastle\AmpPool\WorkerPoolMocks;
 
-use CT\AmpPool\Exceptions\TerminateWorkerException;
-use CT\AmpPool\Worker\WorkerEntryPointInterface;
-use CT\AmpPool\Worker\WorkerInterface;
+use IfCastle\AmpPool\Exceptions\TerminateWorkerException;
+use IfCastle\AmpPool\Worker\WorkerEntryPointInterface;
+use IfCastle\AmpPool\Worker\WorkerInterface;
 
 final class TerminateWorkerEntryPoint implements WorkerEntryPointInterface
 {

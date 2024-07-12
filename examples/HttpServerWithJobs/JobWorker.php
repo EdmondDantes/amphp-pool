@@ -4,10 +4,10 @@ declare(strict_types=1);
 namespace Examples\HttpServerWithJobs;
 
 use Amp\Cancellation;
-use CT\AmpPool\Coroutine\CoroutineInterface;
-use CT\AmpPool\Strategies\JobExecutor\JobHandlerInterface;
-use CT\AmpPool\Worker\WorkerEntryPointInterface;
-use CT\AmpPool\Worker\WorkerInterface;
+use IfCastle\AmpPool\Coroutine\CoroutineInterface;
+use IfCastle\AmpPool\Strategies\JobExecutor\JobHandlerInterface;
+use IfCastle\AmpPool\Worker\WorkerEntryPointInterface;
+use IfCastle\AmpPool\Worker\WorkerInterface;
 
 final class JobWorker implements WorkerEntryPointInterface, JobHandlerInterface
 {

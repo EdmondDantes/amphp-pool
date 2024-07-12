@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Strategies\ScalingStrategy;
+namespace IfCastle\AmpPool\Strategies\ScalingStrategy;
 
 final readonly class ScalingRequest
 {

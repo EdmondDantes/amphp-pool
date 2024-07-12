@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Internal\Messages;
+namespace IfCastle\AmpPool\Internal\Messages;
 
 /**
  * Used to notify the Worker that it can finish its work at its convenience.

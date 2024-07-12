@@ -1,22 +1,22 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool;
+namespace IfCastle\AmpPool;
 
 use Amp\Sync\ChannelException;
-use CT\AmpPool\Exceptions\FatalWorkerException;
-use CT\AmpPool\Strategies\RestartStrategy\RestartNever;
-use CT\AmpPool\WorkerPoolMocks\EntryPointHello;
-use CT\AmpPool\WorkerPoolMocks\EntryPointWait;
-use CT\AmpPool\WorkerPoolMocks\FatalWorkerEntryPoint;
-use CT\AmpPool\WorkerPoolMocks\RestartEntryPoint;
-use CT\AmpPool\WorkerPoolMocks\RestartStrategies\RestartNeverWithLastError;
-use CT\AmpPool\WorkerPoolMocks\RestartStrategies\RestartTwice;
-use CT\AmpPool\WorkerPoolMocks\Runners\RunnerLostChannel;
-use CT\AmpPool\WorkerPoolMocks\StartCounterEntryPoint;
-use CT\AmpPool\WorkerPoolMocks\TerminateWorkerEntryPoint;
-use CT\AmpPool\WorkerPoolMocks\TestEntryPointWaitTermination;
-use CT\AmpPool\WorkersStorage\WorkersStorage;
+use IfCastle\AmpPool\Exceptions\FatalWorkerException;
+use IfCastle\AmpPool\Strategies\RestartStrategy\RestartNever;
+use IfCastle\AmpPool\WorkerPoolMocks\EntryPointHello;
+use IfCastle\AmpPool\WorkerPoolMocks\EntryPointWait;
+use IfCastle\AmpPool\WorkerPoolMocks\FatalWorkerEntryPoint;
+use IfCastle\AmpPool\WorkerPoolMocks\RestartEntryPoint;
+use IfCastle\AmpPool\WorkerPoolMocks\RestartStrategies\RestartNeverWithLastError;
+use IfCastle\AmpPool\WorkerPoolMocks\RestartStrategies\RestartTwice;
+use IfCastle\AmpPool\WorkerPoolMocks\Runners\RunnerLostChannel;
+use IfCastle\AmpPool\WorkerPoolMocks\StartCounterEntryPoint;
+use IfCastle\AmpPool\WorkerPoolMocks\TerminateWorkerEntryPoint;
+use IfCastle\AmpPool\WorkerPoolMocks\TestEntryPointWaitTermination;
+use IfCastle\AmpPool\WorkersStorage\WorkersStorage;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use Revolt\EventLoop;

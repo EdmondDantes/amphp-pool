@@ -1,14 +1,14 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Strategies\SocketStrategy;
+namespace IfCastle\AmpPool\Strategies\SocketStrategy;
 
 use Amp\Parallel\Context\DefaultContextFactory;
 use Amp\TimeoutCancellation;
-use CT\AmpPool\Strategies\RestartStrategy\RestartNever;
-use CT\AmpPool\WorkerGroup;
-use CT\AmpPool\WorkerPool;
-use CT\AmpPool\WorkerTypeEnum;
+use IfCastle\AmpPool\Strategies\RestartStrategy\RestartNever;
+use IfCastle\AmpPool\WorkerGroup;
+use IfCastle\AmpPool\WorkerPool;
+use IfCastle\AmpPool\WorkerTypeEnum;
 use Monolog\Handler\StreamHandler;
 use Monolog\Level;
 use Monolog\Logger;

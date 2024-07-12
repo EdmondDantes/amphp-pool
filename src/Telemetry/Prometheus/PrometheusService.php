@@ -1,16 +1,16 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Telemetry\Prometheus;
+namespace IfCastle\AmpPool\Telemetry\Prometheus;
 
 use Amp\Http\HttpStatus;
 use Amp\Http\Server\DefaultErrorHandler;
 use Amp\Http\Server\RequestHandler\ClosureRequestHandler;
 use Amp\Http\Server\Response;
 use Amp\Http\Server\SocketHttpServer;
-use CT\AmpPool\Exceptions\FatalWorkerException;
-use CT\AmpPool\Worker\WorkerEntryPointInterface;
-use CT\AmpPool\Worker\WorkerInterface;
+use IfCastle\AmpPool\Exceptions\FatalWorkerException;
+use IfCastle\AmpPool\Worker\WorkerEntryPointInterface;
+use IfCastle\AmpPool\Worker\WorkerInterface;
 use Monolog\Logger;
 
 class PrometheusService implements WorkerEntryPointInterface

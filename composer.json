@@ -40,11 +40,12 @@
         "amphp/http-server": "^3.3"
     },
     "autoload": {
-        "psr-4": {"CT\\AmpPool\\": ["./src"]}
+        "psr-4": {
+            "IfCastle\\AmpPool\\": ["./src"]}
     },
     "autoload-dev": {
         "psr-4": {
-            "CT\\AmpPool\\": "./tests",
+            "IfCastle\\AmpPool\\": "./tests",
             "Examples\\": "./examples"
         }
     },

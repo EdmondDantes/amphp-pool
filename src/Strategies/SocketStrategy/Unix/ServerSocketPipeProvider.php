@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace CT\AmpPool\Strategies\SocketStrategy\Unix;
+namespace IfCastle\AmpPool\Strategies\SocketStrategy\Unix;
 
 use Amp\ByteStream\ReadableStream;
 use Amp\ByteStream\ResourceStream;

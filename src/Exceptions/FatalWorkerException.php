@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Exceptions;
+namespace IfCastle\AmpPool\Exceptions;
 
 /**
  * FatalWorkerException is thrown when a worker encounters a fatal error.

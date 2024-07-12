@@ -1,11 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace CT\AmpPool\Strategies\SocketStrategy\Windows;
+namespace IfCastle\AmpPool\Strategies\SocketStrategy\Windows;
 
 use Amp\Socket\ServerSocketFactory;
-use CT\AmpPool\Strategies\SocketStrategy\SocketStrategyInterface;
-use CT\AmpPool\Strategies\WorkerStrategyAbstract;
+use IfCastle\AmpPool\Strategies\SocketStrategy\SocketStrategyInterface;
+use IfCastle\AmpPool\Strategies\WorkerStrategyAbstract;
 
 final class SocketWindowsStrategy extends WorkerStrategyAbstract implements SocketStrategyInterface
 {
