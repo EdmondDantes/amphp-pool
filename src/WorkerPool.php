@@ -1138,6 +1138,7 @@ final class WorkerPool implements WorkerPoolInterface
         }
 
         $this->pidFileHandler       = null;
+        $pidFileLocked              = false;
 
         try {
             // Try to lock the pid file without waiting
@@ -1146,7 +1147,7 @@ final class WorkerPool implements WorkerPoolInterface
 
             if(!$pidFileLocked) {
                 echo "Failed to lock the pid file: another instance is running... [EXIT]\n";
-                exit(1);
+                return;
             }
 
             \ftruncate($this->pidFileHandler, 0);
@@ -1154,11 +1155,19 @@ final class WorkerPool implements WorkerPoolInterface
 
         } catch (\Throwable $throwable) {
             echo "Failed to lock the pid file: ".$throwable->getMessage()."\n";
-            exit(1);
+            return;
         } finally {
-            if($this->pidFileHandler && true !== $pidFileLocked) {
+            if($this->pidFileHandler !== null && true !== $pidFileLocked) {
                 \fclose($this->pidFileHandler);
                 $this->pidFileHandler = null;
+            }
+
+            if(false === $pidFileLocked) {
+                if($this->tryHandleCliCommands()) {
+                    exit(0);
+                }
+
+                exit(1);
             }
         }
     }
@@ -1167,8 +1176,63 @@ final class WorkerPool implements WorkerPoolInterface
     {
         if(\is_resource($this->pidFileHandler)) {
             \fclose($this->pidFileHandler);
-            \unlink($this->getPidFile());
+
+            try {
+                Safe::execute(fn () => \unlink($this->getPidFile()));
+            } catch (\Throwable $throwable) {
+                echo 'Failed to remove the pid file: '.$throwable->getMessage().PHP_EOL;
+            }
         }
+    }
+
+    private function tryHandleCliCommands(): bool
+    {
+        // we try to handle CLI commands: stop, restart
+
+        $args                       = $_SERVER['argv'] ?? [];
+
+        if(\count($args) < 2) {
+            return false;
+        }
+
+        $command                    = $args[1];
+
+        if(IS_WINDOWS) {
+            echo 'The stop and restart commands are not supported on Windows'.PHP_EOL;
+            return false;
+        }
+
+        if(false === \function_exists('posix_kill')) {
+            echo 'The stop and restart commands are not supported because posix_kill not exists'.PHP_EOL;
+            return false;
+        }
+
+        $this->initWorkersStorage();
+
+        try {
+            $this->workersStorage->getApplicationState()->read();
+            $pid                    = $this->workersStorage->getApplicationState()->getPid();
+        } catch (\Throwable) {
+            $pid                    = 0;
+        }
+
+        if($pid === 0) {
+            echo 'Failed to get the application PID'.PHP_EOL;
+            return false;
+        }
+
+        if($command === 'stop') {
+            echo 'The application will be stopped'.PHP_EOL;
+            posix_kill($pid, \SIGTERM);
+            return true;
+        }
+
+        if($command === 'restart') {
+            echo 'The application will be restarted'.PHP_EOL;
+            posix_kill($pid, \SIGUSR1);
+        }
+
+        return false;
     }
 
     public function __destruct()

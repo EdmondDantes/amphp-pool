@@ -26,6 +26,7 @@ final readonly class ApplicationCollector implements ApplicationCollectorInterfa
         $stat                       = SystemInfo::systemStat();
 
         $this->applicationState
+            ->applyPid()
             ->setStartedAt(\time())
             ->setRestartsCount(0)
             ->setLastRestartedAt(0)

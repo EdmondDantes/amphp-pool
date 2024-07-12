@@ -10,6 +10,8 @@ interface ApplicationStateInterface
 
     public function getWorkersCount(): int;
 
+    public function getPid(): int;
+
     public function getUptime(): int;
 
     public function getStartedAt(): int;
@@ -24,6 +26,8 @@ interface ApplicationStateInterface
     public function getLoadAverage(): float;
 
     // setters
+
+    public function applyPid(): static;
 
     public function setStartedAt(int $startedAt): static;
     public function setLastRestartedAt(int $lastRestartedAt): static;

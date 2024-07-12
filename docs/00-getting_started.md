@@ -339,6 +339,25 @@ scrape_configs:
 
 4. Step. Add to Grafana the Prometheus data source.
 
+## Using PidFile and Cli commands: stop, restart
+
+Server applications often cannot be run simultaneously in two instances, so they require a Pid file lock.
+The `WorkerPool` provides a built-in `PidFile` option that allows you to store the process ID 
+of the `WorkerPool` in a file.
+
+```php
+$workerPool = new WorkerPool(logger: $logger, pidFile: true);
+```
+
+When using the PidFile option, your application will be able to respond to stop and restart commands on `Unix` platforms. 
+For example:
+
+```shell
+php app.php stop
+php app.php restart
+```
+
+In this case, signals will be sent to the running application: `SIGTERM` for stop and `SIGUSR1` for restart.
 
 ## Windows Support
 

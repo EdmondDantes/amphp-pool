@@ -6,10 +6,10 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 use Amp\ByteStream;
 use Amp\Log\ConsoleFormatter;
 use Amp\Log\StreamHandler;
+use Examples\HttpServer\HttpReactor;
 use IfCastle\AmpPool\WorkerGroup;
 use IfCastle\AmpPool\WorkerPool;
 use IfCastle\AmpPool\WorkerTypeEnum;
-use Examples\HttpServer\HttpReactor;
 use Monolog\Logger;
 use Monolog\Processor\PsrLogMessageProcessor;
 

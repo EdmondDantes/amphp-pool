@@ -6,12 +6,12 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 use Amp\ByteStream;
 use Amp\Log\ConsoleFormatter;
 use Amp\Log\StreamHandler;
+use Examples\Prometheus\HttpReactorWithTelemetry;
+use Examples\Prometheus\JobWorker;
 use IfCastle\AmpPool\Telemetry\Prometheus\PrometheusGroup;
 use IfCastle\AmpPool\WorkerGroup;
 use IfCastle\AmpPool\WorkerPool;
 use IfCastle\AmpPool\WorkerTypeEnum;
-use Examples\Prometheus\HttpReactorWithTelemetry;
-use Examples\Prometheus\JobWorker;
 use Monolog\Logger;
 use Monolog\Processor\PsrLogMessageProcessor;
 

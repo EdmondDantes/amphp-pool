@@ -6,10 +6,10 @@ namespace IfCastle\AmpPool\WorkersStorage;
 class ApplicationState implements ApplicationStateInterface
 {
     private \WeakReference|null $storage = null;
-    private bool $isLoaded   = false;
-    private bool $isReadOnly = true;
+    private bool $isLoaded              = false;
+    private bool $isReadOnly            = true;
 
-    protected const int ITEM_COUNT      = 8;
+    protected const int ITEM_COUNT      = 9;
 
     public static function instanciate(WorkersStorageInterface $workersStorage, int $workersCount, bool $isReadOnly = true): static
     {
@@ -22,6 +22,7 @@ class ApplicationState implements ApplicationStateInterface
 
     public function __construct(
         private int $workersCount       = 0,
+        private int $pid                = 0,
         private int $startedAt          = 0,
         private int $lastRestartedAt    = 0,
         private int $restartsCount      = 0,
@@ -47,6 +48,7 @@ class ApplicationState implements ApplicationStateInterface
         $data                       = \pack(
             'Q*',
             $this->workersCount,
+            $this->pid,
             $this->startedAt,
             $this->lastRestartedAt,
             $this->restartsCount,
@@ -84,13 +86,14 @@ class ApplicationState implements ApplicationStateInterface
         }
 
         $this->workersCount         = $data[1];
-        $this->startedAt            = $data[2];
-        $this->lastRestartedAt      = $data[3];
-        $this->restartsCount        = $data[4];
-        $this->workersErrors        = $data[5];
-        $this->memoryFree           = $data[6];
-        $this->memoryTotal          = $data[7];
-        $this->loadAverage          = $data[8] / 1000;
+        $this->pid                  = $data[2];
+        $this->startedAt            = $data[3];
+        $this->lastRestartedAt      = $data[4];
+        $this->restartsCount        = $data[5];
+        $this->workersErrors        = $data[6];
+        $this->memoryFree           = $data[7];
+        $this->memoryTotal          = $data[8];
+        $this->loadAverage          = $data[9] / 1000;
     }
 
     public function read(): void
@@ -107,6 +110,11 @@ class ApplicationState implements ApplicationStateInterface
     public function getWorkersCount(): int
     {
         return $this->workersCount;
+    }
+
+    public function getPid(): int
+    {
+        return $this->pid;
     }
 
     public function getUptime(): int
@@ -147,6 +155,12 @@ class ApplicationState implements ApplicationStateInterface
     public function getLoadAverage(): float
     {
         return $this->loadAverage;
+    }
+
+    public function applyPid(): static
+    {
+        $this->pid                  = \getmypid();
+        return $this;
     }
 
     public function setStartedAt(int $startedAt): static
