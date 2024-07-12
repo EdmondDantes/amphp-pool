@@ -58,6 +58,7 @@ final readonly class ApplicationCollector implements ApplicationCollectorInterfa
 
     public function restartApplication(): void
     {
+        $this->applicationState->read();
         $this->applicationState->setRestartsCount($this->applicationState->getRestartsCount() + 1)->update();
     }
 
