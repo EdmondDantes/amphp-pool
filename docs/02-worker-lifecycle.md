@@ -53,6 +53,39 @@ WorkerPool --> [*] : End
 
 ```
 
-
-
 ## Scaling workers
+
+Scaling is a way to dynamically adjust the number of Workers based on various factors. 
+`WorkerPool` considers three key states of the Worker process regarding Scaling: 
+* the worker will be started, 
+* the worker will never be started, 
+* and the worker is not yet working.
+
+A `Watcher` process can receive a special `ScalingRequest` event, 
+which prompts it to increase or decrease the number of active Workers in the group. 
+This enables dynamic load adjustment on the server depending on a range of factors.
+
+Note! For `UNIX` OS, the current implementation of the Reactor for `TCP/IP` does not support `Scaling`, 
+due to the sharing socket algorithm used. Typically, this is not needed.
+
+Generally, Scaling makes sense primarily for JOB-type Workers, 
+although this approach has its drawbacks and should be used judiciously.
+
+## Hard and Soft restart
+
+`WorkerPool` supports both a **hard** and a **soft** restart of all Workers on demand.
+
+A **hard** restart follows this sequence:
+
+* First, all Workers terminate their work, and the Watcher process waits for completion.
+* Then, the Watcher restarts all Workers.
+
+A **soft** restart works differently: 
+Each active Worker receives an event indicating it should restart as soon as possible **asynchronously**. 
+
+Both restart methods can be useful during the deployment of your application.
+The second method is generally preferred because the server continues to operate, 
+seamlessly updating Workers for users. 
+However, sometimes this is not possible due to the nature of changes in the code. 
+A complete server restart may be necessary, as the interaction characteristics between Workers may change. 
+In such cases, use the first method.

@@ -536,7 +536,7 @@ final class WorkerPool implements WorkerPoolInterface
         );
 
         try {
-            $signal             = trapSignal([\SIGINT, \SIGTERM, \SIGUSR1], true, $cancellation);
+            $signal             = trapSignal([\SIGINT, \SIGTERM, \SIGUSR1, \SIGUSR2], true, $cancellation);
         } catch (CancelledException) {
             return;
         }
@@ -545,7 +545,10 @@ final class WorkerPool implements WorkerPoolInterface
             $this->logger?->info('Server will stop due to signal SIGINT or SIGTERM');
             $this->stop();
         } elseif($signal === \SIGUSR1) {
-            $this->logger?->info('Server should reload due to signal SIGUSR1');
+            $this->logger?->info('Server should hard-reload due to signal SIGUSR1');
+            $this->restart();
+        } elseif($signal === \SIGUSR2) {
+            $this->logger?->info('Server should soft-reload due to signal SIGUSR2');
             $this->restart();
         }
     }
@@ -989,8 +992,20 @@ final class WorkerPool implements WorkerPoolInterface
         }
     }
 
-    public function restart(): void
+    public function restart(bool $isSoft = true): void
     {
+        if($isSoft) {
+
+            foreach ($this->workers as $workerDescriptor) {
+                if($workerDescriptor->isRunning()) {
+                    $workerDescriptor->getWorkerProcess()->softShutdown();
+                }
+            }
+
+            $this->logger?->info('Server should be softly restarted');
+            return;
+        }
+
         $this->shouldRestart        = true;
         $this->stopWorkers();
         $this->logger?->info('Server should be restarted');
@@ -1229,7 +1244,7 @@ final class WorkerPool implements WorkerPoolInterface
 
         if($command === 'restart') {
             echo 'The application will be restarted'.PHP_EOL;
-            posix_kill($pid, \SIGUSR1);
+            posix_kill($pid, \SIGUSR2);
         }
 
         return false;

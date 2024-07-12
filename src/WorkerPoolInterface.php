@@ -53,7 +53,7 @@ interface WorkerPoolInterface extends WorkerEventEmitterAwareInterface, WorkersS
      * The method stops all workers and restarts them gracefully (not immediately).
      *
      */
-    public function restart(): void;
+    public function restart(bool $isSoft = true): void;
 
     public function countWorkers(int $groupId, bool $onlyRunning = false, bool $notRunning = false): int;
 
