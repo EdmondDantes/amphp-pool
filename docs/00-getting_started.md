@@ -245,6 +245,47 @@ A service worker can also use job execution in other workers or run its own Http
 A service worker is especially useful when you need additional functionality and want to ensure 
 that it runs in only one process and is automatically restarted in case of issues.
 
+## Setting Up Communication Between Reactor and Job Workers
+
+If you want a group of `Reactor`-type workers to be able to send tasks to another group of `Job`-type workers, 
+you must explicitly define the relationship between the groups.
+
+To do this, you need to specify the `jobGroups` parameter in the `WorkerGroup` configuration:
+
+```php
+
+$workerPool->describeGroup(new WorkerGroup(
+    entryPointClass: JobWorker::class,
+    workerType: WorkerTypeEnum::JOB,
+    groupName: 'JobWorker'
+));
+
+$workerPool->describeGroup(new WorkerGroup(
+    entryPointClass: HttpReactorWithTelemetry::class,
+    workerType: WorkerTypeEnum::REACTOR,
+    // jobGroups - the list of groups that can accept tasks from this group
+    jobGroups: ['JobWorker']
+));
+```
+
+You can define multiple groups of workers that can accept jobs or use a single group of job workers 
+to which several groups of reactors will send tasks, and so on.
+
+The interaction scheme can be exactly what you need to solve your task.
+
+## Pickup Strategy
+
+The `PickupStrategy` is responsible for selecting a worker from the pool to process a task. 
+`WorkerPool` provides you with several strategies to choose from for optimal worker selection. 
+In most cases, the `PickupRoundRobin` or `PickupLeastJobs` strategy works well, 
+as they allow efficient load distribution among workers. 
+
+However, sometimes you need more. For example, you might want to execute long-running tasks 
+in one group of workers and quick tasks in another. 
+This can be useful if you need to control the maximum number of tasks of a specific type.
+
+Please see the `CT\AmpPool\Strategies\PickupStrategy` namespace for more details.
+
 ## How to use asynchronous programming inside workers
 
 When writing code for the `WorkerPool` in an asynchronous style, 

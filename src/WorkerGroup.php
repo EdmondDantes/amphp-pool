@@ -57,11 +57,11 @@ class WorkerGroup implements WorkerGroupInterface
         private readonly WorkerTypeEnum $workerType,
         private readonly int            $minWorkers = 0,
         private int                     $maxWorkers = 0,
-        private string                    $groupName = '',
+        private string                  $groupName = '',
         /**
-         * @var int[]
+         * @var int|string[]
          */
-        private readonly array            $jobGroups = [],
+        private array                     $jobGroups = [],
         private ?RunnerStrategyInterface  $runnerStrategy = null,
         private ?PickupStrategyInterface  $pickupStrategy = null,
         private ?RestartStrategyInterface $restartStrategy = null,

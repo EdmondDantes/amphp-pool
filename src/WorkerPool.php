@@ -213,6 +213,17 @@ final class WorkerPool implements WorkerPoolInterface
         return $this->groupsScheme;
     }
 
+    public function findGroup(int|string $groupIdOrName): WorkerGroupInterface|null
+    {
+        foreach ($this->getGroupsScheme() as $group) {
+            if ($group->getWorkerGroupId() === $groupIdOrName || $group->getGroupName() === $groupIdOrName) {
+                return $group;
+            }
+        }
+
+        return null;
+    }
+
     /**
      * @throws \Exception
      */
@@ -249,6 +260,12 @@ final class WorkerPool implements WorkerPoolInterface
             }
 
             foreach ($group->getJobGroups() as $jobGroupId) {
+
+                // Resolve group name to group id
+                if(\is_string($jobGroupId)) {
+                    $jobGroupId     = $this->findGroup($jobGroupId)?->getWorkerGroupId() ?? 0;
+                }
+
                 if(false === \array_key_exists($jobGroupId, $this->groupsScheme)) {
                     throw new \Exception("The job group id '{$jobGroupId}' is not found in the worker groups scheme");
                 }

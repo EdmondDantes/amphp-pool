@@ -21,6 +21,9 @@ interface WorkerPoolInterface extends WorkerEventEmitterAwareInterface, WorkersS
      * @return WorkerGroup[]
      */
     public function getGroupsScheme(): array;
+
+    public function findGroup(int|string $groupIdOrName): WorkerGroupInterface|null;
+
     public function validateGroupsScheme(): void;
 
     /**

@@ -45,7 +45,7 @@ $workerPool->describeGroup(new WorkerGroup(
     workerType: WorkerTypeEnum::REACTOR,
     minWorkers: 2,
     maxWorkers: 5,
-    jobGroups: [2]
+    jobGroups: ['JobWorker']
 ));
 
 // 4. Run the worker pool

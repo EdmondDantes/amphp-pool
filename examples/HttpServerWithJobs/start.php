@@ -39,7 +39,7 @@ $workerPool->describeGroup(new WorkerGroup(
     entryPointClass: HttpReactor::class,
     workerType: WorkerTypeEnum::REACTOR,
     minWorkers: 1,
-    jobGroups: [1]
+    jobGroups: ['JobWorker']
 ));
 
 // 4. Run the worker pool
