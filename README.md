@@ -20,7 +20,9 @@ and you want to be able to program their behavior to ensure a better balance of 
 * Execution of **Jobs** based on `priority` and `weight` (*weight being an estimate of resource consumption*).
 * `Coroutine Scheduler` for distributing a load among long-running background jobs.
 * Support for telemetry and statistics with **Prometheus** + **Grafana**.
-* Full support for **Windows**.
+* Support for **Windows**.
+
+![Architecture](docs/images/worker-pool.svg)
 
 ## Installation
 
