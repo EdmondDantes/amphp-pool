@@ -7,7 +7,8 @@
 - Fixed socket waiting when the server is about to shut down. 
 The issue remains for `UNIX` and is caused by the architecture of the `AMPHP` `httpserver`.
 - Fixed the synchronization of `WorkerState` for the isReady status and fields related to the worker's termination state.
-- Fixed the bug with Server Socket hanging under `Windows`. 
+- Fixed the bug with Server Socket hanging under `Windows`.
+- Fixed bug SHARED MEMORY delete for `Worker` instances.
 
 ### Added
 

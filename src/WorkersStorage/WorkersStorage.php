@@ -386,7 +386,7 @@ final class WorkersStorage implements WorkersStorageInterface
 
     public function close(): void
     {
-        if($this->handler !== null && $this->isWrite) {
+        if($this->handler !== null && $this->isWrite && $this->workerId === 0) {
             \shmop_delete($this->handler);
         }
     }
