@@ -546,10 +546,10 @@ final class WorkerPool implements WorkerPoolInterface
             $this->stop();
         } elseif($signal === \SIGUSR1) {
             $this->logger?->info('Server should hard-reload due to signal SIGUSR1');
-            $this->restart(false);
+            $this->restart();
         } elseif($signal === \SIGUSR2) {
             $this->logger?->info('Server should soft-reload due to signal SIGUSR2');
-            $this->restart();
+            $this->restart(true);
         }
     }
 
@@ -992,7 +992,7 @@ final class WorkerPool implements WorkerPoolInterface
         }
     }
 
-    public function restart(bool $isSoft = true): void
+    public function restart(bool $isSoft = false): void
     {
         if($isSoft) {
             
