@@ -20,6 +20,7 @@ use IfCastle\AmpPool\WorkersStorage\WorkersStorage;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use Revolt\EventLoop;
+use function Amp\delay;
 
 class WorkerPoolTest extends TestCase
 {
@@ -295,4 +296,39 @@ class WorkerPoolTest extends TestCase
         StartCounterEntryPoint::removeFile();
     }
 
+    #[RunInSeparateProcess]
+    public function testSoftRestart(): void
+    {
+        $workerPool                 = new WorkerPool;
+        $workerPool->describeGroup(new WorkerGroup(
+            EntryPointHello::class,
+            WorkerTypeEnum::SERVICE,
+            minWorkers:                1
+        ));
+
+        EventLoop::delay(1, function () use ($workerPool) {
+
+            $state                  = $workerPool->getWorkersStorage()->getApplicationState();
+            $pid                    = $state->getPid();
+
+            $this->assertEquals(0, $state->getRestartsCount(), 'Restarts count should be 0');
+            $this->assertEquals(\getmypid(), $state->getPid(), 'Pid should be the same as the main process');
+
+            $workerPool->restart(true);
+            delay(2);
+
+            $workerStorageReadOnly  = WorkersStorage::instanciate();
+            $state                  = $workerStorageReadOnly->getApplicationState();
+            $state->read();
+
+            $this->assertEquals(1, $state->getRestartsCount(), 'Restarts count should be 1');
+            $this->assertEquals($pid, $state->getPid(), 'Pid should be the same as the main process');
+
+            $workerPool->stop();
+        });
+
+        $workerPool->run();
+
+        $this->assertTrue(true, 'Soft restart should not throw any exception');
+    }
 }

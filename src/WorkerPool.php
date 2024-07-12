@@ -995,9 +995,9 @@ final class WorkerPool implements WorkerPoolInterface
     public function restart(bool $isSoft = false): void
     {
         if($isSoft) {
-            
+
             $this->applicationCollector?->restartApplication();
-            
+
             foreach ($this->workers as $workerDescriptor) {
                 if($workerDescriptor->isRunning()) {
                     $workerDescriptor->getWorkerProcess()->softShutdown();

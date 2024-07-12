@@ -58,7 +58,9 @@ final readonly class ApplicationCollector implements ApplicationCollectorInterfa
 
     public function restartApplication(): void
     {
-        $this->applicationState->setRestartsCount($this->applicationState->getRestartsCount() + 1)->update();
+        $this->applicationState->setLastRestartedAt(\time())
+                               ->setRestartsCount($this->applicationState->getRestartsCount() + 1)
+                               ->update();
     }
 
     public function stopApplication(): void
