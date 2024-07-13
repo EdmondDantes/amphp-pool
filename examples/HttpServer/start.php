@@ -31,7 +31,7 @@ $workerPool = new WorkerPool(logger: $logger);
 $workerPool->describeGroup(new WorkerGroup(
     entryPointClass: HttpReactor::class,
     workerType: WorkerTypeEnum::REACTOR,
-    minWorkers: 1
+    minWorkers: 4
 ));
 
 // 3. Run the worker pool
