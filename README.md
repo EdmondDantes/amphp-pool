@@ -24,6 +24,10 @@ and you want to be able to program their behavior to ensure a better balance of 
 
 ![Architecture](docs/images/worker-pool.svg)
 
+## But isn't PHP slow?
+
+Please review the [performance considerations](docs/01-performance-considerations.md).
+
 ## Installation
 
 ```bash
